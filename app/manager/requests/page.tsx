@@ -41,7 +41,7 @@ export default async function ManagerRequestsPage({
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>

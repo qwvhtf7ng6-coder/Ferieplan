@@ -21,7 +21,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-4xl mx-auto p-6">
         <AdminUsersClient
           users={users.map((u: typeof users[0]) => ({ ...u, password: "" }))}

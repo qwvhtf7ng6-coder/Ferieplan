@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import CalendarGrid from "@/components/CalendarGrid";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { isManager } from "@/lib/permissions";
+import { getCalendarVisibility } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function CalendarPage({
@@ -14,7 +15,12 @@ export default async function CalendarPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (!isManager(user.role)) redirect("/dashboard");
+
+  // Check access: managers/admins always, employees only if setting allows
+  const visibility = await getCalendarVisibility();
+  if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
+    redirect("/dashboard");
+  }
 
   const sp = await searchParams;
   const now = new Date();
@@ -24,8 +30,7 @@ export default async function CalendarPage({
   const start = new Date(year, month - 1, 1);
   const end   = new Date(year, month,     0, 23, 59, 59);
 
-  // For managers: only their department. Admins see all.
-  const deptFilter = isAdmin(user.role)
+  const deptFilter = isManager(user.role)
     ? {}
     : { id: user.departmentId ?? "" };
 
@@ -41,10 +46,9 @@ export default async function CalendarPage({
         },
       },
     }),
-
     prisma.vacationRequest.findMany({
       where: {
-        ...(isAdmin(user.role) ? {} : { departmentId: user.departmentId ?? "" }),
+        ...(isManager(user.role) ? {} : { departmentId: user.departmentId ?? "" }),
         status: { in: ["APPROVED", "PENDING"] },
         entries: { some: { date: { gte: start, lte: end } } },
       },
@@ -56,14 +60,12 @@ export default async function CalendarPage({
         user: { select: { id: true, name: true } },
       },
     }),
-
     prisma.holiday.findMany({
       where: { date: { gte: start, lte: end } },
       orderBy: { date: "asc" },
     }),
   ]);
 
-  // Serialize dates to ISO strings for client component
   type DeptRow = typeof departments[0];
   type ReqRow  = typeof requests[0];
   type HolRow  = typeof holidays[0];
@@ -96,7 +98,7 @@ export default async function CalendarPage({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
           year={year}

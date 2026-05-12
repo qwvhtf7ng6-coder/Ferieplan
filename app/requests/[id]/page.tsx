@@ -44,7 +44,7 @@ export default async function RequestDetailPage({
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6 flex items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900">Ansøgning</h1>

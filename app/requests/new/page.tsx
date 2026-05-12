@@ -12,7 +12,7 @@ export default async function NewRequestPage() {
   if (!user.departmentId) {
     return (
       <div>
-        <Nav role={user.role} name={user.name ?? ""} />
+        <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
         <main className="max-w-2xl mx-auto px-4 py-8">
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
             <p className="text-orange-800 font-medium">
@@ -29,7 +29,7 @@ export default async function NewRequestPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Ny ferieansøgning</h1>

@@ -15,7 +15,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-xl mx-auto p-6">
         <SettingsClient settings={settings as any} />
       </main>

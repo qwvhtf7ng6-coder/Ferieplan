@@ -15,7 +15,7 @@ export default async function HolidaysPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-2xl mx-auto p-6">
         <HolidaysClient holidays={holidays as any} />
       </main>

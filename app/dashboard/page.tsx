@@ -4,6 +4,8 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
+import { getCalendarVisibility } from "@/lib/settings";
+import { isManager } from "@/lib/permissions";
 import type { SessionUser } from "@/types";
 
 export default async function DashboardPage() {
@@ -11,17 +13,22 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const result = await getMyRequests();
-  const requests = result.ok ? result.data ?? [] : [];
+  const [result, visibility] = await Promise.all([
+    getMyRequests(),
+    getCalendarVisibility(),
+  ]);
 
+  const requests = result.ok ? result.data ?? [] : [];
   const pendingCount = requests.filter((r) => r.status === "PENDING").length;
   const approvedCount = requests.filter((r) => r.status === "APPROVED").length;
 
+  const calendarVisible =
+    isManager(user.role) || visibility === "ALL_EMPLOYEES";
+
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
       <main className="max-w-3xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Mine feriedage</h1>
@@ -37,12 +44,11 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           <StatCard label="Afventer" value={pendingCount} color="text-yellow-600" />
           <StatCard label="Godkendt" value={approvedCount} color="text-green-600" />
           <StatCard
-            label="I alt"
+            label2="godkendte dage"
             value={requests.reduce(
               (sum, r) =>
                 r.status === "APPROVED"
@@ -50,12 +56,10 @@ export default async function DashboardPage() {
                   : sum,
               0
             )}
-            label2="godkendte dage"
             color="text-blue-600"
           />
         </div>
 
-        {/* List */}
         <RequestList
           requests={requests}
           showCancelButton
@@ -72,7 +76,7 @@ function StatCard({
   value,
   color,
 }: {
-  label: string;
+  label?: string;
   label2?: string;
   value: number;
   color: string;
