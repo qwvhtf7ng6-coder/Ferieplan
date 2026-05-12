@@ -40,7 +40,7 @@ export default async function CalendarPage({
       orderBy: { name: "asc" },
       include: {
         users: {
-          where: { role: { not: "ADMIN" } },
+          where: { departmentId: { not: null } },
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         },
