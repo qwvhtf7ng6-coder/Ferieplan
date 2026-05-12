@@ -15,28 +15,25 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
   const pathname = usePathname();
 
   const links = [
-    { href: "/dashboard",         label: "Mine ansøgninger",      roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/requests/new",      label: "Ny ansøgning",          roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/manager/requests",  label: "Afdelingsansøgninger",  roles: ["MANAGER", "ADMIN"] },
-    { href: "/manager/calendar",  label: "Kalender",              roles: ["MANAGER", "ADMIN"], alwaysShow: true },
-    { href: "/manager/calendar",  label: "Kalender",              roles: ["EMPLOYEE"],         alwaysShow: false },
-    { href: "/admin/users",       label: "Brugere",               roles: ["ADMIN"] },
-    { href: "/admin/departments", label: "Afdelinger",            roles: ["ADMIN"] },
-    { href: "/admin/holidays",    label: "Helligdage",            roles: ["ADMIN"] },
-    { href: "/admin/settings",    label: "Indstillinger",         roles: ["ADMIN"] },
-  ].filter((l) => {
-    if (!l.roles.includes(role)) return false;
-    // For employees: only show calendar if calendarVisible is true
-    if (role === "EMPLOYEE" && l.href === "/manager/calendar") return calendarVisible;
-    return true;
-  });
+    { href: "/dashboard",         label: "Mine ansøgninger",     roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
+    { href: "/requests/new",      label: "Ny ansøgning",         roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
+    { href: "/manager/requests",  label: "Afdelingsansøgninger", roles: ["MANAGER", "ADMIN"] },
+    { href: "/manager/calendar",  label: "Kalender",             roles: ["MANAGER", "ADMIN"] },
+    ...(calendarVisible && role === "EMPLOYEE"
+      ? [{ href: "/manager/calendar", label: "Kalender", roles: ["EMPLOYEE"] }]
+      : []),
+    { href: "/admin/users",       label: "Brugere",              roles: ["ADMIN"] },
+    { href: "/admin/departments", label: "Afdelinger",           roles: ["ADMIN"] },
+    { href: "/admin/holidays",    label: "Helligdage",           roles: ["ADMIN"] },
+    { href: "/admin/settings",    label: "Indstillinger",        roles: ["ADMIN"] },
+  ].filter((l) => l.roles.includes(role));
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-6 flex-wrap">
+    <nav className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 flex-wrap">
       <span className="font-bold text-blue-700 text-lg mr-2">🏖️ Ferieplan</span>
-      {links.map((l) => (
+      {links.map((l, i) => (
         <Link
-          key={l.href + l.label}
+          key={i}
           href={l.href}
           className={cn(
             "text-sm font-medium px-2 py-1 rounded transition-colors",
@@ -49,10 +46,20 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
         </Link>
       ))}
       <div className="ml-auto flex items-center gap-3">
-        <span className="text-xs text-gray-500">{name}</span>
+        <Link
+          href="/profile"
+          className={cn(
+            "text-xs font-medium px-2 py-1 rounded transition-colors",
+            pathname === "/profile"
+              ? "text-blue-700 bg-blue-50"
+              : "text-gray-500 hover:text-blue-700"
+          )}
+        >
+          {name}
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-xs text-gray-500 hover:text-red-600"
+          className="text-xs text-gray-400 hover:text-red-600 transition-colors"
         >
           Log ud
         </button>
