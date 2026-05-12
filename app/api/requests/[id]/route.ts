@@ -32,7 +32,7 @@ export async function PATCH(
   let capacityWarning = null;
   if (status === "APPROVED") {
     const dept = await prisma.department.findUnique({ where: { id: request.departmentId } });
-    const dates = request.entries.map((e) => e.date);
+    const dates = request.entries.map((e: { date: Date }) => e.date);
 
     for (const date of dates) {
       const count = await prisma.vacationRequestEntry.count({

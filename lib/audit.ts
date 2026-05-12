@@ -10,8 +10,13 @@ export async function createAuditLog({
   requestId?: string;
   action: string;
   details?: string;
-}) {
+}): Promise<void> {
   await prisma.auditLog.create({
-    data: { userId, requestId, action, details },
+    data: {
+      userId,
+      requestId: requestId ?? null,
+      action,
+      details: details ?? null,
+    },
   });
 }

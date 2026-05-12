@@ -1,27 +1,48 @@
-import { Role } from "@prisma/client";
+export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN";
+export type VisibilitySetting = "ALL_EMPLOYEES" | "MANAGEMENT_ONLY";
 
-export function isAdmin(role: Role) {
-  return role === Role.ADMIN;
+export function isAdmin(role: UserRole): boolean {
+  return role === "ADMIN";
 }
 
-export function isManager(role: Role) {
-  return role === Role.MANAGER || role === Role.ADMIN;
+export function isManager(role: UserRole): boolean {
+  return role === "MANAGER" || role === "ADMIN";
+}
+
+export function isEmployee(role: UserRole): boolean {
+  return role === "EMPLOYEE";
 }
 
 export function canManageDepartment(
-  userRole: Role,
+  userRole: UserRole,
   userDeptId: string | null | undefined,
   targetDeptId: string
-) {
+): boolean {
   if (isAdmin(userRole)) return true;
   if (isManager(userRole) && userDeptId === targetDeptId) return true;
   return false;
 }
 
 export function canViewCalendar(
-  userRole: Role,
-  visibility: "ALL_EMPLOYEES" | "MANAGEMENT_ONLY"
-) {
+  userRole: UserRole,
+  visibility: VisibilitySetting
+): boolean {
   if (isManager(userRole)) return true;
   return visibility === "ALL_EMPLOYEES";
+}
+
+export function canCancelOwnRequest(status: string): boolean {
+  return status === "PENDING";
+}
+
+export function canEditRequest(
+  userRole: UserRole,
+  requestUserId: string,
+  currentUserId: string,
+  requestDeptId: string,
+  userDeptId: string | null | undefined
+): boolean {
+  if (isAdmin(userRole)) return true;
+  if (isManager(userRole) && requestDeptId === userDeptId) return true;
+  return false;
 }
