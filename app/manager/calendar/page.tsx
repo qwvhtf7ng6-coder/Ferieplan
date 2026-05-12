@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import CalendarGrid from "@/components/CalendarGrid";
-import { isManager } from "@/lib/permissions";
+import { isManager, isAdmin } from "@/lib/permissions";
+import type { SessionUser } from "@/types";
 
 export default async function CalendarPage({
   searchParams,
@@ -12,57 +13,97 @@ export default async function CalendarPage({
 }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
-  const user = session.user as any;
-
+  const user = session.user as SessionUser;
   if (!isManager(user.role)) redirect("/dashboard");
 
   const sp = await searchParams;
   const now = new Date();
-  const year = parseInt(sp.year ?? String(now.getFullYear()));
+  const year  = parseInt(sp.year  ?? String(now.getFullYear()));
   const month = parseInt(sp.month ?? String(now.getMonth() + 1));
 
   const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0, 23, 59, 59);
+  const end   = new Date(year, month,     0, 23, 59, 59);
 
-  const where: any =
-    user.role === "ADMIN" ? {} : { departmentId: user.departmentId };
+  // For managers: only their department. Admins see all.
+  const deptFilter = isAdmin(user.role)
+    ? {}
+    : { id: user.departmentId ?? "" };
 
   const [departments, requests, holidays] = await Promise.all([
     prisma.department.findMany({
+      where: Object.keys(deptFilter).length ? deptFilter : undefined,
+      orderBy: { name: "asc" },
       include: {
         users: {
           where: { role: { not: "ADMIN" } },
-          select: { id: true, name: true, departmentId: true },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
         },
       },
-      ...(user.role !== "ADMIN" ? { where: { id: user.departmentId } } : {}),
     }),
+
     prisma.vacationRequest.findMany({
       where: {
-        ...where,
-        entries: { some: { date: { gte: start, lte: end } } },
+        ...(isAdmin(user.role) ? {} : { departmentId: user.departmentId ?? "" }),
         status: { in: ["APPROVED", "PENDING"] },
+        entries: { some: { date: { gte: start, lte: end } } },
       },
       include: {
-        entries: { where: { date: { gte: start, lte: end } } },
+        entries: {
+          where: { date: { gte: start, lte: end } },
+          orderBy: { date: "asc" },
+        },
         user: { select: { id: true, name: true } },
       },
     }),
+
     prisma.holiday.findMany({
       where: { date: { gte: start, lte: end } },
+      orderBy: { date: "asc" },
     }),
   ]);
 
+  // Serialize dates to ISO strings for client component
+  type DeptRow = typeof departments[0];
+  type ReqRow  = typeof requests[0];
+  type HolRow  = typeof holidays[0];
+
+  const serializedDepts = departments.map((d: DeptRow) => ({
+    id: d.id,
+    name: d.name,
+    maxConcurrent: d.maxConcurrent,
+    users: d.users,
+  }));
+
+  const serializedRequests = requests.map((r: ReqRow) => ({
+    id: r.id,
+    status: r.status as "APPROVED" | "PENDING",
+    note: r.note,
+    user: r.user,
+    entries: r.entries.map((e: ReqRow["entries"][0]) => ({
+      date: e.date.toISOString(),
+      type: e.type as string,
+      days: e.days,
+    })),
+  }));
+
+  const serializedHolidays = holidays.map((h: HolRow) => ({
+    id: h.id,
+    name: h.name,
+    date: h.date.toISOString(),
+    isNational: h.isNational,
+  }));
+
   return (
-    <div>
+    <div className="flex flex-col h-screen overflow-hidden">
       <Nav role={user.role} name={user.name ?? ""} />
-      <main className="p-4">
+      <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
           year={year}
           month={month}
-          departments={departments as any}
-          requests={requests as any}
-          holidays={holidays as any}
+          departments={serializedDepts}
+          requests={serializedRequests}
+          holidays={serializedHolidays}
         />
       </main>
     </div>
