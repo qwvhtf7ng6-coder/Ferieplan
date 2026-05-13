@@ -4,7 +4,7 @@ import { useState } from "react";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Alert } from "@/components/ui/Alert";
-import { formatDate, formatDateShort, totalDaysFromEntries, ENTRY_TYPE_LABELS } from "@/lib/utils";
+import { formatDate, formatDateShort, totalDaysFromEntries, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS } from "@/lib/utils";
 import { cancelOwnRequest } from "@/actions/requests";
 import type { VacationRequestRow } from "@/types";
 
@@ -60,7 +60,7 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
             </p>
 
             <p className="text-xs text-gray-500 mt-0.5">
-              {totalDays} feriedag{totalDays !== 1 ? "e" : ""}
+              {totalDays} dag{totalDays !== 1 ? "e" : ""}
               {request.note && (
                 <span className="ml-2 italic text-gray-400">"{request.note}"</span>
               )}
@@ -118,17 +118,23 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
               Datolinjer ({sortedEntries.length})
             </p>
             <div className="space-y-1">
-              {sortedEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0"
-                >
-                  <span className="text-gray-700">{formatDate(entry.date)}</span>
-                  <span className="text-gray-500 text-xs">
-                    {ENTRY_TYPE_LABELS[entry.type] ?? entry.type}
-                  </span>
-                </div>
-              ))}
+              {sortedEntries.map((entry) => {
+                const absColor = ABSENCE_TYPE_COLORS[(entry as any).absenceType];
+                return (
+                  <div key={entry.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-700">{formatDate(entry.date)}</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ backgroundColor: absColor?.bg ?? "#f3f4f6", color: absColor?.text ?? "#374151" }}
+                      >
+                        {ABSENCE_TYPE_LABELS[(entry as any).absenceType] ?? "Ferie"}
+                      </span>
+                      <span className="text-xs text-gray-400">{ENTRY_TYPE_LABELS[entry.type] ?? entry.type}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

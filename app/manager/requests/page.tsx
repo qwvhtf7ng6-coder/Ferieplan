@@ -45,12 +45,12 @@ export default async function ManagerRequestsPage({
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ferieansøgninger</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Ansøgninger</h1>
             <p className="text-sm text-gray-500 mt-1">
               {requests.length} ansøgning{requests.length !== 1 ? "er" : ""}
               {pendingCount > 0 && (
                 <span className="ml-2 text-yellow-700 font-medium">
-                  · {pendingCount} afventer godkendelse
+                  · {pendingCount} afventer
                 </span>
               )}
             </p>

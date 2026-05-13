@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Nav from "@/components/Nav";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
-import { formatDate, ENTRY_TYPE_LABELS, totalDaysFromEntries } from "@/lib/utils";
+import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import { canSeeCalendar } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
@@ -37,7 +37,6 @@ export default async function RequestDetailPage({
 
   if (!request) notFound();
 
-  // Employees can only see their own
   if (user.role === "EMPLOYEE" && request.userId !== user.id) {
     redirect("/dashboard");
   }
@@ -72,7 +71,7 @@ export default async function RequestDetailPage({
                 <p className="text-gray-700">{formatDate(request.createdAt)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400 mb-0.5">Feriedage i alt</p>
+                <p className="text-xs text-gray-400 mb-0.5">Dage i alt</p>
                 <p className="font-semibold text-gray-800">
                   {totalDays} dag{totalDays !== 1 ? "e" : ""}
                 </p>
@@ -93,20 +92,31 @@ export default async function RequestDetailPage({
               Datolinjer ({request.entries.length})
             </p>
             <div className="space-y-1">
-              {request.entries.map((entry: { id: string; date: Date; type: string; days: number }) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 text-sm"
-                >
-                  <span className="text-gray-800">{formatDate(entry.date)}</span>
-                  <div className="flex items-center gap-3 text-gray-500 text-xs">
-                    <span>{ENTRY_TYPE_LABELS[entry.type] ?? entry.type}</span>
-                    <span className="font-medium">
-                      {entry.days} dag{entry.days !== 1 ? "e" : ""}
-                    </span>
+              {request.entries.map((entry: { id: string; date: Date; type: string; absenceType: string; days: number }) => {
+                const absColor = ABSENCE_TYPE_COLORS[entry.absenceType];
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 text-sm"
+                  >
+                    <span className="text-gray-800">{formatDate(entry.date)}</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ backgroundColor: absColor?.bg ?? "#f3f4f6", color: absColor?.text ?? "#374151" }}
+                      >
+                        {ABSENCE_TYPE_LABELS[entry.absenceType] ?? entry.absenceType}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {ENTRY_TYPE_LABELS[entry.type] ?? entry.type}
+                      </span>
+                      <span className="text-xs text-gray-500 font-medium">
+                        {entry.days} dag{entry.days !== 1 ? "e" : ""}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

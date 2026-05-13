@@ -35,7 +35,7 @@ export default async function NewRequestPage() {
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Ny ferieansøgning</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Ny ansøgning</h1>
           <p className="text-sm text-gray-500 mt-1">
             Ansøgningen sendes til godkendelse hos din leder.
           </p>

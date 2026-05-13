@@ -27,7 +27,7 @@ export function RejectDialog({ open, onClose, onConfirm, employeeName }: RejectD
     <Modal open={open} onClose={onClose} title="Afvis ansøgning">
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-gray-600">
-          Du er ved at afvise ferieansøgningen fra{" "}
+          Du er ved at afvise ansøgningen fra{" "}
           <span className="font-semibold">{employeeName}</span>.
         </p>
         <div>

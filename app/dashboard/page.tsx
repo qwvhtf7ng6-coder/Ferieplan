@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       <main className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
         <div className="flex items-start justify-between mb-6 gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mine feriedage</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mine ansøgninger</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {user.name} · {requests.length} ansøgning{requests.length !== 1 ? "er" : ""}
             </p>
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         <RequestList
           requests={requests}
           showCancelButton
-          emptyMessage="Du har ingen ferieansøgninger endnu."
+          emptyMessage="Du har ingen ansøgninger endnu."
         />
       </main>
     </div>

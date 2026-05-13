@@ -17,7 +17,7 @@ import {
   editRequestNote,
   getRequestWithAudit,
 } from "@/actions/manager";
-import { formatDate, ENTRY_TYPE_LABELS, totalDaysFromEntries } from "@/lib/utils";
+import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import type { VacationRequestRow } from "@/types";
 
 interface RequestDetailModalProps {
@@ -137,7 +137,7 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
             <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-4">
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Dage i alt</p>
-                <p className="font-semibold text-gray-800">{totalDays} feriedag{totalDays !== 1 ? "e" : ""}</p>
+                <p className="font-semibold text-gray-800">{totalDays} dag{totalDays !== 1 ? "e" : ""}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Oprettet</p>
@@ -154,20 +154,31 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
             {/* Entries */}
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                Datoer ({req.entries.length})
+                Datolinjer ({req.entries.length})
               </p>
               <div className="max-h-48 overflow-y-auto space-y-1 border border-gray-100 rounded-xl p-3">
-                {req.entries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"
-                  >
-                    <span className="text-gray-800">{formatDate(entry.date)}</span>
-                    <span className="text-xs text-gray-400">
-                      {ENTRY_TYPE_LABELS[entry.type] ?? entry.type}
-                    </span>
-                  </div>
-                ))}
+                {req.entries.map((entry) => {
+                  const absColor = ABSENCE_TYPE_COLORS[(entry as any).absenceType];
+                  return (
+                    <div
+                      key={entry.id}
+                      className="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"
+                    >
+                      <span className="text-gray-800">{formatDate(entry.date)}</span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ backgroundColor: absColor?.bg ?? "#f3f4f6", color: absColor?.text ?? "#374151" }}
+                        >
+                          {ABSENCE_TYPE_LABELS[(entry as any).absenceType] ?? (entry as any).absenceType ?? "Ferie"}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {ENTRY_TYPE_LABELS[entry.type] ?? entry.type}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
