@@ -462,6 +462,16 @@ export default function CalendarGrid({
                 </button>
               ))}
             </div>
+            {/* Print button */}
+            <a
+              href={`/manager/calendar/print?year=${year}&month=${month}&scope=${personalFilter}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              aria-label="Print kalender"
+            >
+              🖨️ Print
+            </a>
           </div>
         </div>
 
