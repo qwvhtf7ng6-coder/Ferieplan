@@ -4,7 +4,7 @@ import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "WorkPlan",
-  description: "WorkPlanlægning",
+  description: "Ferieplanlægning",
 };
 
 export default function RootLayout({
@@ -15,7 +15,12 @@ export default function RootLayout({
   return (
     <html lang="da">
       <body className="min-h-screen bg-gray-50">
-        <Providers>{children}</Providers>
+        <Providers>
+          {/* Sidebar offset on desktop, top+bottom bar offset on mobile */}
+          <div className="md:pl-56 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
