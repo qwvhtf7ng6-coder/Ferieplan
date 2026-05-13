@@ -118,26 +118,13 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
       {/* ── Mobile top bar ── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between">
         <span className="font-bold text-blue-700 text-base">📅 WorkPlan</span>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/profile"
-            className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
-            aria-label={`Profil: ${name}`}
-          >
-            {name?.charAt(0).toUpperCase()}
-          </Link>
-          {/* Overflow menu button — shows when > 5 links */}
-          {links.length > 5 && (
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-600 hover:bg-gray-100"
-              aria-label="Åbn menu"
-              aria-expanded={menuOpen}
-            >
-              <span className="text-xl leading-none">☰</span>
-            </button>
-          )}
-        </div>
+        <Link
+          href="/profile"
+          className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
+          aria-label={`Profil: ${name}`}
+        >
+          {name?.charAt(0).toUpperCase()}
+        </Link>
       </header>
 
       {/* ── Mobile full-screen menu overlay ── */}
