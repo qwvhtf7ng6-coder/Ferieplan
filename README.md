@@ -40,17 +40,6 @@ npm run db:seed
 npm run dev
 ```
 
-Åbn [http://localhost:3000](http://localhost:3000)
-
-## Test-brugere
-
-| Email | Adgangskode | Rolle |
-|-------|-------------|-------|
-| admin@firma.dk | admin123 | Admin |
-| leder@firma.dk | user123 | Manager |
-| anna@firma.dk | user123 | Medarbejder |
-| bo@firma.dk | user123 | Medarbejder |
-
 ## Roller
 
 - **EMPLOYEE** — opretter og ser egne ansøgninger
