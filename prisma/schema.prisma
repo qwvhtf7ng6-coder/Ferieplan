@@ -45,6 +45,7 @@ enum NotificationType {
   REQUEST_CANCELLED
   REQUEST_EDITED
   NEW_REQUEST_SUBMITTED
+  PENDING_REMINDER
 }
 
 model Department {
@@ -141,9 +142,10 @@ model Holiday {
 }
 
 model AppSettings {
-  id                 String            @id @default(cuid())
-  calendarVisibility VisibilitySetting @default(ALL_EMPLOYEES)
-  updatedAt          DateTime          @updatedAt
+  id                   String            @id @default(cuid())
+  calendarVisibility   VisibilitySetting @default(ALL_EMPLOYEES)
+  reminderThresholdDays Int              @default(3)
+  updatedAt            DateTime          @updatedAt
 }
 
 model AuditLog {

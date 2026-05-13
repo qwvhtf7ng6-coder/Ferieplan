@@ -5,7 +5,8 @@ type NotificationType =
   | "REQUEST_REJECTED"
   | "REQUEST_CANCELLED"
   | "REQUEST_EDITED"
-  | "NEW_REQUEST_SUBMITTED";
+  | "NEW_REQUEST_SUBMITTED"
+  | "PENDING_REMINDER";
 
 interface CreateNotificationInput {
   userId: string;
@@ -27,16 +28,16 @@ export async function notifyEmployeeOfDecision(
   actorName: string
 ) {
   const titles: Record<typeof type, string> = {
-    REQUEST_APPROVED: "Ferieansøgning godkendt",
-    REQUEST_REJECTED: "Ferieansøgning afvist",
-    REQUEST_CANCELLED: "Ferieansøgning annulleret",
-    REQUEST_EDITED: "Ferieansøgning ændret",
+    REQUEST_APPROVED:  "Ansøgning godkendt",
+    REQUEST_REJECTED:  "Ansøgning afvist",
+    REQUEST_CANCELLED: "Ansøgning annulleret",
+    REQUEST_EDITED:    "Ansøgning ændret",
   };
   const messages: Record<typeof type, string> = {
-    REQUEST_APPROVED: `Din ansøgning er blevet godkendt af ${actorName}.`,
-    REQUEST_REJECTED: `Din ansøgning er blevet afvist af ${actorName}.`,
+    REQUEST_APPROVED:  `Din ansøgning er blevet godkendt af ${actorName}.`,
+    REQUEST_REJECTED:  `Din ansøgning er blevet afvist af ${actorName}.`,
     REQUEST_CANCELLED: `Din ansøgning er blevet annulleret af ${actorName}.`,
-    REQUEST_EDITED: `Din ansøgnings note er blevet redigeret af ${actorName}.`,
+    REQUEST_EDITED:    `Din ansøgnings note er blevet redigeret af ${actorName}.`,
   };
 
   await createNotification({
@@ -67,8 +68,8 @@ export async function notifyManagersOfNewRequest(
       createNotification({
         userId: m.id,
         type: "NEW_REQUEST_SUBMITTED",
-        title: "Ny ferieansøgning",
-        message: `${employeeName} har indsendt en ny ferieansøgning.`,
+        title: "Ny ansøgning",
+        message: `${employeeName} har indsendt en ny ansøgning.`,
         link: `/manager/requests`,
       })
     )
@@ -95,8 +96,8 @@ export async function notifyAdminsOfNewRequest(
       createNotification({
         userId: a.id,
         type: "NEW_REQUEST_SUBMITTED",
-        title: "Ny ferieansøgning",
-        message: `${employeeName} har indsendt en ny ferieansøgning.`,
+        title: "Ny ansøgning",
+        message: `${employeeName} har indsendt en ny ansøgning.`,
         link: `/manager/requests`,
       })
     )

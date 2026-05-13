@@ -16,12 +16,19 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
   if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { calendarVisibility } = await req.json();
+  const { calendarVisibility, reminderThresholdDays } = await req.json();
 
   const settings = await prisma.appSettings.upsert({
     where: { id: "settings" },
-    update: { calendarVisibility },
-    create: { id: "settings", calendarVisibility },
+    update: {
+      calendarVisibility,
+      ...(reminderThresholdDays !== undefined && { reminderThresholdDays: Number(reminderThresholdDays) }),
+    },
+    create: {
+      id: "settings",
+      calendarVisibility,
+      reminderThresholdDays: reminderThresholdDays !== undefined ? Number(reminderThresholdDays) : 3,
+    },
   });
 
   return NextResponse.json(settings);

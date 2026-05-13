@@ -5,6 +5,12 @@ import Nav from "@/components/Nav";
 import SettingsClient from "./SettingsClient";
 import { isAdmin } from "@/lib/permissions";
 
+interface Settings {
+  id: string;
+  calendarVisibility: "ALL_EMPLOYEES" | "MANAGEMENT_ONLY";
+  reminderThresholdDays: number;
+}
+
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -17,7 +23,7 @@ export default async function SettingsPage() {
     <div>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-xl mx-auto p-6">
-        <SettingsClient settings={settings as any} />
+        <SettingsClient settings={settings as Settings | null} />
       </main>
     </div>
   );
