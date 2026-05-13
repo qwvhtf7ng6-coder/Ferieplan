@@ -26,6 +26,14 @@ enum EntryType {
   HALF_DAY_PM
 }
 
+enum AbsenceType {
+  VACATION
+  VACATION_FREE
+  MATERNITY
+  CHILD_SICK_DAY
+  SICK
+}
+
 enum VisibilitySetting {
   ALL_EMPLOYEES
   MANAGEMENT_ONLY
@@ -115,12 +123,13 @@ model VacationRequest {
 }
 
 model VacationRequestEntry {
-  id        String    @id @default(cuid())
-  requestId String
-  date      DateTime
-  type      EntryType @default(FULL_DAY)
-  days      Float     @default(1)
-  request   VacationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id           String      @id @default(cuid())
+  requestId    String
+  date         DateTime
+  type         EntryType   @default(FULL_DAY)
+  absenceType  AbsenceType @default(VACATION)
+  days         Float       @default(1)
+  request      VacationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
 model Holiday {

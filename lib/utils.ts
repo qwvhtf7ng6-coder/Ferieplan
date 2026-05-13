@@ -76,6 +76,22 @@ export const ENTRY_TYPE_LABELS: Record<string, string> = {
   HALF_DAY_PM: "Halvdag (eftermiddag)",
 };
 
+export const ABSENCE_TYPE_LABELS: Record<string, string> = {
+  VACATION:      "Ferie",
+  VACATION_FREE: "Feriefri",
+  MATERNITY:     "Barsel",
+  CHILD_SICK_DAY:"Barns første sygedag",
+  SICK:          "Sygdom",
+};
+
+export const ABSENCE_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  VACATION:      { bg: "#dcfce7", text: "#166534" }, // green
+  VACATION_FREE: { bg: "#dbeafe", text: "#1e40af" }, // blue
+  MATERNITY:     { bg: "#fce7f3", text: "#9d174d" }, // pink
+  CHILD_SICK_DAY:{ bg: "#fef9c3", text: "#854d0e" }, // yellow
+  SICK:          { bg: "#fee2e2", text: "#991b1b" }, // red
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   EMPLOYEE: "Medarbejder",
   MANAGER: "Leder",

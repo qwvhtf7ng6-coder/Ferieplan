@@ -80,6 +80,7 @@ export default async function CalendarPage({
     entries: r.entries.map((e: ReqRow["entries"][0]) => ({
       date: e.date.toISOString(),
       type: e.type as string,
+      absenceType: (e as any).absenceType as string ?? "VACATION",
       days: e.days,
     })),
   }));

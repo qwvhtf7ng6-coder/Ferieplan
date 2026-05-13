@@ -5,6 +5,9 @@ export interface ValidationError {
   message: string;
 }
 
+const VALID_TYPES = ["FULL_DAY", "HALF_DAY_AM", "HALF_DAY_PM"];
+const VALID_ABSENCE_TYPES = ["VACATION", "VACATION_FREE", "MATERNITY", "CHILD_SICK_DAY", "SICK"];
+
 export function validateEntries(entries: EntryInput[]): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -33,14 +36,18 @@ export function validateEntries(entries: EntryInput[]): ValidationError[] {
       errors.push({ field: `entries.${i}.date`, message: `Årstal udenfor gyldig rækkevidde på linje ${i + 1}` });
     }
 
-    const key = `${e.date}__${e.type}`;
+    const key = `${e.date}__${e.type}__${e.absenceType}`;
     if (seen.has(key)) {
       errors.push({ field: `entries.${i}.date`, message: `Dubleret dato+type: ${e.date}` });
     }
     seen.add(key);
 
-    if (!["FULL_DAY", "HALF_DAY_AM", "HALF_DAY_PM"].includes(e.type)) {
+    if (!VALID_TYPES.includes(e.type)) {
       errors.push({ field: `entries.${i}.type`, message: `Ugyldig type på linje ${i + 1}` });
+    }
+
+    if (!VALID_ABSENCE_TYPES.includes(e.absenceType)) {
+      errors.push({ field: `entries.${i}.absenceType`, message: `Ugyldig fraværstype på linje ${i + 1}` });
     }
   });
 

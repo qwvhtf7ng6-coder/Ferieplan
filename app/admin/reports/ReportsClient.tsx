@@ -346,13 +346,19 @@ function CsvExport({ requests, departments }: Props) {
     downloadCSV([header, ...data], `ansøgninger${statusFilter ? `-${statusFilter.toLowerCase()}` : ""}${yearFilter ? `-${yearFilter}` : ""}.csv`);
   }
 
+  const ABSENCE_LABELS: Record<string, string> = {
+    VACATION: "Ferie", VACATION_FREE: "Feriefri", MATERNITY: "Barsel",
+    CHILD_SICK_DAY: "Barns første sygedag", SICK: "Sygdom",
+  };
+
   function exportDetailed() {
-    const header = ["Ansøgning ID", "Medarbejder", "Email", "Afdeling", "Status", "Dato", "Type", "Dage", "Note"];
+    const header = ["Ansøgning ID", "Medarbejder", "Email", "Afdeling", "Status", "Dato", "Fraværstype", "Dagtype", "Dage", "Note"];
     const data = filtered.flatMap((r) =>
       r.entries.map((e) => [
         r.id, r.user.name, r.user.email, r.department.name,
         STATUS_LABELS[r.status] ?? r.status,
         formatDK(e.date),
+        ABSENCE_LABELS[(e as any).absenceType] ?? (e as any).absenceType ?? "Ferie",
         e.type === "FULL_DAY" ? "Hel dag" : e.type === "HALF_DAY_AM" ? "Halvdag FM" : "Halvdag EM",
         String(e.days),
         r.note ?? "",

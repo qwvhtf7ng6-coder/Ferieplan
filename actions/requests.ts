@@ -78,6 +78,7 @@ export async function createVacationRequest(
   const entryData = input.entries.map((e) => ({
     date: new Date(e.date),
     type: e.type,
+    absenceType: e.absenceType,
     days: entryTypeToDays(e.type),
   }));
 

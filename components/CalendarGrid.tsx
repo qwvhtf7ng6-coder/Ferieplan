@@ -7,7 +7,7 @@ import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval,
 } from "date-fns";
 import { da } from "date-fns/locale";
-import { getMonthDays, formatMonthYear, cn, ENTRY_TYPE_LABELS, formatDate } from "@/lib/utils";
+import { getMonthDays, formatMonthYear, cn, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, formatDate } from "@/lib/utils";
 import { buildDeptColorMap, type DeptColor } from "@/lib/dept-colors";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
@@ -20,7 +20,7 @@ interface CalendarDepartment {
   id: string; name: string; maxConcurrent: number; users: CalendarUser[];
 }
 
-interface CalendarEntry { date: string; type: string; days: number; }
+interface CalendarEntry { date: string; type: string; absenceType: string; days: number; }
 
 interface CalendarRequest {
   id: string;
@@ -73,6 +73,8 @@ function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClos
               {dayEntry && (
                 <div className="text-sm text-gray-700">
                   <span className="font-medium">Denne dag: </span>
+                  {ABSENCE_TYPE_LABELS[dayEntry.absenceType] ?? dayEntry.absenceType}
+                  {" · "}
                   {ENTRY_TYPE_LABELS[dayEntry.type] ?? dayEntry.type}
                   {dayEntry.days === 0.5 && <span className="ml-1 text-gray-500">(½ dag)</span>}
                 </div>

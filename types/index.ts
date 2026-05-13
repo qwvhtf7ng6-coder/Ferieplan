@@ -1,6 +1,7 @@
 export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN";
 export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type EntryType = "FULL_DAY" | "HALF_DAY_AM" | "HALF_DAY_PM";
+export type AbsenceType = "VACATION" | "VACATION_FREE" | "MATERNITY" | "CHILD_SICK_DAY" | "SICK";
 export type VisibilitySetting = "ALL_EMPLOYEES" | "MANAGEMENT_ONLY";
 
 export interface SessionUser {
@@ -14,6 +15,7 @@ export interface SessionUser {
 export interface EntryInput {
   date: string; // yyyy-MM-dd
   type: EntryType;
+  absenceType: AbsenceType;
 }
 
 export interface CreateRequestInput {
@@ -30,6 +32,7 @@ export interface VacationEntryRow {
   id: string;
   date: Date;
   type: EntryType;
+  absenceType: AbsenceType;
   days: number;
 }
 
