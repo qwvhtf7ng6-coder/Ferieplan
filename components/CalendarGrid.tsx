@@ -32,8 +32,19 @@ interface CalendarRequest {
 
 interface CalendarHoliday { id: string; name: string; date: string; isNational: boolean; }
 
+export interface CalendarShift {
+  id: string;
+  userId: string;
+  date: string;
+  templateName: string;
+  startTime: string;
+  endTime: string;
+  color: string;
+  note: string | null;
+}
+
 interface CellModalData {
-  dateKey: string; user: CalendarUser; requests: CalendarRequest[]; holidayName: string | null;
+  dateKey: string; user: CalendarUser; requests: CalendarRequest[]; holidayName: string | null; shifts: CalendarShift[];
 }
 
 export interface CalendarGridProps {
@@ -41,6 +52,7 @@ export interface CalendarGridProps {
   departments: CalendarDepartment[];
   requests: CalendarRequest[];
   holidays: CalendarHoliday[];
+  shifts?: CalendarShift[];
   currentUserId?: string;
   currentUserDeptId?: string | null;
   isManagerOrAdmin?: boolean;
@@ -53,14 +65,26 @@ type PersonalFilter = "all" | "dept" | "me";
 
 function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClose: () => void }) {
   if (!data) return null;
-  const { dateKey, user, requests, holidayName } = data;
+  const { dateKey, user, requests, holidayName, shifts } = data;
   return (
     <Modal open={!!data} onClose={onClose} title={`${user.name} · ${formatDate(dateKey)}`} className="sm:max-w-md">
       <div className="space-y-4">
         {holidayName && (
           <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-700">🎌 {holidayName}</div>
         )}
-        {requests.length === 0 && <p className="text-sm text-gray-500">Ingen ansøgning denne dag.</p>}
+        {shifts.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vagter</p>
+            {shifts.map((s) => (
+              <div key={s.id} className="flex items-center gap-2 rounded-lg px-3 py-2 text-white text-sm" style={{ backgroundColor: s.color }}>
+                <span className="font-semibold">{s.templateName}</span>
+                <span className="opacity-80 text-xs">{s.startTime}–{s.endTime}</span>
+                {s.note && <span className="opacity-70 text-xs italic ml-auto">{s.note}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+        {requests.length === 0 && shifts.length === 0 && <p className="text-sm text-gray-500">Ingen ansøgning denne dag.</p>}
         {requests.map((req) => {
           const dayEntry = req.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dateKey);
           const totalDays = req.entries.reduce((s, e) => s + e.days, 0);
@@ -132,7 +156,7 @@ function LegendItem({ hex, label }: { hex?: string; label: string }) {
 // ─── Grid table ───────────────────────────────────────────────────────────────
 
 function CalendarTable({
-  days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin,
+  days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin, shiftLookup,
 }: {
   days: Date[];
   departments: CalendarDepartment[];
@@ -141,8 +165,9 @@ function CalendarTable({
   deptCapacity: Map<string, Map<string, number>>;
   deptColorMap: Map<string, DeptColor>;
   todayKey: string;
-  onOpenCell: (dk: string, user: CalendarUser, reqs: CalendarRequest[]) => void;
+  onOpenCell: (dk: string, user: CalendarUser, reqs: CalendarRequest[], shifts: CalendarShift[]) => void;
   isManagerOrAdmin?: boolean;
+  shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
@@ -221,12 +246,14 @@ function CalendarTable({
                   {days.map((d) => {
                     const dk = format(d, "yyyy-MM-dd");
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
+                    const cellShifts = shiftLookup.get(emp.id)?.get(dk) ?? [];
                     const weekend = isWeekend(d);
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
                     const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
-                    const clickable = reqs.length > 0 || holiday;
+                    const hasShift = cellShifts.length > 0;
+                    const clickable = reqs.length > 0 || holiday || hasShift;
 
                     let bgStyle: React.CSSProperties = {};
                     let bgClass = "";
@@ -239,8 +266,8 @@ function CalendarTable({
                     return (
                       <td
                         key={dk}
-                        onClick={() => clickable && onOpenCell(dk, emp, reqs)}
-                        className={cn("border-b border-r border-gray-100 text-center transition-colors h-7 w-8", bgClass, clickable ? "cursor-pointer" : "cursor-default")}
+                        onClick={() => clickable && onOpenCell(dk, emp, reqs, cellShifts)}
+                        className={cn("border-b border-r border-gray-100 text-center transition-colors h-7 w-8 relative", bgClass, clickable ? "cursor-pointer" : "cursor-default")}
                         style={bgStyle}
                       >
                         {hasApproved && (
@@ -250,6 +277,16 @@ function CalendarTable({
                         )}
                         {!hasApproved && hasPending && (
                           <span className="text-yellow-700 font-bold text-[11px] leading-none">?</span>
+                        )}
+                        {hasShift && !hasApproved && !hasPending && (
+                          <span className="flex items-center justify-center gap-0.5">
+                            {cellShifts.slice(0, 2).map((s) => (
+                              <span key={s.id} className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} title={s.templateName} />
+                            ))}
+                          </span>
+                        )}
+                        {hasShift && (hasApproved || hasPending) && (
+                          <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cellShifts[0].color }} />
                         )}
                       </td>
                     );
@@ -346,7 +383,7 @@ function MobileCalendarList({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CalendarGrid({
-  year, month, departments, requests, holidays,
+  year, month, departments, requests, holidays, shifts = [],
   currentUserId, currentUserDeptId, isManagerOrAdmin,
 }: CalendarGridProps) {
   const router = useRouter();
@@ -372,6 +409,18 @@ export default function CalendarGrid({
   const days = viewMode === "month" ? monthDays : weekDays;
 
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
+
+  const shiftLookup = useMemo(() => {
+    const map = new Map<string, Map<string, CalendarShift[]>>();
+    for (const s of shifts) {
+      const dk = new Date(s.date).toISOString().slice(0, 10);
+      if (!map.has(s.userId)) map.set(s.userId, new Map());
+      const dm = map.get(s.userId)!;
+      if (!dm.has(dk)) dm.set(dk, []);
+      dm.get(dk)!.push(s);
+    }
+    return map;
+  }, [shifts]);
 
   const requestLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarRequest[]>>();
@@ -505,8 +554,9 @@ export default function CalendarGrid({
             deptCapacity={deptCapacity}
             deptColorMap={deptColorMap}
             todayKey={todayKey}
-            onOpenCell={(dk, user, reqs) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null })}
+            onOpenCell={(dk, user, reqs, cellShifts) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts })}
             isManagerOrAdmin={isManagerOrAdmin}
+            shiftLookup={shiftLookup}
           />
         </div>
       </div>

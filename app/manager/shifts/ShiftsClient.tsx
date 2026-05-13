@@ -113,7 +113,6 @@ export default function ShiftsClient({
   const [tplLoading, setTplLoading] = useState(false);
   const [editTplId, setEditTplId] = useState<string | null>(null);
 
-  // Assignment modal
   const [assignModal, setAssignModal] = useState<{
     date: Date; userId: string;
   } | null>(null);
@@ -121,6 +120,7 @@ export default function ShiftsClient({
   const [assignNote, setAssignNote] = useState("");
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState("");
+  const [assignConflict, setAssignConflict] = useState(false);
 
   // Filter employees by dept
   const deptEmployees = employees.filter(
@@ -175,6 +175,7 @@ export default function ShiftsClient({
     if (!assignModal || !assignTemplateId) return;
     setAssignLoading(true);
     setAssignError("");
+    setAssignConflict(false);
     const res = await fetch("/api/shifts/assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -187,6 +188,12 @@ export default function ShiftsClient({
     });
     const data = await res.json();
     if (res.ok) {
+      if (data.hasAbsenceConflict) {
+        setAssignConflict(true);
+        setAssignLoading(false);
+        loadAssignments();
+        return;
+      }
       setAssignModal(null);
       setAssignTemplateId("");
       setAssignNote("");
@@ -378,6 +385,7 @@ export default function ShiftsClient({
                               setAssignTemplateId(deptTemplates[0]?.id ?? "");
                               setAssignNote("");
                               setAssignError("");
+                              setAssignConflict(false);
                             }}
                             className="w-full text-xs text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded py-0.5 transition-colors mt-0.5"
                             title="Tilføj vagt"
@@ -438,6 +446,7 @@ export default function ShiftsClient({
                                   setAssignTemplateId(deptTemplates[0]?.id ?? "");
                                   setAssignNote("");
                                   setAssignError("");
+                                  setAssignConflict(false);
                                 }}
                                 className="text-xs text-blue-500 hover:text-blue-700 px-1"
                               >
@@ -645,6 +654,11 @@ export default function ShiftsClient({
             </div>
 
             {assignError && <p className="text-red-600 text-xs">{assignError}</p>}
+            {assignConflict && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+                ⚠️ <strong>Advarsel:</strong> Medarbejderen har godkendt fravær denne dag. Vagten er gemt, men der er en konflikt.
+              </div>
+            )}
 
             <div className="flex gap-2 pt-1">
               <button
@@ -655,10 +669,10 @@ export default function ShiftsClient({
                 {assignLoading ? "Gemmer..." : "Tilføj vagt"}
               </button>
               <button
-                onClick={() => setAssignModal(null)}
+                onClick={() => { setAssignModal(null); setAssignConflict(false); }}
                 className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700"
               >
-                Annuller
+                {assignConflict ? "Luk" : "Annuller"}
               </button>
             </div>
           </div>

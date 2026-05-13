@@ -31,7 +31,7 @@ export default async function CalendarPage({
 
   const isManagerOrAdmin = isManager(user.role);
 
-  const [departments, requests, holidays] = await Promise.all([
+  const [departments, requests, holidays, shiftAssignments] = await Promise.all([
     prisma.department.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -59,11 +59,19 @@ export default async function CalendarPage({
       where: { date: { gte: start, lte: end } },
       orderBy: { date: "asc" },
     }),
+    prisma.shiftAssignment.findMany({
+      where: { date: { gte: start, lte: end } },
+      include: {
+        template: { select: { name: true, startTime: true, endTime: true, color: true } },
+      },
+      orderBy: { date: "asc" },
+    }),
   ]);
 
   type DeptRow = typeof departments[0];
   type ReqRow  = typeof requests[0];
   type HolRow  = typeof holidays[0];
+  type ShiftRow = typeof shiftAssignments[0];
 
   const serializedDepts = departments.map((d: DeptRow) => ({
     id: d.id,
@@ -92,6 +100,17 @@ export default async function CalendarPage({
     isNational: h.isNational,
   }));
 
+  const serializedShifts = shiftAssignments.map((s: ShiftRow) => ({
+    id: s.id,
+    userId: s.userId,
+    date: s.date.toISOString(),
+    templateName: s.template.name,
+    startTime: s.template.startTime,
+    endTime: s.template.endTime,
+    color: s.template.color,
+    note: s.note,
+  }));
+
   return (
     <div className="flex flex-col h-full">
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
@@ -102,6 +121,7 @@ export default async function CalendarPage({
           departments={serializedDepts}
           requests={serializedRequests}
           holidays={serializedHolidays}
+          shifts={serializedShifts}
           currentUserId={user.id}
           currentUserDeptId={user.departmentId}
           isManagerOrAdmin={isManagerOrAdmin}
