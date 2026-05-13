@@ -50,6 +50,7 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
     { href: "/admin/users",       label: "Brugere",           icon: "👥", roles: ["ADMIN"] },
     { href: "/admin/departments", label: "Afdelinger",        icon: "🏢", roles: ["ADMIN"] },
     { href: "/admin/holidays",    label: "Helligdage",        icon: "🎌", roles: ["ADMIN"] },
+    { href: "/admin/reports",     label: "Rapporter",         icon: "📊", roles: ["ADMIN"] },
     { href: "/admin/settings",    label: "Indstillinger",     icon: "⚙️",  roles: ["ADMIN"] },
     { href: "/profile",           label: "Min profil",        icon: "👤", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
   ].filter((l) => l.roles.includes(role));
