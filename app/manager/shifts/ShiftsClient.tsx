@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 import { da } from "date-fns/locale";
+import { PrintShiftPlan } from "@/components/PrintShiftPlan";
 
 interface Department {
   id: string;
@@ -246,6 +247,8 @@ export default function ShiftsClient({
 
   return (
     <div>
+      {/* Screen-only content */}
+      <div className="no-print">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
@@ -265,6 +268,18 @@ export default function ShiftsClient({
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
+          )}
+          {tab === "plan" && (
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+              title="Udskriv vagtplan for denne uge"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.75 19.5m10.56-5.671c.24.03.48.062.72.096m-.72-.096L17.25 19.5M9 13.5V7.5m6 6V7.5M9 7.5h6M3 8.25h18" />
+              </svg>
+              Udskriv
+            </button>
           )}
         </div>
       </div>
@@ -678,6 +693,17 @@ export default function ShiftsClient({
           </div>
         </div>
       )}
+      </div>{/* end no-print */}
+
+      {/* Print view – only visible when printing */}
+      <PrintShiftPlan
+        weekStart={weekStart}
+        assignments={assignments}
+        employees={employees}
+        departments={departments}
+        selectedDeptId={selectedDeptId}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

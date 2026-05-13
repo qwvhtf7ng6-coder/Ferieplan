@@ -63,3 +63,39 @@ select {
     scrollbar-width: thin;
   }
 }
+
+/* ── Print styles ─────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm 10mm;
+  }
+
+  /* Force colors to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide everything on screen except print view */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Remove layout padding added by the app shell */
+  .md\:pl-56 {
+    padding-left: 0 !important;
+  }
+  .pt-14 {
+    padding-top: 0 !important;
+  }
+  .pb-20 {
+    padding-bottom: 0 !important;
+  }
+
+  /* Show print view */
+  #shift-print-view {
+    display: block !important;
+  }
+}

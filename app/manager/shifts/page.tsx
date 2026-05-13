@@ -36,7 +36,9 @@ export default async function ManagerShiftsPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
+      <div className="no-print">
+        <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
+      </div>
       <main className="max-w-6xl mx-auto px-4 py-6">
         <ShiftsClient
           departments={departments}
