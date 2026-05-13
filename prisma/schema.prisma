@@ -31,6 +31,14 @@ enum VisibilitySetting {
   MANAGEMENT_ONLY
 }
 
+enum NotificationType {
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_CANCELLED
+  REQUEST_EDITED
+  NEW_REQUEST_SUBMITTED
+}
+
 model Department {
   id              String            @id @default(cuid())
   name            String
@@ -55,6 +63,7 @@ model User {
   auditLogs      AuditLog[]
   accounts       Account[]
   sessions       Session[]
+  notifications  Notification[]
 }
 
 model Account {
@@ -137,4 +146,19 @@ model AuditLog {
   createdAt DateTime @default(now())
   user      User            @relation(fields: [userId], references: [id])
   request   VacationRequest? @relation(fields: [requestId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }

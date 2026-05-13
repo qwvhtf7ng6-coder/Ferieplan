@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
 import { canManageDepartment, isManager } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
+import { notifyEmployeeOfDecision } from "@/lib/notifications";
 import type {
   ActionResult,
   CapacityCheckResult,
@@ -126,6 +127,10 @@ export async function approveRequest(
       : undefined,
   });
 
+  // Notify employee
+  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_APPROVED", user.name ?? "Leder")
+    .catch(() => {/* silent */});
+
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
   revalidatePath("/dashboard");
@@ -168,6 +173,9 @@ export async function rejectRequest(
     details: reason?.trim() || undefined,
   });
 
+  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder")
+    .catch(() => {/* silent */});
+
   revalidatePath("/manager/requests");
   revalidatePath("/dashboard");
 
@@ -201,6 +209,9 @@ export async function cancelRequestAsManager(
     details: `Annulleret af ${user.role === "ADMIN" ? "admin" : "leder"}`,
   });
 
+  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_CANCELLED", user.name ?? "Leder")
+    .catch(() => {/* silent */});
+
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
   revalidatePath("/dashboard");
@@ -232,6 +243,9 @@ export async function editRequestNote(
     action: "EDITED",
     details: `Note opdateret`,
   });
+
+  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_EDITED", user.name ?? "Leder")
+    .catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
 

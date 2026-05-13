@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 interface NavProps {
   role: string;
@@ -90,21 +91,24 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
 
         {/* User section */}
         <div className="border-t border-gray-100 p-3">
-          <Link
-            href="/profile"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full",
-              pathname === "/profile"
-                ? "bg-blue-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
-            )}
-            aria-current={pathname === "/profile" ? "page" : undefined}
-          >
-            <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0" aria-hidden="true">
-              {name?.charAt(0).toUpperCase()}
-            </span>
-            <span className="truncate">{name}</span>
-          </Link>
+          <div className="flex items-center gap-1 mb-1">
+            <Link
+              href="/profile"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors flex-1 min-w-0",
+                pathname === "/profile"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              )}
+              aria-current={pathname === "/profile" ? "page" : undefined}
+            >
+              <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0" aria-hidden="true">
+                {name?.charAt(0).toUpperCase()}
+              </span>
+              <span className="truncate">{name}</span>
+            </Link>
+            <NotificationBell />
+          </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full mt-1"
@@ -118,13 +122,16 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
       {/* ── Mobile top bar ── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between">
         <span className="font-bold text-blue-700 text-base">📅 WorkPlan</span>
-        <Link
-          href="/profile"
-          className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
-          aria-label={`Profil: ${name}`}
-        >
-          {name?.charAt(0).toUpperCase()}
-        </Link>
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <Link
+            href="/profile"
+            className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
+            aria-label={`Profil: ${name}`}
+          >
+            {name?.charAt(0).toUpperCase()}
+          </Link>
+        </div>
       </header>
 
       {/* ── Mobile full-screen menu overlay ── */}

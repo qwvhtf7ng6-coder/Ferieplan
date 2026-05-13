@@ -6,6 +6,10 @@ import { createAuditLog } from "@/lib/audit";
 import { canManageDepartment, isManager } from "@/lib/permissions";
 import { entryTypeToDays } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import {
+  notifyManagersOfNewRequest,
+  notifyAdminsOfNewRequest,
+} from "@/lib/notifications";
 import type {
   ActionResult,
   CapacityCheckResult,
@@ -92,6 +96,14 @@ export async function createVacationRequest(
     action: "CREATE",
     details: `${input.entries.length} datolinjer`,
   });
+
+  // Notify managers + admins (best-effort, don't block)
+  const userName = user.name ?? "En medarbejder";
+  const deptId = user.departmentId;
+  Promise.all([
+    notifyManagersOfNewRequest(request.id, deptId, userName),
+    notifyAdminsOfNewRequest(request.id, deptId, userName, []),
+  ]).catch(() => {/* silent */});
 
   revalidatePath("/dashboard");
   revalidatePath("/manager/requests");
