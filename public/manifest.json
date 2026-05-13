@@ -1,0 +1,42 @@
+{
+  "name": "WorkPlan – Ferieplanlægning",
+  "short_name": "WorkPlan",
+  "description": "Intern ferieplanlægning og fraværshåndtering",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "lang": "da",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "shortcuts": [
+    {
+      "name": "Ny ansøgning",
+      "short_name": "Ny",
+      "description": "Opret ny ferieansøgning",
+      "url": "/requests/new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kalender",
+      "short_name": "Kalender",
+      "description": "Se feriekalenderen",
+      "url": "/calendar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
