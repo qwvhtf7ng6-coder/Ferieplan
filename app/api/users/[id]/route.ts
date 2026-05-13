@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 export async function DELETE(
   req: NextRequest,
@@ -17,4 +18,41 @@ export async function DELETE(
 
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const actor = session.user as any;
+  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const { name, email, role, departmentId, newPassword } = await req.json();
+
+  if (!name || !email) {
+    return NextResponse.json({ error: "Navn og email er påkrævet" }, { status: 400 });
+  }
+
+  // Check email uniqueness (exclude self)
+  const existing = await prisma.user.findFirst({
+    where: { email, NOT: { id } },
+  });
+  if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
+
+  const data: any = {
+    name: name.trim(),
+    email: email.trim(),
+    role: role || "EMPLOYEE",
+    departmentId: departmentId || null,
+  };
+
+  if (newPassword && newPassword.length >= 6) {
+    data.password = await bcrypt.hash(newPassword, 10);
+  }
+
+  const updated = await prisma.user.update({ where: { id }, data });
+  return NextResponse.json({ id: updated.id });
 }

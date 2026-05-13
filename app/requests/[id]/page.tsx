@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import { canSeeCalendar } from "@/lib/settings";
+import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
 
 export default async function RequestDetailPage({
@@ -120,26 +121,8 @@ export default async function RequestDetailPage({
             </div>
           </div>
 
-          {/* Audit log */}
-          {request.auditLogs.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-5">
-              <p className="text-sm font-semibold text-gray-700 mb-3">Historik</p>
-              <ol className="relative border-l border-gray-200 space-y-3 pl-4">
-                {request.auditLogs.map((log: { id: string; action: string; details: string | null; createdAt: Date; user: { name: string } }) => (
-                  <li key={log.id}>
-                    <div className="absolute -left-1.5 w-3 h-3 rounded-full bg-gray-300 border-2 border-white" />
-                    <p className="text-xs text-gray-500">
-                      {formatDate(log.createdAt)} · {log.user.name}
-                    </p>
-                    <p className="text-sm text-gray-800 font-medium">{log.action}</p>
-                    {log.details && (
-                      <p className="text-xs text-orange-700 mt-0.5">{log.details}</p>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
+          {/* Timeline */}
+          <RequestTimeline logs={request.auditLogs} />
         </div>
       </main>
     </div>

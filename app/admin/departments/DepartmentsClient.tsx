@@ -16,6 +16,11 @@ export default function DepartmentsClient({ departments: initial }: { department
   const [form, setForm] = useState({ name: "", maxConcurrent: "2" });
   const [loading, setLoading] = useState(false);
 
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", maxConcurrent: "2" });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -30,10 +35,39 @@ export default function DepartmentsClient({ departments: initial }: { department
     router.refresh();
   }
 
-  async function del(id: string) {
-    if (!confirm("Slet afdeling?")) return;
+  async function del(id: string, name: string) {
+    if (!confirm(`Slet afdelingen "${name}"? Dette kan ikke fortrydes.`)) return;
     await fetch(`/api/departments/${id}`, { method: "DELETE" });
     router.refresh();
+  }
+
+  function startEdit(d: Department) {
+    setEditId(d.id);
+    setEditForm({ name: d.name, maxConcurrent: String(d.maxConcurrent) });
+    setEditError("");
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setEditError("");
+  }
+
+  async function saveEdit(id: string) {
+    setEditLoading(true);
+    setEditError("");
+    const res = await fetch(`/api/departments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editForm.name, maxConcurrent: parseInt(editForm.maxConcurrent) }),
+    });
+    if (res.ok) {
+      setEditId(null);
+      router.refresh();
+    } else {
+      const d = await res.json();
+      setEditError(d.error || "Fejl ved opdatering");
+    }
+    setEditLoading(false);
   }
 
   return (
@@ -102,19 +136,64 @@ export default function DepartmentsClient({ departments: initial }: { department
           </thead>
           <tbody>
             {initial.map((d) => (
-              <tr key={d.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{d.name}</td>
-                <td className="px-4 py-3 text-gray-600">{d.maxConcurrent}</td>
-                <td className="px-4 py-3 text-gray-500">{d._count.users}</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => del(d.id)}
-                    className="text-xs text-red-500 hover:text-red-700 py-1 px-2"
-                    aria-label={`Slet ${d.name}`}
-                  >
-                    Slet
-                  </button>
-                </td>
+              <tr key={d.id} className="border-t border-gray-100">
+                {editId === d.id ? (
+                  <td colSpan={4} className="px-4 py-3 bg-blue-50">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        placeholder="Navn"
+                        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-48"
+                      />
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-500 whitespace-nowrap">Max samtidige:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editForm.maxConcurrent}
+                          onChange={(e) => setEditForm({ ...editForm, maxConcurrent: e.target.value })}
+                          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-20"
+                        />
+                      </div>
+                      {editError && <p className="text-red-600 text-xs">{editError}</p>}
+                      <div className="flex gap-2 ml-auto">
+                        <button
+                          onClick={() => saveEdit(d.id)}
+                          disabled={editLoading}
+                          className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {editLoading ? "Gemmer..." : "Gem"}
+                        </button>
+                        <button onClick={cancelEdit} className="text-xs text-gray-500 px-2 py-1.5 hover:text-gray-700">
+                          Annuller
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                ) : (
+                  <>
+                    <td className="px-4 py-3 font-medium">{d.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{d.maxConcurrent}</td>
+                    <td className="px-4 py-3 text-gray-500">{d._count.users}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => startEdit(d)}
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 py-1 px-2 rounded"
+                        >
+                          Rediger
+                        </button>
+                        <button
+                          onClick={() => del(d.id, d.name)}
+                          className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 py-1 px-2 rounded"
+                        >
+                          Slet
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
@@ -125,22 +204,65 @@ export default function DepartmentsClient({ departments: initial }: { department
       <div className="sm:hidden space-y-3">
         {initial.map((d) => (
           <div key={d.id} className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{d.name}</p>
-                <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
-                  <span>Max {d.maxConcurrent} samtidige</span>
-                  <span>{d._count.users} brugere</span>
+            {editId === d.id ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Navn</label>
+                  <input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Max samtidige</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.maxConcurrent}
+                    onChange={(e) => setEditForm({ ...editForm, maxConcurrent: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+                {editError && <p className="text-red-600 text-xs">{editError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => saveEdit(d.id)}
+                    disabled={editLoading}
+                    className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {editLoading ? "Gemmer..." : "Gem"}
+                  </button>
+                  <button onClick={cancelEdit} className="text-xs text-gray-500 px-3 py-2">
+                    Annuller
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => del(d.id)}
-                className="text-xs text-red-500 hover:text-red-700 py-1 px-2 shrink-0"
-                aria-label={`Slet ${d.name}`}
-              >
-                Slet
-              </button>
-            </div>
+            ) : (
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{d.name}</p>
+                  <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                    <span>Max {d.maxConcurrent} samtidige</span>
+                    <span>{d._count.users} brugere</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => startEdit(d)}
+                    className="text-xs text-blue-600 hover:text-blue-800 py-1 px-2"
+                  >
+                    Rediger
+                  </button>
+                  <button
+                    onClick={() => del(d.id, d.name)}
+                    className="text-xs text-red-500 hover:text-red-700 py-1 px-2"
+                  >
+                    Slet
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
