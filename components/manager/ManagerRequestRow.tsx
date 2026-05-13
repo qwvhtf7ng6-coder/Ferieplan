@@ -69,56 +69,63 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
       <div
         className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
         onClick={() => onOpenDetail(request.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && onOpenDetail(request.id)}
+        aria-label={`Ansøgning fra ${request.user.name}`}
       >
-        <div className="flex items-start gap-4">
-          {/* Left: info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-semibold text-gray-900 text-sm">{request.user.name}</span>
-              <span className="text-xs text-gray-400">{request.department.name}</span>
-              <StatusBadge status={request.status} />
-            </div>
-
-            <p className="text-sm text-gray-700">
-              {first && last
-                ? first === last
-                  ? formatDate(first)
-                  : `${formatDate(first)} – ${formatDate(last)}`
-                : "—"}
-            </p>
-
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-xs text-gray-500">
-                {totalDays} dag{totalDays !== 1 ? "e" : ""}
-              </span>
-              {request.note && (
-                <span className="text-xs text-gray-400 italic truncate max-w-xs">
-                  "{request.note}"
-                </span>
-              )}
-            </div>
+        {/* Top row: name + badge */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <span className="font-semibold text-gray-900 text-sm">{request.user.name}</span>
+            <span className="text-xs text-gray-400 hidden sm:inline">{request.department.name}</span>
+            <StatusBadge status={request.status} />
           </div>
+          {isPending && <Spinner className="text-gray-400 shrink-0" />}
+        </div>
 
-          {/* Right: action buttons */}
+        {/* Department on mobile */}
+        <p className="text-xs text-gray-400 sm:hidden mb-1">{request.department.name}</p>
+
+        {/* Date range */}
+        <p className="text-sm text-gray-700">
+          {first && last
+            ? first === last
+              ? formatDate(first)
+              : `${formatDate(first)} – ${formatDate(last)}`
+            : "—"}
+        </p>
+
+        <div className="flex items-center gap-3 mt-0.5 mb-3">
+          <span className="text-xs text-gray-500">
+            {totalDays} dag{totalDays !== 1 ? "e" : ""}
+          </span>
+          {request.note && (
+            <span className="text-xs text-gray-400 italic truncate max-w-[200px]">
+              "{request.note}"
+            </span>
+          )}
+        </div>
+
+        {/* Action buttons — always visible, full width on mobile */}
+        {(request.status === "PENDING" || ["PENDING", "APPROVED"].includes(request.status)) && (
           <div
-            className="flex gap-2 shrink-0 items-center"
+            className="flex flex-wrap gap-2"
             onClick={(e) => e.stopPropagation()}
           >
-            {isPending && <Spinner className="text-gray-400" />}
-
             {request.status === "PENDING" && (
               <>
                 <button
                   onClick={handleApprove}
                   disabled={isPending}
-                  className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 sm:flex-none bg-green-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors text-center"
                 >
                   Godkend
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowReject(true); }}
                   disabled={isPending}
-                  className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+                  className="flex-1 sm:flex-none bg-red-500 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors text-center"
                 >
                   Afvis
                 </button>
@@ -129,13 +136,13 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
               <button
                 onClick={handleCancel}
                 disabled={isPending}
-                className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                className="flex-1 sm:flex-none bg-gray-100 text-gray-600 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-gray-200 disabled:opacity-50 transition-colors text-center"
               >
                 Annuller
               </button>
             )}
           </div>
-        </div>
+        )}
 
         {error && (
           <Alert variant="error" className="mt-2">

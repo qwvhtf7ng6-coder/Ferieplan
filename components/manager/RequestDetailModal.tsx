@@ -112,7 +112,7 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
         open={!!requestId}
         onClose={onClose}
         title="Ansøgningsdetaljer"
-        className="max-w-xl"
+        className="sm:max-w-xl"
       >
         {loading && (
           <div className="flex justify-center py-10">
@@ -125,9 +125,9 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
         {req && !loading && (
           <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-gray-900 text-lg">{req.user.name}</p>
+                <p className="font-semibold text-gray-900 text-lg leading-tight">{req.user.name}</p>
                 <p className="text-sm text-gray-500">{req.department.name}</p>
               </div>
               <StatusBadge status={req.status} />
@@ -160,7 +160,7 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
                 {req.entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex justify-between items-center text-sm py-1 border-b border-gray-50 last:border-0"
+                    className="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"
                   >
                     <span className="text-gray-800">{formatDate(entry.date)}</span>
                     <span className="text-xs text-gray-400">
@@ -171,14 +171,14 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex flex-wrap gap-2 pt-1">
+            {/* Action buttons — stacked on mobile */}
+            <div className="space-y-2 pt-1">
               {req.status === "PENDING" && (
-                <>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleApprove}
                     disabled={isPending}
-                    className="flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    className="flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
                   >
                     {isPending && <Spinner />}
                     Godkend
@@ -186,27 +186,29 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
                   <button
                     onClick={() => setShowRejectDialog(true)}
                     disabled={isPending}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    className="bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors text-center"
                   >
                     Afvis
                   </button>
-                </>
+                </div>
               )}
-              {["PENDING", "APPROVED"].includes(req.status) && (
+              <div className="flex gap-2">
+                {["PENDING", "APPROVED"].includes(req.status) && (
+                  <button
+                    onClick={handleCancel}
+                    disabled={isPending}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors text-center"
+                  >
+                    Annuller
+                  </button>
+                )}
                 <button
-                  onClick={handleCancel}
-                  disabled={isPending}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                  onClick={() => setShowEditDialog(true)}
+                  className="flex-1 text-sm text-blue-600 hover:text-blue-800 py-2.5 text-center"
                 >
-                  Annuller
+                  Rediger note
                 </button>
-              )}
-              <button
-                onClick={() => setShowEditDialog(true)}
-                className="ml-auto text-sm text-blue-600 hover:text-blue-800"
-              >
-                Rediger note
-              </button>
+              </div>
             </div>
 
             {error && <Alert variant="error">{error}</Alert>}

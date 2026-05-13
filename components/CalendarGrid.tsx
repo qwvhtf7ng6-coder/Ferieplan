@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format, isWeekend } from "date-fns";
 import { da } from "date-fns/locale";
@@ -109,7 +109,7 @@ function CellDetailModal({
       open={!!data}
       onClose={onClose}
       title={`${user.name} · ${displayDate}`}
-      className="max-w-md"
+      className="sm:max-w-md"
     >
       <div className="space-y-4">
         {holidayName && (
@@ -187,13 +187,7 @@ function CellDetailModal({
 
 // ─── Capacity indicator ───────────────────────────────────────────────────────
 
-function CapacityDot({
-  count,
-  max,
-}: {
-  count: number;
-  max: number;
-}) {
+function CapacityDot({ count, max }: { count: number; max: number }) {
   if (count === 0) return null;
   const exceeded = count > max;
   return (
@@ -205,6 +199,138 @@ function CapacityDot({
       )}
     >
       {count}/{max}
+    </div>
+  );
+}
+
+// ─── Mobile list view ─────────────────────────────────────────────────────────
+
+function MobileCalendarList({
+  year,
+  month,
+  departments,
+  requests,
+  holidays,
+  onNavigate,
+}: CalendarGridProps & { onNavigate: (delta: number) => void }) {
+  const holidayMap = useMemo(
+    () => new Map<string, string>(
+      holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])
+    ),
+    [holidays]
+  );
+
+  // Group requests by user
+  const requestsByUser = useMemo(() => {
+    const map = new Map<string, CalendarRequest[]>();
+    for (const req of requests) {
+      const uid = req.user.id;
+      if (!map.has(uid)) map.set(uid, []);
+      map.get(uid)!.push(req);
+    }
+    return map;
+  }, [requests]);
+
+  const allUsers = departments.flatMap((d) =>
+    d.users.map((u) => ({ ...u, deptName: d.name }))
+  );
+
+  // Only show users with requests this month
+  const activeUsers = allUsers.filter((u) => requestsByUser.has(u.id));
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate(-1)}
+            className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100"
+            aria-label="Forrige måned"
+          >‹</button>
+          <h2 className="text-lg font-bold text-gray-900 capitalize">
+            {formatMonthYear(year, month)}
+          </h2>
+          <button
+            onClick={() => onNavigate(1)}
+            className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100"
+            aria-label="Næste måned"
+          >›</button>
+        </div>
+      </div>
+
+      {/* Holidays */}
+      {holidays.length > 0 && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-3 space-y-1">
+          <p className="text-xs font-semibold text-red-700 uppercase">Helligdage denne måned</p>
+          {holidays.map((h) => (
+            <div key={h.id} className="flex justify-between text-sm text-red-700">
+              <span>🎌 {h.name}</span>
+              <span className="text-xs text-red-500">{formatDate(h.date)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* User request cards */}
+      {activeUsers.length === 0 ? (
+        <div className="py-10 text-center">
+          <p className="text-gray-400 text-sm">Ingen godkendte eller afventende ansøgninger denne måned.</p>
+        </div>
+      ) : (
+        activeUsers.map((u) => {
+          const reqs = requestsByUser.get(u.id) ?? [];
+          return (
+            <div key={u.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="bg-slate-700 text-white px-4 py-2.5 flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-sm">{u.name}</span>
+                  <span className="text-slate-300 text-xs ml-2">{u.deptName}</span>
+                </div>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {reqs.map((req) => {
+                  const sorted = [...req.entries].sort(
+                    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                  );
+                  const totalDays = req.entries.reduce((s, e) => s + e.days, 0);
+                  const first = sorted[0];
+                  const last = sorted[sorted.length - 1];
+                  return (
+                    <div key={req.id} className="px-4 py-3 flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <StatusBadge status={req.status} />
+                          <span className="text-xs text-gray-500">
+                            {totalDays} dag{totalDays !== 1 ? "e" : ""}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-800">
+                          {first && last
+                            ? first.date.slice(0, 10) === last.date.slice(0, 10)
+                              ? formatDate(first.date)
+                              : `${formatDate(first.date)} – ${formatDate(last.date)}`
+                            : "—"}
+                        </p>
+                        {req.note && (
+                          <p className="text-xs text-gray-400 italic mt-0.5">"{req.note}"</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-gray-500 pt-1">
+        <LegendItem color="bg-green-200" label="Godkendt" />
+        <LegendItem color="bg-yellow-200" label="Afventer" />
+        <LegendItem color="bg-red-100" label="Helligdag" />
+      </div>
     </div>
   );
 }
@@ -222,40 +348,49 @@ export default function CalendarGrid({
   const [cellModal, setCellModal] = useState<CellModalData | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const days = getMonthDays(year, month);
+  const days = useMemo(() => getMonthDays(year, month), [year, month]);
 
   // Holiday lookup: dateKey -> name
-  const holidayMap = new Map<string, string>(
-    holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])
+  const holidayMap = useMemo(
+    () => new Map<string, string>(
+      holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])
+    ),
+    [holidays]
   );
 
   // Request lookup: userId -> dateKey -> requests[]
-  const requestLookup = new Map<string, Map<string, CalendarRequest[]>>();
-  for (const req of requests) {
-    for (const entry of req.entries) {
-      const dk = new Date(entry.date).toISOString().slice(0, 10);
-      if (!requestLookup.has(req.user.id)) requestLookup.set(req.user.id, new Map());
-      const dm = requestLookup.get(req.user.id)!;
-      if (!dm.has(dk)) dm.set(dk, []);
-      dm.get(dk)!.push(req);
-    }
-  }
-
-  // Approved count per dept per date: deptId -> dateKey -> count
-  const deptCapacity = new Map<string, Map<string, number>>();
-  for (const dept of departments) {
-    const dm = new Map<string, number>();
+  const requestLookup = useMemo(() => {
+    const map = new Map<string, Map<string, CalendarRequest[]>>();
     for (const req of requests) {
-      if (req.status !== "APPROVED") continue;
-      const userInDept = dept.users.some((u) => u.id === req.user.id);
-      if (!userInDept) continue;
       for (const entry of req.entries) {
         const dk = new Date(entry.date).toISOString().slice(0, 10);
-        dm.set(dk, (dm.get(dk) ?? 0) + 1);
+        if (!map.has(req.user.id)) map.set(req.user.id, new Map());
+        const dm = map.get(req.user.id)!;
+        if (!dm.has(dk)) dm.set(dk, []);
+        dm.get(dk)!.push(req);
       }
     }
-    deptCapacity.set(dept.id, dm);
-  }
+    return map;
+  }, [requests]);
+
+  // Approved count per dept per date: deptId -> dateKey -> count
+  const deptCapacity = useMemo(() => {
+    const outer = new Map<string, Map<string, number>>();
+    for (const dept of departments) {
+      const dm = new Map<string, number>();
+      for (const req of requests) {
+        if (req.status !== "APPROVED") continue;
+        const userInDept = dept.users.some((u) => u.id === req.user.id);
+        if (!userInDept) continue;
+        for (const entry of req.entries) {
+          const dk = new Date(entry.date).toISOString().slice(0, 10);
+          dm.set(dk, (dm.get(dk) ?? 0) + 1);
+        }
+      }
+      outer.set(dept.id, dm);
+    }
+    return outer;
+  }, [departments, requests]);
 
   function navigate(delta: number) {
     const d = new Date(year, month - 1 + delta, 1);
@@ -271,193 +406,208 @@ export default function CalendarGrid({
     });
   }
 
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+
   return (
     <div className="flex flex-col h-full">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            ‹
-          </button>
-          <h2 className="text-xl font-bold text-gray-900 capitalize min-w-[160px] text-center">
-            {formatMonthYear(year, month)}
-          </h2>
-          <button
-            onClick={() => navigate(1)}
-            className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => {
-              const n = new Date();
-              router.push(`/manager/calendar?year=${n.getFullYear()}&month=${n.getMonth() + 1}`);
-            }}
-            className="text-xs text-blue-600 hover:underline ml-1"
-          >
-            I dag
-          </button>
-        </div>
-
-        {/* Legend */}
-        <div className="flex gap-4 text-xs text-gray-500">
-          <LegendItem color="bg-green-200" label="Godkendt" />
-          <LegendItem color="bg-yellow-200" label="Afventer" />
-          <LegendItem color="bg-red-100" label="Helligdag" />
-          <LegendItem color="bg-gray-200" label="Weekend" />
-        </div>
+      {/* ── Mobile list view (< md) ── */}
+      <div className="md:hidden">
+        <MobileCalendarList
+          year={year}
+          month={month}
+          departments={departments}
+          requests={requests}
+          holidays={holidays}
+          onNavigate={navigate}
+        />
       </div>
 
-      {/* ── Grid ── */}
-      <div
-        ref={scrollRef}
-        className="overflow-auto border border-gray-200 rounded-xl shadow-sm"
-        style={{ maxHeight: "calc(100vh - 200px)" }}
-      >
-        <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
-          {/* ── Sticky thead ── */}
-          <thead className="sticky top-0 z-20">
-            <tr>
-              {/* Corner cell */}
-              <th
-                className="sticky left-0 z-30 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left text-gray-500 font-semibold min-w-[160px] whitespace-nowrap"
-                style={{ minWidth: 160 }}
-              >
-                Medarbejder
-              </th>
+      {/* ── Desktop grid view (≥ md) ── */}
+      <div className="hidden md:flex flex-col h-full">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Forrige måned"
+            >
+              ‹
+            </button>
+            <h2 className="text-xl font-bold text-gray-900 capitalize min-w-[160px] text-center">
+              {formatMonthYear(year, month)}
+            </h2>
+            <button
+              onClick={() => navigate(1)}
+              className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Næste måned"
+            >
+              ›
+            </button>
+            <button
+              onClick={() => {
+                const n = new Date();
+                router.push(`/manager/calendar?year=${n.getFullYear()}&month=${n.getMonth() + 1}`);
+              }}
+              className="text-xs text-blue-600 hover:underline ml-1"
+            >
+              I dag
+            </button>
+          </div>
 
-              {days.map((d) => {
-                const dk = format(d, "yyyy-MM-dd");
-                const holiday = holidayMap.get(dk);
-                const weekend = isWeekend(d);
-                const isToday = dk === format(new Date(), "yyyy-MM-dd");
+          {/* Legend */}
+          <div className="flex gap-4 text-xs text-gray-500">
+            <LegendItem color="bg-green-200" label="Godkendt" />
+            <LegendItem color="bg-yellow-200" label="Afventer" />
+            <LegendItem color="bg-red-100" label="Helligdag" />
+            <LegendItem color="bg-gray-200" label="Weekend" />
+          </div>
+        </div>
 
-                return (
-                  <th
-                    key={dk}
-                    title={holiday ?? undefined}
-                    className={cn(
-                      "border-b border-r border-gray-200 text-center font-normal select-none",
-                      "min-w-[32px] w-8 py-1.5 px-0",
-                      weekend && !holiday ? "bg-gray-100 text-gray-400" : "",
-                      holiday ? "bg-red-100 text-red-700" : "",
-                      !weekend && !holiday ? "bg-gray-50 text-gray-600" : "",
-                      isToday ? "ring-2 ring-inset ring-blue-400" : ""
-                    )}
-                  >
-                    <div className="font-semibold text-[11px]">{format(d, "d")}</div>
-                    <div className="text-[9px] uppercase opacity-60">
-                      {format(d, "EEEEE", { locale: da })}
-                    </div>
-                    {holiday && (
-                      <div className="text-[8px] text-red-500 leading-tight px-0.5 truncate max-w-[30px]" title={holiday}>
-                        🎌
-                      </div>
-                    )}
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+        {/* Grid */}
+        <div
+          ref={scrollRef}
+          className="overflow-auto border border-gray-200 rounded-xl shadow-sm"
+          style={{ maxHeight: "calc(100vh - 200px)" }}
+        >
+          <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
+            {/* Sticky thead */}
+            <thead className="sticky top-0 z-20">
+              <tr>
+                <th
+                  className="sticky left-0 z-30 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left text-gray-500 font-semibold whitespace-nowrap"
+                  style={{ minWidth: 160 }}
+                >
+                  Medarbejder
+                </th>
 
-          <tbody>
-            {departments.map((dept) => {
-              const capacityMap = deptCapacity.get(dept.id)!;
+                {days.map((d) => {
+                  const dk = format(d, "yyyy-MM-dd");
+                  const holiday = holidayMap.get(dk);
+                  const weekend = isWeekend(d);
+                  const isToday = dk === todayKey;
 
-              return (
-                <>
-                  {/* ── Department row ── */}
-                  <tr key={`dept-${dept.id}`}>
-                    <td
-                      className="sticky left-0 z-10 bg-slate-700 text-white px-3 py-1.5 font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-b border-slate-600"
-                      style={{ minWidth: 160 }}
-                    >
-                      {dept.name}
-                    </td>
-                    {days.map((d) => {
-                      const dk = format(d, "yyyy-MM-dd");
-                      const count = capacityMap.get(dk) ?? 0;
-                      const weekend = isWeekend(d);
-                      const holiday = holidayMap.has(dk);
-
-                      return (
-                        <td
-                          key={dk}
-                          className={cn(
-                            "border-b border-r border-slate-600 text-center py-0.5",
-                            weekend || holiday ? "bg-slate-600" : "bg-slate-700"
-                          )}
-                        >
-                          <CapacityDot count={count} max={dept.maxConcurrent} />
-                        </td>
-                      );
-                    })}
-                  </tr>
-
-                  {/* ── Employee rows ── */}
-                  {dept.users.map((emp, empIdx) => (
-                    <tr
-                      key={emp.id}
+                  return (
+                    <th
+                      key={dk}
+                      title={holiday ?? undefined}
                       className={cn(
-                        "group transition-colors",
-                        empIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        "border-b border-r border-gray-200 text-center font-normal select-none",
+                        "min-w-[32px] w-8 py-1.5 px-0",
+                        weekend && !holiday ? "bg-gray-100 text-gray-400" : "",
+                        holiday ? "bg-red-100 text-red-700" : "",
+                        !weekend && !holiday ? "bg-gray-50 text-gray-600" : "",
+                        isToday ? "ring-2 ring-inset ring-blue-400" : ""
                       )}
                     >
-                      {/* Sticky name cell */}
+                      <div className="font-semibold text-[11px]">{format(d, "d")}</div>
+                      <div className="text-[9px] uppercase opacity-60">
+                        {format(d, "EEEEE", { locale: da })}
+                      </div>
+                      {holiday && (
+                        <div className="text-[8px] text-red-500 leading-tight px-0.5 truncate max-w-[30px]" title={holiday}>
+                          🎌
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+
+            <tbody>
+              {departments.map((dept) => {
+                const capacityMap = deptCapacity.get(dept.id)!;
+
+                return (
+                  <>
+                    {/* Department row */}
+                    <tr key={`dept-${dept.id}`}>
                       <td
-                        className={cn(
-                          "sticky left-0 z-10 border-b border-r border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800 text-[12px]",
-                          empIdx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        )}
+                        className="sticky left-0 z-10 bg-slate-700 text-white px-3 py-1.5 font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-b border-slate-600"
                         style={{ minWidth: 160 }}
                       >
-                        {emp.name}
+                        {dept.name}
                       </td>
-
                       {days.map((d) => {
                         const dk = format(d, "yyyy-MM-dd");
-                        const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
+                        const count = capacityMap.get(dk) ?? 0;
                         const weekend = isWeekend(d);
                         const holiday = holidayMap.has(dk);
-                        const hasApproved = reqs.some((r) => r.status === "APPROVED");
-                        const hasPending = reqs.some((r) => r.status === "PENDING");
-                        const approvedEntry = reqs
-                          .find((r) => r.status === "APPROVED")
-                          ?.entries.find(
-                            (e) => new Date(e.date).toISOString().slice(0, 10) === dk
-                          );
-                        const clickable = reqs.length > 0 || holiday;
 
                         return (
                           <td
                             key={dk}
-                            onClick={() =>
-                              clickable && openCell(dk, emp, reqs)
-                            }
                             className={cn(
-                              "border-b border-r border-gray-100 text-center transition-colors",
-                              "h-7 w-8",
-                              getCellStyle(hasApproved, hasPending, holiday, weekend),
-                              clickable ? "cursor-pointer" : "cursor-default"
+                              "border-b border-r border-slate-600 text-center py-0.5",
+                              weekend || holiday ? "bg-slate-600" : "bg-slate-700"
                             )}
                           >
-                            {getCellContent(hasApproved, hasPending, approvedEntry)}
+                            <CapacityDot count={count} max={dept.maxConcurrent} />
                           </td>
                         );
                       })}
                     </tr>
-                  ))}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
+
+                    {/* Employee rows */}
+                    {dept.users.map((emp, empIdx) => (
+                      <tr
+                        key={emp.id}
+                        className={cn(
+                          "group transition-colors",
+                          empIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        )}
+                      >
+                        <td
+                          className={cn(
+                            "sticky left-0 z-10 border-b border-r border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800 text-[12px]",
+                            empIdx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          )}
+                          style={{ minWidth: 160 }}
+                        >
+                          {emp.name}
+                        </td>
+
+                        {days.map((d) => {
+                          const dk = format(d, "yyyy-MM-dd");
+                          const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
+                          const weekend = isWeekend(d);
+                          const holiday = holidayMap.has(dk);
+                          const hasApproved = reqs.some((r) => r.status === "APPROVED");
+                          const hasPending = reqs.some((r) => r.status === "PENDING");
+                          const approvedEntry = reqs
+                            .find((r) => r.status === "APPROVED")
+                            ?.entries.find(
+                              (e) => new Date(e.date).toISOString().slice(0, 10) === dk
+                            );
+                          const clickable = reqs.length > 0 || holiday;
+
+                          return (
+                            <td
+                              key={dk}
+                              onClick={() => clickable && openCell(dk, emp, reqs)}
+                              className={cn(
+                                "border-b border-r border-gray-100 text-center transition-colors",
+                                "h-7 w-8",
+                                getCellStyle(hasApproved, hasPending, holiday, weekend),
+                                clickable ? "cursor-pointer" : "cursor-default"
+                              )}
+                            >
+                              {getCellContent(hasApproved, hasPending, approvedEntry)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ── Cell detail modal ── */}
+      {/* Cell detail modal */}
       <CellDetailModal
         data={cellModal}
         onClose={() => setCellModal(null)}
@@ -469,7 +619,7 @@ export default function CalendarGrid({
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn("w-3 h-3 rounded-sm inline-block border border-gray-200", color)} />
+      <span className={cn("w-3 h-3 rounded-sm inline-block border border-gray-200", color)} aria-hidden="true" />
       {label}
     </span>
   );

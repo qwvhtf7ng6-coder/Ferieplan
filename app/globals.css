@@ -10,4 +10,56 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Prevent horizontal overflow globally */
+  overflow-x: hidden;
+}
+
+/* Prevent any element from causing horizontal scroll */
+*, *::before, *::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Safe-area support for bottom nav on iOS */
+.safe-area-pb {
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+}
+
+/* Improve tap targets on touch devices */
+@media (pointer: coarse) {
+  button, a, select, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+  }
+  input[type="date"], select {
+    font-size: 16px; /* Prevents iOS auto-zoom */
+  }
+}
+
+/* Visible focus ring for keyboard nav */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Better scrolling on iOS */
+.overflow-auto, .overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent input zoom on iOS (16px triggers no-zoom) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+textarea,
+select {
+  font-size: max(16px, 0.875rem);
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
 }

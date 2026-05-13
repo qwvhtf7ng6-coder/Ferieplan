@@ -66,14 +66,15 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
   }
 
   const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+  const sorted = [...initial].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3">
         <h1 className="text-xl font-bold text-gray-800">Helligdage</h1>
         <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shrink-0"
         >
           + Tilføj manuelt
         </button>
@@ -85,22 +86,26 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
           Importer danske helligdage automatisk
         </p>
         <p className="text-xs text-blue-600 mb-3">
-          Henter fra Nager.Date API — inkluderer nytår, påske, pinse, grundlovsdag og jul. Store bededag er ekskluderet.
+          Henter fra Nager.Date API — inkluderer nytår, påske, pinse, grundlovsdag og jul.
         </p>
-        <div className="flex gap-3 items-center flex-wrap">
-          <select
-            value={importYear}
-            onChange={(e) => setImportYear(e.target.value)}
-            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            {years.map((y) => (
-              <option key={y} value={String(y)}>{y}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label htmlFor="import-year" className="block text-xs text-blue-700 mb-1">År</label>
+            <select
+              id="import-year"
+              value={importYear}
+              onChange={(e) => setImportYear(e.target.value)}
+              className="border border-blue-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {years.map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={importHolidays}
             disabled={importLoading}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {importLoading && <Spinner />}
             {importLoading ? "Importerer..." : "Importer"}
@@ -115,53 +120,58 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
 
       {/* Manual form */}
       {showForm && (
-        <form onSubmit={create} className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 space-y-3">
-          <div className="flex gap-3 items-end flex-wrap">
+        <form onSubmit={create} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6 space-y-3">
+          <h2 className="font-semibold text-gray-700 text-sm">Tilføj helligdag</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Navn</label>
+              <label htmlFor="h-name" className="block text-xs text-gray-600 mb-1">Navn</label>
               <input
+                id="h-name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Dato</label>
+              <label htmlFor="h-date" className="block text-xs text-gray-600 mb-1">Dato</label>
               <input
+                id="h-date"
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
                 required
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isNational"
-                checked={form.isNational}
-                onChange={(e) => setForm({ ...form, isNational: e.target.checked })}
-              />
-              <label htmlFor="isNational" className="text-sm text-gray-600">National</label>
-            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isNational}
+              onChange={(e) => setForm({ ...form, isNational: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-gray-600">National helligdag</span>
+          </label>
+          <div className="flex gap-2">
             <button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? "..." : "Tilføj"}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500">
+            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500 px-3 py-2">
               Annuller
             </button>
           </div>
         </form>
       )}
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {initial.length === 0 ? (
+      {/* Desktop table */}
+      <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {sorted.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">
             Ingen helligdage endnu — brug import-knappen ovenfor.
           </p>
@@ -176,27 +186,55 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
               </tr>
             </thead>
             <tbody>
-              {initial
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map((h) => (
-                  <tr key={h.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700">{formatDate(h.date)}</td>
-                    <td className="px-4 py-3 font-medium">{h.name}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {h.isNational ? "National" : "Lokal"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => del(h.id)}
-                        className="text-xs text-red-400 hover:text-red-600"
-                      >
-                        Slet
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+              {sorted.map((h) => (
+                <tr key={h.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3 text-gray-700">{formatDate(h.date)}</td>
+                  <td className="px-4 py-3 font-medium">{h.name}</td>
+                  <td className="px-4 py-3 text-gray-500">{h.isNational ? "National" : "Lokal"}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => del(h.id)}
+                      className="text-xs text-red-400 hover:text-red-600 py-1 px-2"
+                      aria-label={`Slet ${h.name}`}
+                    >
+                      Slet
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Mobile card list */}
+      <div className="sm:hidden">
+        {sorted.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-8">
+            Ingen helligdage endnu.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {sorted.map((h) => (
+              <div key={h.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-medium text-sm text-gray-900">{h.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
+                    <span>{formatDate(h.date)}</span>
+                    <span>·</span>
+                    <span>{h.isNational ? "National" : "Lokal"}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => del(h.id)}
+                  className="text-xs text-red-400 hover:text-red-600 py-1 px-2 shrink-0"
+                  aria-label={`Slet ${h.name}`}
+                >
+                  Slet
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
