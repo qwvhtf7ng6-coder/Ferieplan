@@ -16,7 +16,6 @@ export default async function CalendarPage({
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  // Check access: managers/admins always, employees only if setting allows
   const visibility = await getCalendarVisibility();
   if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
     redirect("/dashboard");
@@ -32,7 +31,6 @@ export default async function CalendarPage({
 
   const isManagerOrAdmin = isManager(user.role);
 
-  // Employees see all departments (when visibility allows), managers see all
   const [departments, requests, holidays] = await Promise.all([
     prisma.department.findMany({
       orderBy: { name: "asc" },
@@ -46,7 +44,6 @@ export default async function CalendarPage({
     }),
     prisma.vacationRequest.findMany({
       where: {
-        // Employees only see APPROVED; managers see APPROVED + PENDING
         status: { in: isManagerOrAdmin ? ["APPROVED", "PENDING"] : ["APPROVED"] },
         entries: { some: { date: { gte: start, lte: end } } },
       },
@@ -104,6 +101,9 @@ export default async function CalendarPage({
           departments={serializedDepts}
           requests={serializedRequests}
           holidays={serializedHolidays}
+          currentUserId={user.id}
+          currentUserDeptId={user.departmentId}
+          isManagerOrAdmin={isManagerOrAdmin}
         />
       </main>
     </div>
