@@ -2,32 +2,25 @@
 
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { format, isWeekend, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
+import {
+  format, isWeekend,
+  startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval,
+} from "date-fns";
 import { da } from "date-fns/locale";
 import { getMonthDays, formatMonthYear, cn, ENTRY_TYPE_LABELS, formatDate } from "@/lib/utils";
-import { buildDeptColorMap } from "@/lib/dept-colors";
+import { buildDeptColorMap, type DeptColor } from "@/lib/dept-colors";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface CalendarUser {
-  id: string;
-  name: string;
-}
+interface CalendarUser { id: string; name: string; }
 
 interface CalendarDepartment {
-  id: string;
-  name: string;
-  maxConcurrent: number;
-  users: CalendarUser[];
+  id: string; name: string; maxConcurrent: number; users: CalendarUser[];
 }
 
-interface CalendarEntry {
-  date: string;
-  type: string;
-  days: number;
-}
+interface CalendarEntry { date: string; type: string; days: number; }
 
 interface CalendarRequest {
   id: string;
@@ -37,23 +30,14 @@ interface CalendarRequest {
   entries: CalendarEntry[];
 }
 
-interface CalendarHoliday {
-  id: string;
-  name: string;
-  date: string;
-  isNational: boolean;
-}
+interface CalendarHoliday { id: string; name: string; date: string; isNational: boolean; }
 
 interface CellModalData {
-  dateKey: string;
-  user: CalendarUser;
-  requests: CalendarRequest[];
-  holidayName: string | null;
+  dateKey: string; user: CalendarUser; requests: CalendarRequest[]; holidayName: string | null;
 }
 
 export interface CalendarGridProps {
-  year: number;
-  month: number;
+  year: number; month: number;
   departments: CalendarDepartment[];
   requests: CalendarRequest[];
   holidays: CalendarHoliday[];
@@ -70,7 +54,6 @@ type PersonalFilter = "all" | "dept" | "me";
 function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClose: () => void }) {
   if (!data) return null;
   const { dateKey, user, requests, holidayName } = data;
-
   return (
     <Modal open={!!data} onClose={onClose} title={`${user.name} · ${formatDate(dateKey)}`} className="sm:max-w-md">
       <div className="space-y-4">
@@ -123,7 +106,7 @@ function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClos
 function CapacityDot({ count, max }: { count: number; max: number }) {
   if (count === 0) return null;
   return (
-    <div title={`${count}/${max} godkendt`} className={cn("text-[9px] font-bold leading-none text-center", count > max ? "text-red-400" : "text-slate-300")}>
+    <div title={`${count}/${max} godkendt`} className={cn("text-[9px] font-bold leading-none text-center", count > max ? "text-red-300" : "text-white/50")}>
       {count}/{max}
     </div>
   );
@@ -131,36 +114,30 @@ function CapacityDot({ count, max }: { count: number; max: number }) {
 
 // ─── Legend item ─────────────────────────────────────────────────────────────
 
-function LegendItem({ color, label }: { color: string; label: string }) {
+function LegendItem({ hex, label }: { hex?: string; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className={cn("w-3 h-3 rounded-sm inline-block border border-gray-200", color)} aria-hidden="true" />
-      {label}
+      <span
+        className="w-3 h-3 rounded-sm inline-block border border-gray-200"
+        style={hex ? { backgroundColor: hex } : {}}
+        aria-hidden="true"
+      />
+      <span className="text-xs text-gray-500">{label}</span>
     </span>
   );
 }
 
-// ─── Grid table (shared by month + week) ─────────────────────────────────────
+// ─── Grid table ───────────────────────────────────────────────────────────────
 
 function CalendarTable({
-  days,
-  departments,
-  requests,
-  holidayMap,
-  requestLookup,
-  deptCapacity,
-  deptColorMap,
-  todayKey,
-  onOpenCell,
-  isManagerOrAdmin,
+  days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin,
 }: {
   days: Date[];
   departments: CalendarDepartment[];
-  requests: CalendarRequest[];
   holidayMap: Map<string, string>;
   requestLookup: Map<string, Map<string, CalendarRequest[]>>;
   deptCapacity: Map<string, Map<string, number>>;
-  deptColorMap: ReturnType<typeof buildDeptColorMap>;
+  deptColorMap: Map<string, DeptColor>;
   todayKey: string;
   onOpenCell: (dk: string, user: CalendarUser, reqs: CalendarRequest[]) => void;
   isManagerOrAdmin?: boolean;
@@ -201,18 +178,18 @@ function CalendarTable({
         {departments.map((dept) => {
           const capacityMap = deptCapacity.get(dept.id) ?? new Map();
           const color = deptColorMap.get(dept.id);
+          const headerBg = color?.hex ?? "#334155";
+          const cellBg = color?.hexLight ?? "#bbf7d0";
+
           return (
             <>
               {/* Dept header row */}
               <tr key={`dept-${dept.id}`}>
                 <td
-                  className={cn("sticky left-0 z-10 text-white px-3 py-1.5 font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-b border-opacity-60", color?.header ?? "bg-slate-700")}
-                  style={{ minWidth: 160 }}
+                  className="sticky left-0 z-10 text-white px-3 py-1.5 font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap border-b"
+                  style={{ minWidth: 160, backgroundColor: headerBg }}
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-white/40 inline-block" />
-                    {dept.name}
-                  </span>
+                  {dept.name}
                 </td>
                 {days.map((d) => {
                   const dk = format(d, "yyyy-MM-dd");
@@ -220,7 +197,7 @@ function CalendarTable({
                   const weekend = isWeekend(d);
                   const holiday = holidayMap.has(dk);
                   return (
-                    <td key={dk} className={cn("border-b border-r border-opacity-40 text-center py-0.5", color?.header ?? "bg-slate-700", (weekend || holiday) ? "opacity-70" : "")}>
+                    <td key={dk} className="border-b border-r text-center py-0.5" style={{ backgroundColor: weekend || holiday ? `${headerBg}99` : headerBg }}>
                       <CapacityDot count={count} max={dept.maxConcurrent} />
                     </td>
                   );
@@ -231,11 +208,13 @@ function CalendarTable({
               {dept.users.map((emp, empIdx) => (
                 <tr key={emp.id} className={cn("group transition-colors", empIdx % 2 === 0 ? "bg-white" : "bg-gray-50/50")}>
                   <td
-                    className={cn("sticky left-0 z-10 border-b border-r border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800 text-[12px] flex items-center gap-2", empIdx % 2 === 0 ? "bg-white" : "bg-gray-50")}
+                    className={cn("sticky left-0 z-10 border-b border-r border-gray-200 px-3 py-1.5 whitespace-nowrap font-medium text-gray-800 text-[12px]", empIdx % 2 === 0 ? "bg-white" : "bg-gray-50")}
                     style={{ minWidth: 160 }}
                   >
-                    <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", color?.dot ?? "bg-slate-400")} aria-hidden="true" />
-                    {emp.name}
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color?.hexDot ?? "#64748b" }} aria-hidden="true" />
+                      {emp.name}
+                    </span>
                   </td>
                   {days.map((d) => {
                     const dk = format(d, "yyyy-MM-dd");
@@ -243,25 +222,27 @@ function CalendarTable({
                     const weekend = isWeekend(d);
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
-                    const hasPending = reqs.some((r) => r.status === "PENDING") && isManagerOrAdmin;
+                    const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
                     const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
                     const clickable = reqs.length > 0 || holiday;
 
-                    let cellBg = "";
-                    if (hasApproved) cellBg = cn(color?.bg ?? "bg-green-200", color?.hover ?? "hover:bg-green-300");
-                    else if (hasPending) cellBg = "bg-yellow-200 hover:bg-yellow-300";
-                    else if (holiday) cellBg = "bg-red-50";
-                    else if (weekend) cellBg = "bg-gray-100";
-                    else cellBg = "hover:bg-blue-50";
+                    let bgStyle: React.CSSProperties = {};
+                    let bgClass = "";
+                    if (hasApproved) { bgStyle = { backgroundColor: cellBg }; bgClass = "hover:brightness-95"; }
+                    else if (hasPending) bgClass = "bg-yellow-200 hover:bg-yellow-300";
+                    else if (holiday) bgClass = "bg-red-50";
+                    else if (weekend) bgClass = "bg-gray-100";
+                    else bgClass = "hover:bg-blue-50";
 
                     return (
                       <td
                         key={dk}
                         onClick={() => clickable && onOpenCell(dk, emp, reqs)}
-                        className={cn("border-b border-r border-gray-100 text-center transition-colors h-7 w-8", cellBg, clickable ? "cursor-pointer" : "cursor-default")}
+                        className={cn("border-b border-r border-gray-100 text-center transition-colors h-7 w-8", bgClass, clickable ? "cursor-pointer" : "cursor-default")}
+                        style={bgStyle}
                       >
                         {hasApproved && (
-                          <span className={cn("font-bold leading-none", approvedEntry?.days === 0.5 ? "text-[9px]" : "text-[11px]", "text-gray-700")}>
+                          <span className="font-bold leading-none text-gray-700" style={{ fontSize: approvedEntry?.days === 0.5 ? "9px" : "11px" }}>
                             {approvedEntry?.days === 0.5 ? "½" : "✓"}
                           </span>
                         )}
@@ -285,7 +266,7 @@ function CalendarTable({
 
 function MobileCalendarList({
   year, month, departments, requests, holidays, onNavigate, deptColorMap,
-}: CalendarGridProps & { onNavigate: (delta: number) => void; deptColorMap: ReturnType<typeof buildDeptColorMap> }) {
+}: CalendarGridProps & { onNavigate: (delta: number) => void; deptColorMap: Map<string, DeptColor> }) {
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
   const requestsByUser = useMemo(() => {
     const map = new Map<string, CalendarRequest[]>();
@@ -296,16 +277,16 @@ function MobileCalendarList({
     return map;
   }, [requests]);
 
-  const activeUsers = departments.flatMap((d) => d.users.map((u) => ({ ...u, deptName: d.name, deptId: d.id }))).filter((u) => requestsByUser.has(u.id));
+  const activeUsers = departments
+    .flatMap((d) => d.users.map((u) => ({ ...u, deptName: d.name, deptId: d.id })))
+    .filter((u) => requestsByUser.has(u.id));
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button onClick={() => onNavigate(-1)} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Forrige måned">‹</button>
-          <h2 className="text-lg font-bold text-gray-900 capitalize">{formatMonthYear(year, month)}</h2>
-          <button onClick={() => onNavigate(1)} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Næste måned">›</button>
-        </div>
+      <div className="flex items-center gap-2">
+        <button onClick={() => onNavigate(-1)} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Forrige måned">‹</button>
+        <h2 className="text-lg font-bold text-gray-900 capitalize">{formatMonthYear(year, month)}</h2>
+        <button onClick={() => onNavigate(1)} className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Næste måned">›</button>
       </div>
 
       {holidays.length > 0 && (
@@ -328,7 +309,7 @@ function MobileCalendarList({
           const color = deptColorMap.get(u.deptId);
           return (
             <div key={u.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <div className={cn("text-white px-4 py-2.5", color?.header ?? "bg-slate-700")}>
+              <div className="text-white px-4 py-2.5" style={{ backgroundColor: color?.hex ?? "#334155" }}>
                 <span className="font-semibold text-sm">{u.name}</span>
                 <span className="text-white/60 text-xs ml-2">{u.deptName}</span>
               </div>
@@ -370,49 +351,26 @@ export default function CalendarGrid({
   const [cellModal, setCellModal] = useState<CellModalData | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [personalFilter, setPersonalFilter] = useState<PersonalFilter>("all");
-  // Week state: track current week start
-  const [weekStart, setWeekStart] = useState<Date>(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const todayKey = format(new Date(), "yyyy-MM-dd");
 
-  // Colour map — stable across renders
   const deptColorMap = useMemo(() => buildDeptColorMap(departments.map((d) => d.id)), [departments]);
 
-  // Filter departments/users by personal filter
   const filteredDepartments = useMemo(() => {
     if (personalFilter === "all") return departments;
-    if (personalFilter === "dept") {
-      return departments
-        .map((d) => ({ ...d, users: d.users.filter((u) => d.id === currentUserDeptId) }))
-        .filter((d) => d.users.length > 0);
-    }
-    if (personalFilter === "me") {
-      return departments
-        .map((d) => ({ ...d, users: d.users.filter((u) => u.id === currentUserId) }))
-        .filter((d) => d.users.length > 0);
-    }
+    if (personalFilter === "dept") return departments.map((d) => ({ ...d, users: d.users.filter(() => d.id === currentUserDeptId) })).filter((d) => d.users.length > 0);
+    if (personalFilter === "me") return departments.map((d) => ({ ...d, users: d.users.filter((u) => u.id === currentUserId) })).filter((d) => d.users.length > 0);
     return departments;
   }, [departments, personalFilter, currentUserId, currentUserDeptId]);
 
-  // Month days
   const monthDays = useMemo(() => getMonthDays(year, month), [year, month]);
-
-  // Week days (Mon–Sun)
-  const weekDays = useMemo(() => {
-    const start = startOfWeek(weekStart, { weekStartsOn: 1 });
-    const end = endOfWeek(weekStart, { weekStartsOn: 1 });
-    return eachDayOfInterval({ start, end });
-  }, [weekStart]);
-
+  const weekDays = useMemo(() => eachDayOfInterval({ start: startOfWeek(weekStart, { weekStartsOn: 1 }), end: endOfWeek(weekStart, { weekStartsOn: 1 }) }), [weekStart]);
   const days = viewMode === "month" ? monthDays : weekDays;
 
-  // Holiday lookup
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
 
-  // Request lookup: userId -> dateKey -> requests[]
   const requestLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarRequest[]>>();
     for (const req of requests) {
@@ -427,7 +385,6 @@ export default function CalendarGrid({
     return map;
   }, [requests]);
 
-  // Capacity: deptId -> dateKey -> count
   const deptCapacity = useMemo(() => {
     const outer = new Map<string, Map<string, number>>();
     for (const dept of departments) {
@@ -449,21 +406,13 @@ export default function CalendarGrid({
     const d = new Date(year, month - 1 + delta, 1);
     router.push(`/manager/calendar?year=${d.getFullYear()}&month=${d.getMonth() + 1}`);
   }
-
   function navigateWeek(delta: number) {
     setWeekStart((w) => delta > 0 ? addWeeks(w, 1) : subWeeks(w, 1));
   }
-
   function goToToday() {
-    if (viewMode === "week") {
-      setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
-    }
+    if (viewMode === "week") setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const n = new Date();
     router.push(`/manager/calendar?year=${n.getFullYear()}&month=${n.getMonth() + 1}`);
-  }
-
-  function openCell(dateKey: string, user: CalendarUser, reqs: CalendarRequest[]) {
-    setCellModal({ dateKey, user, requests: reqs, holidayName: holidayMap.get(dateKey) ?? null });
   }
 
   const weekLabel = weekDays.length > 0
@@ -472,7 +421,7 @@ export default function CalendarGrid({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Mobile list view ── */}
+      {/* Mobile */}
       <div className="md:hidden">
         <MobileCalendarList
           year={year} month={month} departments={filteredDepartments}
@@ -481,9 +430,9 @@ export default function CalendarGrid({
         />
       </div>
 
-      {/* ── Desktop grid view ── */}
+      {/* Desktop */}
       <div className="hidden md:flex flex-col h-full gap-3">
-        {/* Toolbar row 1: navigation + view toggle */}
+        {/* Toolbar row 1 */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <button onClick={() => viewMode === "month" ? navigateMonth(-1) : navigateWeek(-1)} className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100" aria-label="Forrige">‹</button>
@@ -495,31 +444,18 @@ export default function CalendarGrid({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View mode toggle */}
+            {/* View toggle */}
             <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs">
               {(["month", "week"] as ViewMode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setViewMode(m)}
-                  className={cn("px-3 py-1.5 rounded-md font-medium transition-colors", viewMode === m ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700")}
-                >
+                <button key={m} onClick={() => setViewMode(m)} className={cn("px-3 py-1.5 rounded-md font-medium transition-colors", viewMode === m ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700")}>
                   {m === "month" ? "Måned" : "Uge"}
                 </button>
               ))}
             </div>
-
             {/* Personal filter */}
             <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs">
-              {([
-                { value: "all", label: "Alle" },
-                { value: "dept", label: "Min afdeling" },
-                { value: "me", label: "Kun mig" },
-              ] as { value: PersonalFilter; label: string }[]).map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPersonalFilter(opt.value)}
-                  className={cn("px-3 py-1.5 rounded-md font-medium transition-colors", personalFilter === opt.value ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700")}
-                >
+              {([{ value: "all", label: "Alle" }, { value: "dept", label: "Min afdeling" }, { value: "me", label: "Kun mig" }] as { value: PersonalFilter; label: string }[]).map((opt) => (
+                <button key={opt.value} onClick={() => setPersonalFilter(opt.value)} className={cn("px-3 py-1.5 rounded-md font-medium transition-colors", personalFilter === opt.value ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700")}>
                   {opt.label}
                 </button>
               ))}
@@ -527,23 +463,23 @@ export default function CalendarGrid({
           </div>
         </div>
 
-        {/* Toolbar row 2: legend + dept colour chips */}
+        {/* Toolbar row 2: dept chips + legend */}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {departments.map((dept) => {
               const color = deptColorMap.get(dept.id);
               return (
                 <span key={dept.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-                  <span className={cn("w-3 h-3 rounded-sm inline-block", color?.bg ?? "bg-slate-300")} aria-hidden="true" />
+                  <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: color?.hex ?? "#64748b" }} aria-hidden="true" />
                   {dept.name}
                 </span>
               );
             })}
           </div>
-          <div className="flex gap-3 text-xs text-gray-500">
-            <LegendItem color="bg-yellow-200" label="Afventer" />
-            <LegendItem color="bg-red-100" label="Helligdag" />
-            <LegendItem color="bg-gray-200" label="Weekend" />
+          <div className="flex gap-3">
+            <LegendItem hex="#fef08a" label="Afventer" />
+            <LegendItem hex="#fee2e2" label="Helligdag" />
+            <LegendItem hex="#f3f4f6" label="Weekend" />
           </div>
         </div>
 
@@ -552,13 +488,12 @@ export default function CalendarGrid({
           <CalendarTable
             days={days}
             departments={filteredDepartments}
-            requests={requests}
             holidayMap={holidayMap}
             requestLookup={requestLookup}
             deptCapacity={deptCapacity}
             deptColorMap={deptColorMap}
             todayKey={todayKey}
-            onOpenCell={openCell}
+            onOpenCell={(dk, user, reqs) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null })}
             isManagerOrAdmin={isManagerOrAdmin}
           />
         </div>
