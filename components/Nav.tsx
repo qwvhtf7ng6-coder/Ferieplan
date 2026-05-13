@@ -30,7 +30,7 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
 
   return (
     <nav className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 flex-wrap">
-      <span className="font-bold text-blue-700 text-lg mr-2">🏖️ Ferieplan</span>
+      <span className="font-bold text-blue-700 text-lg mr-2">📅 WorkPlan</span>
       {links.map((l, i) => (
         <Link
           key={i}

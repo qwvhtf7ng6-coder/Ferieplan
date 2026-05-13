@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "Ferieplan",
-  description: "Ferieplanlægning",
+  title: "WorkPlan",
+  description: "WorkPlanlægning",
 };
 
 export default function RootLayout({

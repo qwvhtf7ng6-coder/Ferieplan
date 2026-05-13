@@ -34,7 +34,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
         <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          🏖️ Ferieplan
+          📅 WorkPlan
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
