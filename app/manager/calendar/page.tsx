@@ -30,13 +30,11 @@ export default async function CalendarPage({
   const start = new Date(year, month - 1, 1);
   const end   = new Date(year, month,     0, 23, 59, 59);
 
-  const deptFilter = isManager(user.role)
-    ? {}
-    : { id: user.departmentId ?? "" };
+  const isManagerOrAdmin = isManager(user.role);
 
+  // Employees see all departments (when visibility allows), managers see all
   const [departments, requests, holidays] = await Promise.all([
     prisma.department.findMany({
-      where: Object.keys(deptFilter).length ? deptFilter : undefined,
       orderBy: { name: "asc" },
       include: {
         users: {
@@ -48,8 +46,8 @@ export default async function CalendarPage({
     }),
     prisma.vacationRequest.findMany({
       where: {
-        ...(isManager(user.role) ? {} : { departmentId: user.departmentId ?? "" }),
-        status: { in: ["APPROVED", "PENDING"] },
+        // Employees only see APPROVED; managers see APPROVED + PENDING
+        status: { in: isManagerOrAdmin ? ["APPROVED", "PENDING"] : ["APPROVED"] },
         entries: { some: { date: { gte: start, lte: end } } },
       },
       include: {
