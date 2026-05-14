@@ -149,6 +149,12 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
                   <p className="text-gray-700 italic">"{req.note}"</p>
                 </div>
               )}
+              {req.status === "REJECTED" && (req as any).rejectionReason && (
+                <div className="col-span-2">
+                  <p className="text-xs text-red-400 mb-0.5 font-medium">Begrundelse for afvisning</p>
+                  <p className="text-red-700 italic">"{(req as any).rejectionReason}"</p>
+                </div>
+              )}
             </div>
 
             {/* Entries */}

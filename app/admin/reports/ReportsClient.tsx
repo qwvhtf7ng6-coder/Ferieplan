@@ -23,8 +23,6 @@ interface Props {
   currentYear: number;
 }
 
-type Tab = "absence" | "department" | "export";
-
 const MONTHS = ["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"];
 const ROLE_LABELS: Record<string, string> = { EMPLOYEE: "Medarbejder", MANAGER: "Leder", ADMIN: "Admin" };
 const STATUS_LABELS: Record<string, string> = { APPROVED: "Godkendt", PENDING: "Afventer", REJECTED: "Afvist", CANCELLED: "Annulleret" };
@@ -421,11 +419,206 @@ function CsvExport({ requests, departments }: Props) {
   );
 }
 
+// ─── Patterns ─────────────────────────────────────────────────────────────────
+
+function PatternsReport({ requests, users, departments, currentYear }: Props) {
+  const [deptFilter, setDeptFilter] = useState("");
+
+  const ABSENCE_LABELS: Record<string, string> = {
+    VACATION: "Ferie", VACATION_FREE: "Feriefri", MATERNITY: "Barsel",
+    CHILD_SICK_DAY: "Barns 1. sygedag", SICK: "Sygdom",
+  };
+
+  const approvedRequests = requests.filter((r) => r.status === "APPROVED");
+
+  // Per-user sick day count
+  const sickByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const req of approvedRequests) {
+      for (const e of req.entries) {
+        if ((e as any).absenceType === "SICK") {
+          map.set(req.userId, (map.get(req.userId) ?? 0) + e.days);
+        }
+      }
+    }
+    return map;
+  }, [approvedRequests]);
+
+  // Busiest weeks (by approved vacation days)
+  const daysByWeek = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const req of approvedRequests) {
+      for (const e of req.entries) {
+        const d = new Date(e.date);
+        const year = d.getFullYear();
+        const week = getISOWeek(d);
+        const key = `${year}-W${String(week).padStart(2, "0")}`;
+        map.set(key, (map.get(key) ?? 0) + e.days);
+      }
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }, [approvedRequests]);
+
+  // Absence type breakdown
+  const typeBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const req of approvedRequests) {
+      for (const e of req.entries) {
+        const t = (e as any).absenceType ?? "VACATION";
+        map.set(t, (map.get(t) ?? 0) + e.days);
+      }
+    }
+    const total = Array.from(map.values()).reduce((a, b) => a + b, 0);
+    return Array.from(map.entries())
+      .map(([type, days]) => ({ type, days, pct: total > 0 ? Math.round((days / total) * 100) : 0 }))
+      .sort((a, b) => b.days - a.days);
+  }, [approvedRequests]);
+
+  // Top sick users filtered by dept
+  const topSickUsers = useMemo(() => {
+    return users
+      .filter((u) => !deptFilter || u.department?.id === deptFilter)
+      .map((u) => ({ ...u, sickDays: sickByUser.get(u.id) ?? 0 }))
+      .filter((u) => u.sickDays > 0)
+      .sort((a, b) => b.sickDays - a.sickDays)
+      .slice(0, 10);
+  }, [users, sickByUser, deptFilter]);
+
+  const TYPE_COLORS: Record<string, string> = {
+    VACATION: "#3b82f6", VACATION_FREE: "#8b5cf6", MATERNITY: "#ec4899",
+    CHILD_SICK_DAY: "#f59e0b", SICK: "#ef4444",
+  };
+
+  return (
+    <div className="space-y-8">
+      <p className="text-sm text-gray-500">Statistik baseret på godkendte ansøgninger i {currentYear}.</p>
+
+      {/* Absence type breakdown */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Fordeling af fraværstyper</h3>
+        <div className="space-y-2">
+          {typeBreakdown.map(({ type, days, pct }) => (
+            <div key={type} className="flex items-center gap-3">
+              <div className="w-28 text-xs text-gray-600 text-right shrink-0">
+                {ABSENCE_LABELS[type] ?? type}
+              </div>
+              <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${pct}%`, backgroundColor: TYPE_COLORS[type] ?? "#6b7280" }}
+                />
+              </div>
+              <div className="w-20 text-xs text-gray-500 shrink-0">
+                {days} dag{days !== 1 ? "e" : ""} ({pct}%)
+              </div>
+            </div>
+          ))}
+          {typeBreakdown.length === 0 && (
+            <p className="text-sm text-gray-400 italic">Ingen data</p>
+          )}
+        </div>
+      </div>
+
+      {/* Busiest weeks */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Mest belastede uger (top 10)</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase">Uge</th>
+                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase">Fraværsdage</th>
+                <th className="text-left py-2 text-xs font-semibold text-gray-500 uppercase">Belastning</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daysByWeek.map(([week, days], i) => {
+                const maxDays = daysByWeek[0]?.[1] ?? 1;
+                const pct = Math.round((days / maxDays) * 100);
+                return (
+                  <tr key={week} className="border-b border-gray-50">
+                    <td className="py-2 pr-4 font-mono text-gray-700">{week}</td>
+                    <td className="py-2 pr-4 text-gray-600">{days}</td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-gray-100 rounded-full h-2">
+                          <div
+                            className="h-full rounded-full bg-blue-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        {i === 0 && <span className="text-xs text-red-500 font-medium">Højest</span>}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {daysByWeek.length === 0 && (
+                <tr><td colSpan={3} className="py-4 text-center text-sm text-gray-400 italic">Ingen data</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Sick days per employee */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Sygedage pr. medarbejder</h3>
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">Alle afdelinger</option>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </div>
+        {topSickUsers.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">Ingen sygedage registreret.</p>
+        ) : (
+          <div className="space-y-1">
+            {topSickUsers.map((u) => (
+              <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50">
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                  {u.department && (
+                    <span className="text-xs text-gray-400 ml-2">{u.department.name}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 bg-gray-100 rounded-full h-2">
+                    <div
+                      className="h-full rounded-full bg-red-400"
+                      style={{ width: `${Math.min(100, (u.sickDays / (topSickUsers[0]?.sickDays ?? 1)) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-600 w-16 text-right">{u.sickDays} dag{u.sickDays !== 1 ? "e" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
+
+type Tab = "absence" | "department" | "patterns" | "export";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "absence",    label: "Fraværsrapport",   icon: "👤" },
   { key: "department", label: "Afdelingsrapport",  icon: "🏢" },
+  { key: "patterns",   label: "Fraværsmønstre",    icon: "📊" },
   { key: "export",     label: "CSV-eksport",       icon: "↓"  },
 ];
 
@@ -435,7 +628,7 @@ export default function ReportsClient(props: Props) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit flex-wrap">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -453,6 +646,7 @@ export default function ReportsClient(props: Props) {
 
       {tab === "absence"    && <AbsenceReport    {...props} />}
       {tab === "department" && <DepartmentReport {...props} />}
+      {tab === "patterns"   && <PatternsReport   {...props} />}
       {tab === "export"     && <CsvExport        {...props} />}
     </div>
   );

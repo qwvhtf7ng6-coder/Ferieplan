@@ -40,6 +40,7 @@ export interface VacationRequestRow {
   id: string;
   status: RequestStatus;
   note: string | null;
+  rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
   userId: string;

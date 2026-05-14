@@ -85,6 +85,15 @@ export default async function RequestDetailPage({
                 <p className="text-sm text-gray-700 italic">"{request.note}"</p>
               </div>
             )}
+
+            {request.status === "REJECTED" && (request as any).rejectionReason && (
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-red-400 mb-1 font-medium">Begrundelse for afvisning</p>
+                <div className="bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <p className="text-sm text-red-800 italic">"{(request as any).rejectionReason}"</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Entries */}

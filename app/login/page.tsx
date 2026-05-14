@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +24,16 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
-      setError("Forkert email eller adgangskode");
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+
+      if (newAttempts >= 5) {
+        setError("Kontoen er midlertidigt låst i 15 minutter pga. for mange fejlede forsøg.");
+      } else if (newAttempts >= 3) {
+        setError(`Forkert email eller adgangskode. ${5 - newAttempts} forsøg tilbage før kontoen låses.`);
+      } else {
+        setError("Forkert email eller adgangskode.");
+      }
       setLoading(false);
     } else {
       router.push("/dashboard");
@@ -63,7 +73,9 @@ export default function LoginPage() {
             />
           </div>
           {error && (
-            <p className="text-red-600 text-sm">{error}</p>
+            <div className={`text-sm rounded-lg px-3 py-2 ${attempts >= 5 ? "bg-red-50 text-red-700 border border-red-200" : "text-red-600"}`}>
+              {error}
+            </div>
           )}
           <button
             type="submit"
@@ -73,9 +85,6 @@ export default function LoginPage() {
             {loading ? "Logger ind..." : "Log ind"}
           </button>
         </form>
-        <p className="mt-4 text-xs text-gray-400 text-center">
-          Test: admin@firma.dk / admin123
-        </p>
       </div>
     </div>
   );

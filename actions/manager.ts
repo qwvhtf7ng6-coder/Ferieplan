@@ -161,19 +161,24 @@ export async function rejectRequest(
     return { ok: false, error: "Kun afventende ansøgninger kan afvises" };
   }
 
+  const trimmedReason = reason?.trim() || null;
+
   await prisma.vacationRequest.update({
     where: { id: requestId },
-    data: { status: "REJECTED" },
+    data: {
+      status: "REJECTED",
+      rejectionReason: trimmedReason,
+    },
   });
 
   await createAuditLog({
     userId: user.id,
     requestId,
     action: "REJECTED",
-    details: reason?.trim() || undefined,
+    details: trimmedReason || undefined,
   });
 
-  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder")
+  notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder", trimmedReason ?? undefined)
     .catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
@@ -295,4 +300,59 @@ export async function getRequestWithAudit(requestId: string): Promise<
       auditLogs,
     },
   };
+}
+
+export async function createRequestOnBehalf(input: {
+  targetUserId: string;
+  entries: { date: string; type: string; absenceType: string }[];
+  note?: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const user = await getSession();
+  if (!user) return { ok: false, error: "Ikke logget ind" };
+  if (!isManager(user.role)) return { ok: false, error: "Ingen adgang" };
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: input.targetUserId },
+    select: { id: true, name: true, departmentId: true },
+  });
+  if (!targetUser) return { ok: false, error: "Medarbejder ikke fundet" };
+  if (!targetUser.departmentId) return { ok: false, error: "Medarbejder mangler afdeling" };
+
+  // Manager can only create for their own dept, admin for anyone
+  if (!canManageDepartment(user.role, user.departmentId, targetUser.departmentId)) {
+    return { ok: false, error: "Ingen adgang til denne afdeling" };
+  }
+
+  if (!input.entries || input.entries.length === 0) {
+    return { ok: false, error: "Mindst én dato er påkrævet" };
+  }
+
+  const request = await prisma.vacationRequest.create({
+    data: {
+      userId: targetUser.id,
+      departmentId: targetUser.departmentId,
+      note: input.note?.trim() || null,
+      status: "APPROVED", // Manager-created requests are pre-approved
+      entries: {
+        create: input.entries.map((e) => ({
+          date: new Date(e.date),
+          type: e.type as any,
+          absenceType: e.absenceType as any,
+          days: e.type === "HALF_DAY_AM" || e.type === "HALF_DAY_PM" ? 0.5 : 1,
+        })),
+      },
+    },
+  });
+
+  await createAuditLog({
+    userId: user.id,
+    requestId: request.id,
+    action: "CREATED_ON_BEHALF",
+    details: `Oprettet på vegne af ${targetUser.name} af ${user.name}`,
+  });
+
+  revalidatePath("/manager/requests");
+  revalidatePath("/dashboard");
+
+  return { ok: true, data: { id: request.id } };
 }

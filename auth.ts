@@ -4,6 +4,9 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -26,11 +29,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user) return null;
 
+        // Check if account is locked
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          return null; // Still locked
+        }
+
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.password
         );
-        if (!valid) return null;
+
+        if (!valid) {
+          // Increment failed attempts
+          const newAttempts = (user.loginAttempts ?? 0) + 1;
+          const shouldLock = newAttempts >= MAX_LOGIN_ATTEMPTS;
+
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              loginAttempts: newAttempts,
+              lockedUntil: shouldLock
+                ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+                : null,
+            },
+          });
+          return null;
+        }
+
+        // Successful login — reset counter
+        if (user.loginAttempts > 0 || user.lockedUntil) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { loginAttempts: 0, lockedUntil: null },
+          });
+        }
 
         return {
           id: user.id,

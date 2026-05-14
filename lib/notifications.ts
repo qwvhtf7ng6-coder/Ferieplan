@@ -25,7 +25,8 @@ export async function notifyEmployeeOfDecision(
   requestId: string,
   employeeId: string,
   type: "REQUEST_APPROVED" | "REQUEST_REJECTED" | "REQUEST_CANCELLED" | "REQUEST_EDITED",
-  actorName: string
+  actorName: string,
+  reason?: string
 ) {
   const titles: Record<typeof type, string> = {
     REQUEST_APPROVED:  "Ansøgning godkendt",
@@ -33,18 +34,23 @@ export async function notifyEmployeeOfDecision(
     REQUEST_CANCELLED: "Ansøgning annulleret",
     REQUEST_EDITED:    "Ansøgning ændret",
   };
-  const messages: Record<typeof type, string> = {
+  const baseMessages: Record<typeof type, string> = {
     REQUEST_APPROVED:  `Din ansøgning er blevet godkendt af ${actorName}.`,
     REQUEST_REJECTED:  `Din ansøgning er blevet afvist af ${actorName}.`,
     REQUEST_CANCELLED: `Din ansøgning er blevet annulleret af ${actorName}.`,
     REQUEST_EDITED:    `Din ansøgnings note er blevet redigeret af ${actorName}.`,
   };
 
+  let message = baseMessages[type];
+  if (type === "REQUEST_REJECTED" && reason) {
+    message += ` Begrundelse: "${reason}"`;
+  }
+
   await createNotification({
     userId: employeeId,
     type,
     title: titles[type],
-    message: messages[type],
+    message,
     link: `/requests/${requestId}`,
   });
 }

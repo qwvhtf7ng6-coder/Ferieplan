@@ -67,6 +67,8 @@ model User {
   role           Role              @default(EMPLOYEE)
   departmentId   String?
   department     Department?       @relation(fields: [departmentId], references: [id])
+  loginAttempts  Int               @default(0)
+  lockedUntil    DateTime?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   requests       VacationRequest[]
@@ -112,17 +114,18 @@ model VerificationToken {
 }
 
 model VacationRequest {
-  id           String                @id @default(cuid())
-  userId       String
-  departmentId String
-  status       RequestStatus         @default(PENDING)
-  note         String?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
-  user         User                  @relation(fields: [userId], references: [id])
-  department   Department            @relation(fields: [departmentId], references: [id])
-  entries      VacationRequestEntry[]
-  auditLogs    AuditLog[]
+  id             String                @id @default(cuid())
+  userId         String
+  departmentId   String
+  status         RequestStatus         @default(PENDING)
+  note           String?
+  rejectionReason String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  user           User                  @relation(fields: [userId], references: [id])
+  department     Department            @relation(fields: [departmentId], references: [id])
+  entries        VacationRequestEntry[]
+  auditLogs      AuditLog[]
 }
 
 model VacationRequestEntry {
