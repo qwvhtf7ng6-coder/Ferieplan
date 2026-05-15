@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { isAdmin } from "@/lib/permissions";
 import ReportsClient from "./ReportsClient";
 import type { SessionUser } from "@/types";
@@ -60,7 +61,7 @@ export default async function ReportsPage() {
   }));
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
@@ -74,6 +75,6 @@ export default async function ReportsPage() {
           currentYear={currentYear}
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

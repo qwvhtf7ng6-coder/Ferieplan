@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import CalendarGrid from "@/components/CalendarGrid";
 import { isManager, isAdmin } from "@/lib/permissions";
 import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
@@ -138,7 +139,7 @@ export default async function CalendarPage({
   });
 
   return (
-    <div className="flex flex-col h-full">
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
       <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
@@ -153,6 +154,6 @@ export default async function CalendarPage({
           isManagerOrAdmin={isManagerOrAdmin}
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

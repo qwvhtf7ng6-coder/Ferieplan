@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -41,7 +42,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const totalDays = totalDaysFromEntries(request.entries.map((e: { days: number }) => ({ days: e.days })));
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
@@ -115,6 +116,6 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
           <RequestTimeline logs={request.auditLogs} />
         </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

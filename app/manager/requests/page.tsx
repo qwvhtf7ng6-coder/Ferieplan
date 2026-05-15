@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { RequestFilters } from "@/components/manager/RequestFilters";
 import { ManagerRequestsClient } from "./ManagerRequestsClient";
 import { getManagerRequests } from "@/actions/manager";
@@ -71,7 +72,7 @@ export default async function ManagerRequestsPage({
   const presentCount = Math.max(0, totalInDept - absentCount);
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
 
@@ -141,6 +142,6 @@ export default async function ManagerRequestsPage({
 
         <ManagerRequestsClient requests={requests} />
       </main>
-    </div>
+    </AppShell>
   );
 }

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import SettingsClient from "./SettingsClient";
 import { isAdmin } from "@/lib/permissions";
 
@@ -20,11 +21,11 @@ export default async function SettingsPage() {
   const settings = await prisma.appSettings.findFirst();
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-xl mx-auto p-6">
         <SettingsClient settings={settings as Settings | null} />
       </main>
-    </div>
+    </AppShell>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { OnBehalfForm } from "./OnBehalfForm";
 import { isManager, isAdmin } from "@/lib/permissions";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
@@ -35,7 +36,7 @@ export default async function NewRequestOnBehalfPage() {
   });
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
@@ -49,6 +50,6 @@ export default async function NewRequestOnBehalfPage() {
         />
         <OnBehalfForm employees={employees} />
       </main>
-    </div>
+    </AppShell>
   );
 }

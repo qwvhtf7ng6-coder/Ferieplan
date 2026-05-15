@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import AdminUsersClient from "./AdminUsersClient";
 import { isAdmin } from "@/lib/permissions";
 
@@ -20,7 +21,7 @@ export default async function AdminUsersPage() {
   ]);
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <AdminUsersClient
@@ -28,6 +29,6 @@ export default async function AdminUsersPage() {
           departments={departments}
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

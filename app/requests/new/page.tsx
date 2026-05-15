@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { RequestForm } from "@/components/RequestForm";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,7 +23,7 @@ export default async function NewRequestPage() {
 
   if (!user.departmentId) {
     return (
-      <div>
+      <AppShell>
         <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
         <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
           <Card className="p-8 text-center">
@@ -34,12 +35,12 @@ export default async function NewRequestPage() {
             <p className="text-[13px] text-text-muted mt-1">Kontakt en administrator for at blive tilknyttet en afdeling.</p>
           </Card>
         </main>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
@@ -53,6 +54,6 @@ export default async function NewRequestPage() {
         />
         <RequestForm />
       </main>
-    </div>
+    </AppShell>
   );
 }

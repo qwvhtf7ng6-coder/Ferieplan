@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { TopBar } from "@/components/TopBar";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { TopBar } from "@/components/TopBar";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -53,10 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${jakarta.variable} font-sans min-h-screen bg-bg`}>
         <ServiceWorkerRegistration />
         <Providers>
-          <div className="md:pl-56 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen">
-            <TopBar />
-            {children}
-          </div>
+          {children}
         </Providers>
       </body>
     </html>

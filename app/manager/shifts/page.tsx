@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { isManager, isAdmin } from "@/lib/permissions";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import ShiftsClient from "./ShiftsClient";
@@ -39,7 +40,7 @@ export default async function ManagerShiftsPage() {
   ]);
 
   return (
-    <div>
+    <AppShell>
       <div className="no-print">
         <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       </div>
@@ -51,6 +52,6 @@ export default async function ManagerShiftsPage() {
           managerDepartmentId={user.departmentId ?? null}
         />
       </main>
-    </div>
+    </AppShell>
   );
 }

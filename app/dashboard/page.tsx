@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import { AppShell } from "@/components/AppShell";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
 import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div>
+    <AppShell>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
@@ -86,6 +87,6 @@ export default async function DashboardPage() {
           emptyMessage="Du har ingen ansøgninger endnu."
         />
       </main>
-    </div>
+    </AppShell>
   );
 }
