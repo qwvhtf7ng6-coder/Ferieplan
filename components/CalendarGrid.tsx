@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  format, isWeekend,
+  format, isWeekend, getISOWeek,
   startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval,
 } from "date-fns";
 import { da } from "date-fns/locale";
@@ -673,7 +673,13 @@ export default function CalendarGrid({
       <PrintCalendarView
         year={year}
         month={month}
-        departments={departments}
+        days={days}
+        printTitle={
+          viewMode === "week"
+            ? `Uge ${getISOWeek(weekDays[0])} · ${format(weekDays[0], "d. MMM", { locale: da })}–${format(weekDays[6], "d. MMM yyyy", { locale: da })}`
+            : undefined
+        }
+        departments={filteredDepartments}
         requests={requests}
         holidays={holidays}
         isManagerOrAdmin={!!isManagerOrAdmin}

@@ -32,6 +32,10 @@ interface PrintHoliday {
 interface PrintCalendarViewProps {
   year: number;
   month: number;
+  /** Explicit list of days to print — matches whatever is on screen (month or week) */
+  days?: Date[];
+  /** Display title override — e.g. "Uge 21 · 19.–25. maj 2026" */
+  printTitle?: string;
   departments: PrintDept[];
   requests: PrintRequest[];
   holidays: PrintHoliday[];
@@ -46,12 +50,17 @@ const MONTH_NAMES = [
 const DAY_INITIALS = ["M","T","O","T","F","L","S"];
 
 export function PrintCalendarView({
-  year, month, departments, requests, holidays, isManagerOrAdmin,
+  year, month, days: daysProp, printTitle,
+  departments, requests, holidays, isManagerOrAdmin,
 }: PrintCalendarViewProps) {
   const deptColorMap = useMemo(() => buildDeptColorMap(departments.map((d) => d.id)), [departments]);
 
-  const daysInMonth = getDaysInMonth(new Date(year, month - 1));
-  const days = Array.from({ length: daysInMonth }, (_, i) => new Date(year, month - 1, i + 1));
+  const monthDaysList = Array.from(
+    { length: getDaysInMonth(new Date(year, month - 1)) },
+    (_, i) => new Date(year, month - 1, i + 1),
+  );
+  const days = daysProp ?? monthDaysList;
+  const daysInMonth = days.length;
 
   const holidayMap = useMemo(
     () => new Map(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])),
@@ -168,12 +177,12 @@ export function PrintCalendarView({
         <div>
           <div style={S.title}>WorkPlan — Kalender</div>
           <div style={S.subtitle}>
-            {MONTH_NAMES[month - 1]} {year}
+            {printTitle ?? `${MONTH_NAMES[month - 1]} ${year}`}
             {departments.length === 1 && ` · ${departments[0].name}`}
           </div>
         </div>
         <div style={S.metaRight}>
-          <div style={S.metaPrimary}>{MONTH_NAMES[month - 1]} {year}</div>
+          <div style={S.metaPrimary}>{printTitle ?? `${MONTH_NAMES[month - 1]} ${year}`}</div>
           <div style={S.metaSub}>{daysInMonth} dage · {totalEmployees} medarbejdere</div>
           <div style={S.metaFaint}>Udskrevet {format(today, "d. MMM yyyy", { locale: da })}</div>
         </div>
@@ -411,7 +420,7 @@ export function PrintCalendarView({
       <div style={S.footer}>
         <span>WorkPlan — Intern ferieplanlægning</span>
         <span>
-          {totalEmployees} medarbejder{totalEmployees !== 1 ? "e" : ""} · {MONTH_NAMES[month - 1]} {year}
+          {totalEmployees} medarbejder{totalEmployees !== 1 ? "e" : ""} · {printTitle ?? `${MONTH_NAMES[month - 1]} ${year}`}
         </span>
       </div>
 
