@@ -96,23 +96,23 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex flex-wrap gap-3 items-end bg-surface border border-border rounded-lg p-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">År</label>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">År</label>
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Måned</label>
-          <select value={month} onChange={(e) => setMonth(e.target.value === "all" ? "all" : Number(e.target.value))} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">Måned</label>
+          <select value={month} onChange={(e) => setMonth(e.target.value === "all" ? "all" : Number(e.target.value))} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             <option value="all">Hele året</option>
             {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Afdeling</label>
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">Afdeling</label>
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             <option value="">Alle afdelinger</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
@@ -129,20 +129,20 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
             );
             downloadCSV([header, ...data], `fraværsrapport-${year}${month !== "all" ? `-${(month as number)+1}` : ""}.csv`);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors"
         >
           ↓ Eksporter CSV
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
         {rows.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">Ingen godkendte feriedage i den valgte periode.</p>
+          <p className="text-sm text-text-subtle text-center py-10">Ingen godkendte feriedage i den valgte periode.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+              <thead className="bg-bg text-[11px] font-bold text-text-subtle uppercase tracking-wide">
                 <tr>
                   <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">Medarbejder</th>
                   <th className="px-4 py-3 text-left">Afdeling</th>
@@ -150,24 +150,24 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
                     ? MONTHS.map((m, i) => <th key={i} className="px-2 py-3 text-center min-w-[44px]">{m.slice(0, 3)}</th>)
                     : <th className="px-4 py-3 text-center">{MONTHS[month as number]}</th>
                   }
-                  <th className="px-4 py-3 text-center font-bold text-gray-700">Total</th>
+                  <th className="px-4 py-3 text-center font-bold text-text">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.user.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <tr key={r.user.id} className="border-t border-border hover:bg-bg">
                     <td className="px-4 py-3 sticky left-0 bg-white">
                       <p className="font-medium text-gray-900">{r.user.name}</p>
-                      <p className="text-xs text-gray-400">{r.user.email}</p>
+                      <p className="text-xs text-text-subtle">{r.user.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{r.user.department?.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-text-muted text-xs">{r.user.department?.name ?? "—"}</td>
                     {month === "all"
                       ? r.monthly.map((d, i) => (
-                          <td key={i} className={cn("px-2 py-3 text-center text-xs", d > 0 ? "text-blue-700 font-semibold" : "text-gray-300")}>
+                          <td key={i} className={cn("px-2 py-3 text-center text-xs", d > 0 ? "text-primary font-semibold" : "text-text-subtle")}>
                             {d > 0 ? d : "·"}
                           </td>
                         ))
-                      : <td className="px-4 py-3 text-center font-semibold text-blue-700">{r.totalDays}</td>
+                      : <td className="px-4 py-3 text-center font-semibold text-primary">{r.totalDays}</td>
                     }
                     <td className="px-4 py-3 text-center font-bold text-gray-900">{r.totalDays}</td>
                   </tr>
@@ -175,15 +175,15 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
               </tbody>
               <tfoot className="bg-gray-50 border-t border-gray-200">
                 <tr>
-                  <td className="px-4 py-2 text-xs font-semibold text-gray-600 sticky left-0 bg-gray-50">I alt</td>
+                  <td className="px-4 py-2 text-xs font-semibold text-text-muted sticky left-0 bg-gray-50">I alt</td>
                   <td />
                   {month === "all"
                     ? Array.from({ length: 12 }, (_, m) => (
-                        <td key={m} className="px-2 py-2 text-center text-xs font-semibold text-gray-600">
+                        <td key={m} className="px-2 py-2 text-center text-xs font-semibold text-text-muted">
                           {rows.reduce((s, r) => s + r.monthly[m], 0) || ""}
                         </td>
                       ))
-                    : <td className="px-4 py-2 text-center text-xs font-semibold text-gray-600">{rows.reduce((s, r) => s + r.totalDays, 0)}</td>
+                    : <td className="px-4 py-2 text-center text-xs font-semibold text-text-muted">{rows.reduce((s, r) => s + r.totalDays, 0)}</td>
                   }
                   <td className="px-4 py-2 text-center text-sm font-bold text-gray-900">
                     {rows.reduce((s, r) => s + r.totalDays, 0)}
@@ -232,10 +232,10 @@ function DepartmentReport({ departments, requests, currentYear }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex flex-wrap gap-3 items-end bg-surface border border-border rounded-lg p-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">År</label>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">År</label>
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
@@ -245,7 +245,7 @@ function DepartmentReport({ departments, requests, currentYear }: Props) {
             const data = rows.map((r) => [r.dept.name, ...r.monthly.map(String), String(r.totalDays), String(r.approved), String(r.pending), String(r.rejected)]);
             downloadCSV([header, ...data], `afdelingsrapport-${year}.csv`);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors"
         >
           ↓ Eksporter CSV
         </button>
@@ -254,12 +254,12 @@ function DepartmentReport({ departments, requests, currentYear }: Props) {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rows.map((r) => (
-          <div key={r.dept.id} className="bg-white border border-gray-200 rounded-xl p-4">
+          <div key={r.dept.id} className="bg-surface border border-border rounded-lg p-4">
             <div className="flex items-start justify-between mb-3">
               <h3 className="font-semibold text-gray-900">{r.dept.name}</h3>
-              <span className="text-2xl font-bold text-blue-600">{r.totalDays}</span>
+              <span className="text-2xl font-bold text-primary">{r.totalDays}</span>
             </div>
-            <p className="text-xs text-gray-500 mb-3">godkendte feriedage i {year}</p>
+            <p className="text-xs text-text-muted mb-3">godkendte feriedage i {year}</p>
 
             {/* Bar chart */}
             <div className="flex items-end gap-0.5 h-10 mb-2">
@@ -276,27 +276,27 @@ function DepartmentReport({ departments, requests, currentYear }: Props) {
                 />
               ))}
             </div>
-            <div className="flex justify-between text-[10px] text-gray-400 mb-3">
+            <div className="flex justify-between text-[10px] text-text-subtle mb-3">
               <span>Jan</span><span>Jun</span><span>Dec</span>
             </div>
 
             <div className="grid grid-cols-3 gap-1 text-xs text-center">
               <div className="bg-green-50 rounded px-1 py-1">
                 <p className="font-bold text-green-700">{r.approved}</p>
-                <p className="text-gray-500">Godkendt</p>
+                <p className="text-text-muted">Godkendt</p>
               </div>
               <div className="bg-yellow-50 rounded px-1 py-1">
                 <p className="font-bold text-yellow-700">{r.pending}</p>
-                <p className="text-gray-500">Afventer</p>
+                <p className="text-text-muted">Afventer</p>
               </div>
               <div className="bg-red-50 rounded px-1 py-1">
                 <p className="font-bold text-red-700">{r.rejected}</p>
-                <p className="text-gray-500">Afvist</p>
+                <p className="text-text-muted">Afvist</p>
               </div>
             </div>
 
             {r.totalDays > 0 && (
-              <p className="text-xs text-gray-400 mt-2">Travlest: {MONTHS[r.peakMonth]}</p>
+              <p className="text-xs text-text-subtle mt-2">Travlest: {MONTHS[r.peakMonth]}</p>
             )}
           </div>
         ))}
@@ -368,10 +368,10 @@ function CsvExport({ requests, departments }: Props) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex flex-wrap gap-3 items-end bg-surface border border-border rounded-lg p-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Status</label>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">Status</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             <option value="">Alle</option>
             <option value="APPROVED">Godkendt</option>
             <option value="PENDING">Afventer</option>
@@ -380,15 +380,15 @@ function CsvExport({ requests, departments }: Props) {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Afdeling</label>
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">Afdeling</label>
+          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             <option value="">Alle afdelinger</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">År</label>
-          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <label className="block text-xs text-text-muted mb-1">År</label>
+          <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             <option value="">Alle år</option>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
@@ -396,20 +396,20 @@ function CsvExport({ requests, departments }: Props) {
       </div>
 
       {/* Preview count */}
-      <p className="text-sm text-gray-500 px-1">{filtered.length} ansøgning{filtered.length !== 1 ? "er" : ""} matcher filteret</p>
+      <p className="text-sm text-text-muted px-1">{filtered.length} ansøgning{filtered.length !== 1 ? "er" : ""} matcher filteret</p>
 
       {/* Export options */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-800 mb-1">Ansøgningsoversigt</h3>
-          <p className="text-sm text-gray-500 mb-4">Én linje per ansøgning med totale feriedage, datointerval og status.</p>
-          <button onClick={exportRequests} className="w-full bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h3 className="font-semibold text-text mb-1">Ansøgningsoversigt</h3>
+          <p className="text-sm text-text-muted mb-4">Én linje per ansøgning med totale feriedage, datointerval og status.</p>
+          <button onClick={exportRequests} className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
             ↓ Download oversigt ({filtered.length} rækker)
           </button>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-800 mb-1">Detaljeret eksport</h3>
-          <p className="text-sm text-gray-500 mb-4">Én linje per dato — egnet til lønsystemer og detaljeret bogføring.</p>
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <h3 className="font-semibold text-text mb-1">Detaljeret eksport</h3>
+          <p className="text-sm text-text-muted mb-4">Én linje per dato — egnet til lønsystemer og detaljeret bogføring.</p>
           <button onClick={exportDetailed} className="w-full bg-gray-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-900 transition-colors">
             ↓ Download detaljeret ({filtered.flatMap((r) => r.entries).length} rækker)
           </button>
@@ -493,15 +493,15 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
 
   return (
     <div className="space-y-8">
-      <p className="text-sm text-gray-500">Statistik baseret på godkendte ansøgninger i {currentYear}.</p>
+      <p className="text-sm text-text-muted">Statistik baseret på godkendte ansøgninger i {currentYear}.</p>
 
       {/* Absence type breakdown */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Fordeling af fraværstyper</h3>
+        <h3 className="text-sm font-semibold text-text mb-3">Fordeling af fraværstyper</h3>
         <div className="space-y-2">
           {typeBreakdown.map(({ type, days, pct }) => (
             <div key={type} className="flex items-center gap-3">
-              <div className="w-28 text-xs text-gray-600 text-right shrink-0">
+              <div className="w-28 text-xs text-text-muted text-right shrink-0">
                 {ABSENCE_LABELS[type] ?? type}
               </div>
               <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
@@ -510,27 +510,27 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                   style={{ width: `${pct}%`, backgroundColor: TYPE_COLORS[type] ?? "#6b7280" }}
                 />
               </div>
-              <div className="w-20 text-xs text-gray-500 shrink-0">
+              <div className="w-20 text-xs text-text-muted shrink-0">
                 {days} dag{days !== 1 ? "e" : ""} ({pct}%)
               </div>
             </div>
           ))}
           {typeBreakdown.length === 0 && (
-            <p className="text-sm text-gray-400 italic">Ingen data</p>
+            <p className="text-sm text-text-subtle italic">Ingen data</p>
           )}
         </div>
       </div>
 
       {/* Busiest weeks */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Mest belastede uger (top 10)</h3>
+        <h3 className="text-sm font-semibold text-text mb-3">Mest belastede uger (top 10)</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase">Uge</th>
-                <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase">Fraværsdage</th>
-                <th className="text-left py-2 text-xs font-semibold text-gray-500 uppercase">Belastning</th>
+                <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Uge</th>
+                <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Fraværsdage</th>
+                <th className="text-left py-2 text-xs font-semibold text-text-muted uppercase">Belastning</th>
               </tr>
             </thead>
             <tbody>
@@ -539,13 +539,13 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                 const pct = Math.round((days / maxDays) * 100);
                 return (
                   <tr key={week} className="border-b border-gray-50">
-                    <td className="py-2 pr-4 font-mono text-gray-700">{week}</td>
-                    <td className="py-2 pr-4 text-gray-600">{days}</td>
+                    <td className="py-2 pr-4 font-mono text-text">{week}</td>
+                    <td className="py-2 pr-4 text-text-muted">{days}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
                         <div className="w-24 bg-gray-100 rounded-full h-2">
                           <div
-                            className="h-full rounded-full bg-blue-500"
+                            className="h-full rounded-full bg-primary-light0"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -556,7 +556,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                 );
               })}
               {daysByWeek.length === 0 && (
-                <tr><td colSpan={3} className="py-4 text-center text-sm text-gray-400 italic">Ingen data</td></tr>
+                <tr><td colSpan={3} className="py-4 text-center text-sm text-text-subtle italic">Ingen data</td></tr>
               )}
             </tbody>
           </table>
@@ -566,7 +566,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
       {/* Sick days per employee */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Sygedage pr. medarbejder</h3>
+          <h3 className="text-sm font-semibold text-text">Sygedage pr. medarbejder</h3>
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
             <option value="">Alle afdelinger</option>
@@ -574,15 +574,15 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
           </select>
         </div>
         {topSickUsers.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Ingen sygedage registreret.</p>
+          <p className="text-sm text-text-subtle italic">Ingen sygedage registreret.</p>
         ) : (
           <div className="space-y-1">
             {topSickUsers.map((u) => (
               <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50">
                 <div className="flex-1">
-                  <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                  <span className="text-sm font-medium text-text">{u.name}</span>
                   {u.department && (
-                    <span className="text-xs text-gray-400 ml-2">{u.department.name}</span>
+                    <span className="text-xs text-text-subtle ml-2">{u.department.name}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -592,7 +592,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                       style={{ width: `${Math.min(100, (u.sickDays / (topSickUsers[0]?.sickDays ?? 1)) * 100)}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-600 w-16 text-right">{u.sickDays} dag{u.sickDays !== 1 ? "e" : ""}</span>
+                  <span className="text-xs text-text-muted w-16 text-right">{u.sickDays} dag{u.sickDays !== 1 ? "e" : ""}</span>
                 </div>
               </div>
             ))}
@@ -615,11 +615,11 @@ function getISOWeek(date: Date): number {
 
 type Tab = "absence" | "department" | "patterns" | "export";
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "absence",    label: "Fraværsrapport",   icon: "👤" },
-  { key: "department", label: "Afdelingsrapport",  icon: "🏢" },
-  { key: "patterns",   label: "Fraværsmønstre",    icon: "📊" },
-  { key: "export",     label: "CSV-eksport",       icon: "↓"  },
+const TABS: { key: Tab; label: string }[] = [
+  { key: "absence",    label: "Fraværsrapport" },
+  { key: "department", label: "Afdelingsrapport" },
+  { key: "patterns",   label: "Fraværsmønstre" },
+  { key: "export",     label: "CSV-eksport" },
 ];
 
 export default function ReportsClient(props: Props) {
@@ -627,21 +627,24 @@ export default function ReportsClient(props: Props) {
 
   return (
     <div>
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-              tab === t.key ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"
-            )}
-          >
-            <span>{t.icon}</span>
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-6">
+        <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text mb-5">Rapporter</h1>
+        <div className="flex gap-1 p-1 rounded-lg border border-border bg-bg w-fit flex-wrap">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-[13px] font-semibold transition-colors",
+                tab === t.key
+                  ? "bg-surface text-text shadow-xs"
+                  : "text-text-muted hover:text-text"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "absence"    && <AbsenceReport    {...props} />}

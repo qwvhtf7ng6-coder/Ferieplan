@@ -73,28 +73,27 @@ export default async function ManagerRequestsPage({
   return (
     <div>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
 
         {/* Today widget */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-gray-700">
+        <div className="bg-surface border border-border rounded-lg shadow-xs p-4 mb-5">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <p className="text-[13px] font-semibold text-text">
               I dag — {today.toLocaleDateString("da-DK", { weekday: "long", day: "numeric", month: "long" })}
             </p>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="flex items-center gap-1.5 text-green-700 font-medium">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: "var(--c-success)" }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--c-success)" }} />
                 {presentCount} til stede
               </span>
-              <span className="flex items-center gap-1.5 text-orange-600 font-medium">
-                <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: "var(--c-warning)" }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--c-warning)" }} />
                 {absentCount} fraværende
               </span>
             </div>
           </div>
-
           {absentCount === 0 ? (
-            <p className="text-sm text-gray-400 italic">Ingen godkendte fraværsansøgninger i dag.</p>
+            <p className="text-[12px] text-text-subtle italic">Ingen godkendte fraværsansøgninger i dag.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {todayAbsences.map((req: any) => {
@@ -105,12 +104,10 @@ export default async function ManagerRequestsPage({
                 };
                 const label = entry ? (absLabels[(entry as any).absenceType] ?? "Fravær") : "Fravær";
                 return (
-                  <div key={req.id} className="flex items-center gap-1.5 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1 text-xs">
-                    <span className="font-medium text-gray-800">{req.user.name}</span>
-                    {isAdmin(user.role) && (
-                      <span className="text-gray-400">· {req.department.name}</span>
-                    )}
-                    <span className="text-orange-600">{label}</span>
+                  <div key={req.id} className="flex items-center gap-1.5 bg-warning-bg border border-[rgba(217,119,6,.2)] rounded-md px-2.5 py-1 text-[12px]">
+                    <span className="font-semibold text-text">{req.user.name}</span>
+                    {isAdmin(user.role) && <span className="text-text-subtle">· {req.department.name}</span>}
+                    <span className="text-warning-text font-medium">{label}</span>
                   </div>
                 );
               })}
@@ -118,21 +115,20 @@ export default async function ManagerRequestsPage({
           )}
         </div>
 
-        <div className="flex items-center justify-between mb-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ansøgninger</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Ansøgninger</h1>
+            <p className="text-[13px] text-text-muted mt-0.5">
               {requests.length} ansøgning{requests.length !== 1 ? "er" : ""}
               {pendingCount > 0 && (
-                <span className="ml-2 text-yellow-700 font-medium">
-                  · {pendingCount} afventer
-                </span>
+                <span className="ml-2 font-semibold text-warning">· {pendingCount} afventer</span>
               )}
             </p>
           </div>
           <Link
             href="/manager/requests/new"
-            className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-md text-[13px] font-semibold bg-primary text-white hover:bg-primary-hover transition-colors shadow-[0_1px_4px_rgba(79,70,229,.35)] shrink-0"
           >
             + Opret på vegne af
           </Link>

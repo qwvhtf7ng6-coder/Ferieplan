@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Spinner } from "@/components/ui/Spinner";
+import { Btn } from "@/components/ui/Btn";
+import { X } from "lucide-react";
 
 interface RejectDialogProps {
   open: boolean;
@@ -26,14 +27,13 @@ export function RejectDialog({ open, onClose, onConfirm, employeeName }: RejectD
   return (
     <Modal open={open} onClose={onClose} title="Afvis ansøgning">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-[13px] text-text-muted">
           Du er ved at afvise ansøgningen fra{" "}
-          <span className="font-semibold">{employeeName}</span>.
+          <span className="font-semibold text-text">{employeeName}</span>.
         </p>
         <div>
-          <label htmlFor="reject-reason" className="block text-sm font-medium text-gray-700 mb-1">
-            Begrundelse{" "}
-            <span className="font-normal text-gray-400">(valgfri)</span>
+          <label htmlFor="reject-reason" className="block text-[13px] font-semibold text-text mb-1">
+            Begrundelse <span className="font-normal text-text-subtle">(valgfri)</span>
           </label>
           <textarea
             id="reject-reason"
@@ -42,26 +42,15 @@ export function RejectDialog({ open, onClose, onConfirm, employeeName }: RejectD
             rows={3}
             maxLength={300}
             placeholder="F.eks. for mange allerede godkendt samme periode..."
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+            className="w-full border-[1.5px] border-border rounded-md px-3.5 py-2.5 text-sm bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:border-danger focus:ring-[3px] focus:ring-[rgba(220,38,38,.12)] resize-none"
           />
-          <p className="text-xs text-gray-400 text-right mt-0.5">{reason.length}/300</p>
+          <p className="text-[11px] text-text-subtle text-right mt-0.5">{reason.length}/300</p>
         </div>
-        <div className="flex flex-col-reverse sm:flex-row gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors text-center"
-          >
-            Annuller
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 justify-center flex-1 bg-red-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {loading && <Spinner />}
-            Afvis ansøgning
-          </button>
+        <div className="flex gap-2">
+          <Btn type="submit" variant="danger" disabled={loading} icon={<X size={14} />} full>
+            {loading ? "Afviser..." : "Afvis ansøgning"}
+          </Btn>
+          <Btn type="button" variant="secondary" onClick={onClose} full>Annuller</Btn>
         </div>
       </form>
     </Modal>

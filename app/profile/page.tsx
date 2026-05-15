@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 import { ProfileClient } from "./ProfileClient";
 import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
 import { isManager } from "@/lib/permissions";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { SessionUser } from "@/types";
 
 export default async function ProfilePage() {
@@ -20,8 +21,8 @@ export default async function ProfilePage() {
   return (
     <div>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
-      <main className="max-w-xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Min profil</h1>
+      <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
+        <PageHeader title="Min profil" subtitle="Administrer dine personlige oplysninger" />
         <ProfileClient
           initialName={user.name ?? ""}
           initialEmail={user.email ?? ""}
