@@ -137,10 +137,12 @@ function DayTimeRulesEditor({ value, onChange, defaultStart, defaultEnd }: {
 
 interface PatternFormData {
   name: string; userId: string; templateId: string;
-  recurrenceType: "weekly" | "interval";
+  recurrenceType: "weekly" | "interval" | "nth_weekday";
   intervalWeeks: number;
   weeklyDays: number[];
   intervalRules: { weekIndex: number; weekdays: number[] }[];
+  nthWeekday: number;   // ugedag (0=søn...6=lør)
+  nthEvery: number;     // hver N'te forekomst
   rangeMode: "month" | "months" | "custom";
   monthsCount: number;
   startDate: string; endDate: string; note: string;
@@ -153,6 +155,8 @@ function defaultPatternForm(): PatternFormData {
     recurrenceType: "weekly", intervalWeeks: 2,
     weeklyDays: [1],
     intervalRules: [{ weekIndex: 0, weekdays: [1] }, { weekIndex: 1, weekdays: [3] }],
+    nthWeekday: 5,   // fredag som standard
+    nthEvery: 2,     // hver 2. som standard
     rangeMode: "month", monthsCount: 1,
     startDate: format(startOfMonth(today), "yyyy-MM-dd"),
     endDate: format(endOfMonth(today), "yyyy-MM-dd"),
@@ -236,17 +240,19 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
       <div>
         <SectionLabel>Gentagelsestype</SectionLabel>
         <div className="flex gap-2 mt-2 flex-wrap">
-          {(["weekly", "interval"] as const).map((t) => (
+          {(["weekly", "nth_weekday", "interval"] as const).map((t) => (
             <button key={t} type="button" onClick={() => set({ recurrenceType: t })}
               className={cn("px-4 py-2 rounded-[10px] text-[13px] font-semibold border transition-colors",
                 form.recurrenceType === t ? "bg-primary text-white border-primary" : "bg-surface text-text-muted border-border hover:border-primary hover:text-text")}>
-              {t === "weekly" ? "Fast ugedag" : "Interval (skiftehold)"}
+              {t === "weekly" ? "Fast ugedag" : t === "nth_weekday" ? "Hver N. ugedag" : "Interval (skiftehold)"}
             </button>
           ))}
         </div>
         <p className="mt-1.5 text-[12px] text-text-subtle">
           {form.recurrenceType === "weekly"
             ? "Samme ugedage gentages hver uge."
+            : form.recurrenceType === "nth_weekday"
+            ? "Vælg en ugedag og angiv hvor ofte den gentages — f.eks. hver 4. fredag."
             : "Cyklus af uger med forskellige dage — velegnet til skiftehold."}
         </p>
       </div>
@@ -274,6 +280,43 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
               {form.weeklyDays.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)).map((d) => WEEKDAY_NAMES[d]).join(", ")}
             </p>
           )}
+        </div>
+      )}
+
+      {/* Hver N. ugedag */}
+      {form.recurrenceType === "nth_weekday" && (
+        <div className="space-y-3">
+          <SectionLabel>Opsætning</SectionLabel>
+          <div className="bg-bg rounded-[10px] border border-border p-4 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-2">Ugedag</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {WEEKDAYS.map(({ label, value: dow }) => (
+                  <button key={dow} type="button" onClick={() => set({ nthWeekday: dow })}
+                    className={cn("w-12 py-2 rounded-[10px] text-[12px] font-bold border transition-colors",
+                      form.nthWeekday === dow ? "bg-primary text-white border-primary" : "bg-surface text-text-muted border-border hover:border-primary")}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-2">
+                Hver <span className="text-primary">{form.nthEvery}.</span> {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()}
+              </label>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => set({ nthEvery: Math.max(2, form.nthEvery - 1) })}
+                  className="w-8 h-8 rounded-md border border-border bg-surface text-text-muted hover:text-text flex items-center justify-center text-sm font-bold">−</button>
+                <span className="text-[18px] font-extrabold text-primary w-8 text-center">{form.nthEvery}</span>
+                <button type="button" onClick={() => set({ nthEvery: Math.min(8, form.nthEvery + 1) })}
+                  className="w-8 h-8 rounded-md border border-border bg-surface text-text-muted hover:text-text flex items-center justify-center text-sm font-bold">+</button>
+                <span className="text-[13px] text-text-muted ml-1">uger imellem</span>
+              </div>
+              <p className="text-[12px] text-text-subtle mt-2">
+                Eksempel: hver {form.nthEvery}. {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()} i perioden
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -513,7 +556,14 @@ export default function ShiftsClient({
 
   async function createPattern() {
     setPatternLoading(true); setPatternError("");
-    const weekdayRules = patternForm.recurrenceType === "weekly" ? patternForm.weeklyDays : patternForm.intervalRules;
+    let weekdayRules: unknown;
+    if (patternForm.recurrenceType === "weekly") {
+      weekdayRules = patternForm.weeklyDays;
+    } else if (patternForm.recurrenceType === "nth_weekday") {
+      weekdayRules = { weekday: patternForm.nthWeekday, every: patternForm.nthEvery };
+    } else {
+      weekdayRules = patternForm.intervalRules;
+    }
     const res = await fetch("/api/shifts/patterns", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -555,6 +605,9 @@ export default function ShiftsClient({
         const days = (rules as number[]).sort((a: number, b: number) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))
           .map((d: number) => WEEKDAYS.find((w) => w.value === d)?.label ?? d).join(", ");
         return `Hver uge: ${days}`;
+      } else if (p.recurrenceType === "nth_weekday") {
+        const { weekday, every } = rules as { weekday: number; every: number };
+        return `Hver ${every}. ${WEEKDAY_NAMES[weekday].toLowerCase()}`;
       } else {
         return (rules as { weekIndex: number; weekdays: number[] }[]).map((r) => {
           const days = r.weekdays.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))

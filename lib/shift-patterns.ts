@@ -19,13 +19,34 @@ export async function generateAssignmentsFromPattern(pattern: {
   end.setHours(23, 59, 59, 999);
 
   if (pattern.recurrenceType === "weekly") {
+    // rules: number[] — ugedagsnumre (0=søn, 1=man ... 6=lør)
     const weekdays: number[] = rules;
     const cur = new Date(start);
     while (cur <= end) {
       if (weekdays.includes(cur.getDay())) dates.push(new Date(cur));
       cur.setDate(cur.getDate() + 1);
     }
+
+  } else if (pattern.recurrenceType === "nth_weekday") {
+    // rules: { weekday: number, every: number }
+    // Eksempel: { weekday: 5, every: 4 } = hver 4. fredag
+    const { weekday, every } = rules as { weekday: number; every: number };
+
+    // Saml alle forekomster af ugedagen i perioden
+    const occurrences: Date[] = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (cur.getDay() === weekday) occurrences.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // Vælg hver N'te forekomst (0-indekseret: indeks 0, N, 2N, ...)
+    occurrences.forEach((d, i) => {
+      if (i % every === 0) dates.push(d);
+    });
+
   } else if (pattern.recurrenceType === "interval") {
+    // rules: { weekIndex: number, weekdays: number[] }[]
     const cycleLength = pattern.intervalWeeks;
     const cycleAnchor = new Date(start);
     const dow = cycleAnchor.getDay();
