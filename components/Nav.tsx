@@ -59,7 +59,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
   return (
     <>
       {/* ── Desktop Sidebar ─────────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 z-40"
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 z-40 no-print"
         style={{ background: "linear-gradient(180deg, #1a1744 0%, #0d1117 100%)" }}>
 
         {/* Logo */}
@@ -132,7 +132,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
       </aside>
 
       {/* ── Mobile Top Bar ───────────────────────────────────────────────── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4 border-b border-border"
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4 border-b border-border no-print"
         style={{ background: "var(--c-topbar-bg)", backdropFilter: "blur(12px)" }}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -156,7 +156,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
 
       {/* Mobile full-screen menu */}
       {menuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col"
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col no-print"
           style={{ background: "linear-gradient(180deg, #1a1744 0%, #0d1117 100%)", top: 56 }}>
           <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
             {links.map((l) => {
@@ -189,7 +189,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
       )}
 
       {/* ── Mobile Bottom Nav ────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border safe-area-pb"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border safe-area-pb no-print"
         style={{ background: "var(--c-topbar-bg)", backdropFilter: "blur(12px)" }}>
         <div className="flex items-center justify-around h-16 px-2">
           {bottomLinks.map((l) => {
