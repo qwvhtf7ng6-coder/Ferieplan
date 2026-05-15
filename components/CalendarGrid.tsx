@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ChevronLeft, ChevronRight, Printer, AlertTriangle } from "lucide-react";
+import { PrintCalendarView } from "@/components/PrintCalendarView";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -566,7 +567,7 @@ export default function CalendarGrid({
   return (
     <div className="flex flex-col h-full">
       {/* Mobile */}
-      <div className="md:hidden">
+      <div className="md:hidden no-print">
         <MobileCalendarList
           year={year} month={month} departments={filteredDepartments}
           requests={requests} holidays={holidays}
@@ -575,7 +576,7 @@ export default function CalendarGrid({
       </div>
 
       {/* Desktop */}
-      <div className="hidden md:flex flex-col h-full gap-4">
+      <div className="hidden md:flex flex-col h-full gap-4 no-print">
 
         {/* Toolbar */}
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -606,15 +607,13 @@ export default function CalendarGrid({
           <div className="flex items-center gap-2 flex-wrap">
             <PillTabs options={viewOptions} value={viewMode} onChange={setViewMode} />
             <PillTabs options={filterOptions} value={personalFilter} onChange={setPersonalFilter} />
-            <a
-              href={`/manager/calendar/print?year=${year}&month=${month}&scope=${personalFilter}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-md text-[12px] font-semibold border border-border text-text-muted hover:text-text hover:bg-bg transition-colors"
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 h-[34px] px-3 rounded-md text-[12px] font-semibold border border-border text-text-muted hover:text-text hover:bg-bg transition-colors no-print"
               aria-label="Print kalender"
             >
               <Printer size={13} /> Print
-            </a>
+            </button>
           </div>
         </div>
 
@@ -669,6 +668,16 @@ export default function CalendarGrid({
       </div>
 
       <CellDetailModal data={cellModal} onClose={() => setCellModal(null)} />
+
+      {/* Inline print view — only visible when printing */}
+      <PrintCalendarView
+        year={year}
+        month={month}
+        departments={departments}
+        requests={requests}
+        holidays={holidays}
+        isManagerOrAdmin={!!isManagerOrAdmin}
+      />
     </div>
   );
 }

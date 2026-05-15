@@ -120,4 +120,42 @@ html.dark { color-scheme: dark; }
   .pt-14 { padding-top: 0 !important; }
   .pb-20 { padding-bottom: 0 !important; }
   #shift-print-view { display: block !important; }
+  #calendar-print-view { display: block !important; }
+}
+
+/* ── Force light mode in print ─────────────────────────────────────────────── */
+@media print {
+  :root,
+  html.dark {
+    --c-primary:        #4f46e5;
+    --c-primary-hover:  #4338ca;
+    --c-primary-light:  #eef2ff;
+    --c-primary-muted:  rgba(79,70,229,.1);
+    --c-accent:         #7c3aed;
+
+    --c-success:      #059669; --c-success-bg: #d1fae5; --c-success-text: #065f46;
+    --c-warning:      #d97706; --c-warning-bg: #fef3c7; --c-warning-text: #92400e;
+    --c-danger:       #dc2626; --c-danger-bg:  #fee2e2; --c-danger-text:  #991b1b;
+
+    --c-bg:           #f0f3fb;
+    --c-topbar-bg:    rgba(240,243,251,.92);
+    --c-surface:      #ffffff;
+    --c-border:       #e2e8f0;
+    --c-border-hover: #bfcce0;
+
+    --c-text:        #111827;
+    --c-text-muted:  #6b7280;
+    --c-text-subtle: #9ca3af;
+    --c-sidebar:     #0d1117;
+
+    --sh-xs: 0 1px 2px rgba(0,0,0,0.05);
+    --sh-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --sh-md: 0 4px 12px rgba(0,0,0,0.08);
+    --sh-lg: 0 12px 28px rgba(0,0,0,0.1);
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
 }
