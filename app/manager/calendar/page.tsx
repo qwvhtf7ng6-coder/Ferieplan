@@ -104,16 +104,38 @@ export default async function CalendarPage({
     isNational: h.isNational,
   }));
 
-  const serializedShifts = shiftAssignments.map((s: ShiftRow) => ({
-    id: s.id,
-    userId: s.userId,
-    date: s.date.toISOString(),
-    templateName: s.template.name,
-    startTime: s.template.startTime,
-    endTime: s.template.endTime,
-    color: s.template.color,
-    note: s.note,
-  }));
+  // Cross-check shifts against approved absences
+  const calAbsenceEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { gte: start, lte: end },
+      request: {
+        status: "APPROVED",
+        userId: { in: [...new Set(shiftAssignments.map((s) => s.userId))] },
+      },
+    },
+    select: { date: true, request: { select: { userId: true } } },
+  });
+  const calAbsenceSet = new Set(
+    calAbsenceEntries.map((e) => {
+      const dk = new Date(e.date).toISOString().slice(0, 10);
+      return `${e.request.userId}|${dk}`;
+    })
+  );
+
+  const serializedShifts = shiftAssignments.map((s: ShiftRow) => {
+    const dk = new Date(s.date).toISOString().slice(0, 10);
+    return {
+      id: s.id,
+      userId: s.userId,
+      date: s.date.toISOString(),
+      templateName: s.template.name,
+      startTime: s.template.startTime,
+      endTime: s.template.endTime,
+      color: s.template.color,
+      note: s.note,
+      hasAbsenceConflict: calAbsenceSet.has(`${s.userId}|${dk}`),
+    };
+  });
 
   return (
     <div className="flex flex-col h-full">

@@ -41,6 +41,7 @@ export interface CalendarShift {
   endTime: string;
   color: string;
   note: string | null;
+  hasAbsenceConflict?: boolean;
 }
 
 interface CellModalData {
@@ -76,10 +77,17 @@ function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClos
           <div className="space-y-1.5">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vagter</p>
             {shifts.map((s) => (
-              <div key={s.id} className="flex items-center gap-2 rounded-lg px-3 py-2 text-white text-sm" style={{ backgroundColor: s.color }}>
-                <span className="font-semibold">{s.templateName}</span>
-                <span className="opacity-80 text-xs">{s.startTime}–{s.endTime}</span>
-                {s.note && <span className="opacity-70 text-xs italic ml-auto">{s.note}</span>}
+              <div key={s.id} className="rounded-lg text-white text-sm overflow-hidden" style={{ backgroundColor: s.color }}>
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <span className="font-semibold">{s.templateName}</span>
+                  <span className="opacity-80 text-xs">{s.startTime}–{s.endTime}</span>
+                  {s.note && <span className="opacity-70 text-xs italic ml-auto">{s.note}</span>}
+                </div>
+                {s.hasAbsenceConflict && (
+                  <div className="bg-yellow-400/30 px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 border-t border-white/20">
+                    ⚠️ Konflikt — medarbejderen har godkendt fravær denne dag
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -288,7 +296,14 @@ function CalendarTable({
                           </span>
                         )}
                         {hasShift && (hasApproved || hasPending) && (
-                          <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cellShifts[0].color }} />
+                          <span
+                            className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: cellShifts[0].color }}
+                            title={cellShifts[0].hasAbsenceConflict ? "Vagt konflikt med godkendt fravær" : cellShifts[0].templateName}
+                          />
+                        )}
+                        {hasShift && cellShifts.some((s) => s.hasAbsenceConflict) && (
+                          <span className="absolute top-0.5 right-0.5 text-[9px] leading-none" title="Vagt konflikt med godkendt fravær">⚠️</span>
                         )}
                       </td>
                     );

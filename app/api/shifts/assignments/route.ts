@@ -48,7 +48,32 @@ export async function GET(req: NextRequest) {
     orderBy: [{ date: "asc" }, { template: { startTime: "asc" } }],
   });
 
-  return NextResponse.json(assignments);
+  // Cross-check each assignment against approved absences for the same user/date
+  const absenceEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { gte: from, lte: to },
+      request: {
+        status: "APPROVED",
+        userId: { in: [...new Set(assignments.map((a) => a.userId))] },
+      },
+    },
+    select: { date: true, request: { select: { userId: true } } },
+  });
+
+  // Build a Set of "userId|yyyy-MM-dd" for fast lookup
+  const absenceSet = new Set(
+    absenceEntries.map((e) => {
+      const dk = new Date(e.date).toISOString().slice(0, 10);
+      return `${e.request.userId}|${dk}`;
+    })
+  );
+
+  const result = assignments.map((a) => {
+    const dk = new Date(a.date).toISOString().slice(0, 10);
+    return { ...a, hasAbsenceConflict: absenceSet.has(`${a.userId}|${dk}`) };
+  });
+
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {

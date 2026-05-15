@@ -31,6 +31,7 @@ interface ShiftAssignment {
   id: string;
   date: string;
   note: string | null;
+  hasAbsenceConflict: boolean;
   user: { id: string; name: string };
   template: ShiftTemplate & { department: { name: string } };
 }
@@ -377,7 +378,12 @@ export default function ShiftsClient({
                             className="group relative mb-1 rounded-lg px-2 py-1 text-white text-xs leading-tight cursor-default"
                             style={{ backgroundColor: a.template.color }}
                           >
-                            <div className="font-semibold">{a.template.name}</div>
+                            <div className="font-semibold flex items-center gap-1">
+                              {a.template.name}
+                              {a.hasAbsenceConflict && (
+                                <span title="Medarbejderen har godkendt fravær denne dag" className="text-yellow-300">⚠️</span>
+                              )}
+                            </div>
                             <div className="opacity-80">
                               {a.template.startTime}–{a.template.endTime}
                             </div>
@@ -450,6 +456,9 @@ export default function ShiftsClient({
                                 className="inline-flex items-center gap-1 text-white text-xs px-2 py-0.5 rounded-full"
                                 style={{ backgroundColor: a.template.color }}
                               >
+                                {a.hasAbsenceConflict && (
+                                  <span title="Godkendt fravær denne dag">⚠️</span>
+                                )}
                                 {a.template.name}
                                 <button onClick={() => deleteAssignment(a.id)} className="hover:opacity-70">×</button>
                               </span>
