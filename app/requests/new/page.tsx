@@ -1,8 +1,13 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Nav from "@/components/Nav";
 import { RequestForm } from "@/components/RequestForm";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Btn } from "@/components/ui/Btn";
+import { Card } from "@/components/ui/Card";
+import { AlertTriangle } from "lucide-react";
 import type { SessionUser } from "@/types";
 
 export default async function NewRequestPage() {
@@ -19,15 +24,15 @@ export default async function NewRequestPage() {
     return (
       <div>
         <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
-        <main className="max-w-2xl mx-auto px-4 py-8">
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
-            <p className="text-orange-800 font-medium">
-              Du er ikke tilknyttet en afdeling.
-            </p>
-            <p className="text-orange-600 text-sm mt-1">
-              Kontakt en administrator for at blive tilknyttet en afdeling.
-            </p>
-          </div>
+        <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
+          <Card className="p-8 text-center">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+              style={{ background: "var(--c-warning-bg)", color: "var(--c-warning)" }}>
+              <AlertTriangle size={22} />
+            </div>
+            <p className="text-[15px] font-bold text-text">Du er ikke tilknyttet en afdeling</p>
+            <p className="text-[13px] text-text-muted mt-1">Kontakt en administrator for at blive tilknyttet en afdeling.</p>
+          </Card>
         </main>
       </div>
     );
@@ -36,16 +41,17 @@ export default async function NewRequestPage() {
   return (
     <div>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Ny ansøgning</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Ansøgningen sendes til godkendelse hos din leder.
-          </p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <RequestForm />
-        </div>
+      <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
+        <PageHeader
+          title="Ny ansøgning"
+          subtitle="Ansøgningen sendes til godkendelse hos din leder."
+          actions={
+            <Link href="/dashboard">
+              <Btn variant="secondary" size="sm">Annuller</Btn>
+            </Link>
+          }
+        />
+        <RequestForm />
       </main>
     </div>
   );

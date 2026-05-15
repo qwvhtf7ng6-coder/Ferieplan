@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 import { da } from "date-fns/locale";
 import { PrintShiftPlan } from "@/components/PrintShiftPlan";
+import { Btn } from "@/components/ui/Btn";
+import { Card } from "@/components/ui/Card";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { FieldInput } from "@/components/ui/FieldInput";
+import { cn } from "@/lib/utils";
+import { Printer, Plus, AlertTriangle, X } from "lucide-react";
 
 interface Department {
   id: string;
@@ -53,18 +59,18 @@ function WeekNav({
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(addDays(weekStart, -7))}
-        className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+        className="p-2 rounded-md hover:bg-bg text-text-muted hover:text-text transition-colors"
         aria-label="Forrige uge"
       >
         ←
       </button>
-      <span className="text-sm font-semibold text-gray-700 min-w-[180px] text-center">
+      <span className="text-[13px] font-semibold text-text min-w-[180px] text-center">
         {format(weekStart, "d. MMM", { locale: da })} –{" "}
         {format(weekEnd, "d. MMM yyyy", { locale: da })}
       </span>
       <button
         onClick={() => onChange(addDays(weekStart, 7))}
-        className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+        className="p-2 rounded-md hover:bg-bg text-text-muted hover:text-text transition-colors"
         aria-label="Næste uge"
       >
         →
@@ -251,62 +257,36 @@ export default function ShiftsClient({
       {/* Screen-only content */}
       <div className="no-print">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Vagtplan</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Planlæg og se medarbejdervagter</p>
+          <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Vagtplan</h1>
+          <p className="text-[13px] text-text-muted mt-0.5">Planlæg og se medarbejdervagter</p>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && departments.length > 1 && (
-            <select
-              value={selectedDeptId}
-              onChange={(e) => setSelectedDeptId(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
+            <select value={selectedDeptId} onChange={(e) => setSelectedDeptId(e.target.value)}
+              className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary">
               <option value="">Alle afdelinger</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           )}
           {tab === "plan" && (
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
-              title="Udskriv vagtplan for denne uge"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.75 19.5m10.56-5.671c.24.03.48.062.72.096m-.72-.096L17.25 19.5M9 13.5V7.5m6 6V7.5M9 7.5h6M3 8.25h18" />
-              </svg>
+            <Btn variant="secondary" size="sm" onClick={() => window.print()} icon={<Printer size={14} />}>
               Udskriv
-            </button>
+            </Btn>
           )}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
-        <button
-          onClick={() => setTab("plan")}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "plan"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Ugeplan
-        </button>
-        <button
-          onClick={() => setTab("templates")}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            tab === "templates"
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Vagttyper
-        </button>
+      <div className="flex gap-1 p-1 rounded-lg border border-border bg-bg mb-5 w-fit">
+        {(["plan","templates"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={cn("px-4 py-1.5 rounded-md text-[13px] font-semibold transition-colors",
+              tab === t ? "bg-surface text-text shadow-xs" : "text-text-muted hover:text-text")}>
+            {t === "plan" ? "Ugeplan" : "Vagttyper"}
+          </button>
+        ))}
       </div>
 
       {/* ── PLAN TAB ── */}
@@ -315,12 +295,12 @@ export default function ShiftsClient({
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <WeekNav weekStart={weekStart} onChange={setWeekStart} />
             {deptEmployees.length === 0 && (
-              <p className="text-sm text-gray-400">Ingen medarbejdere i afdelingen</p>
+              <p className="text-[13px] text-text-subtle">Ingen medarbejdere i afdelingen</p>
             )}
           </div>
 
           {deptTemplates.length === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+            <div className="bg-warning-bg border border-[rgba(217,119,6,.2)] rounded-lg p-4 mb-4 text-[13px] text-warning-text">
               Opret vagttyper under fanen <strong>Vagttyper</strong> før du kan planlægge vagter.
             </div>
           )}
@@ -330,7 +310,7 @@ export default function ShiftsClient({
             <div className="min-w-[700px]">
               {/* Header row */}
               <div
-                className="grid text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1"
+                className="grid text-[11px] font-bold text-text-subtle uppercase tracking-wide mb-1"
                 style={{ gridTemplateColumns: `180px repeat(7, 1fr)` }}
               >
                 <div className="px-3 py-2">Medarbejder</div>
@@ -338,7 +318,7 @@ export default function ShiftsClient({
                   <div
                     key={day.toISOString()}
                     className={`px-2 py-2 text-center rounded-lg ${
-                      isSameDay(day, today) ? "bg-blue-50 text-blue-700" : ""
+                      isSameDay(day, today) ? "bg-primary-light text-primary" : ""
                     }`}
                   >
                     <div>{format(day, "EEE", { locale: da })}</div>
@@ -351,14 +331,14 @@ export default function ShiftsClient({
               {deptEmployees.map((emp) => (
                 <div
                   key={emp.id}
-                  className="grid border-t border-gray-100"
+                  className="grid border-t border-border"
                   style={{ gridTemplateColumns: `180px repeat(7, 1fr)` }}
                 >
                   <div className="px-3 py-3 flex items-start">
                     <div>
-                      <p className="text-sm font-medium text-gray-900 leading-tight">{emp.name}</p>
+                      <p className="text-[13px] font-semibold text-text leading-tight">{emp.name}</p>
                       {isAdmin && emp.department && (
-                        <p className="text-xs text-gray-400">{emp.department.name}</p>
+                        <p className="text-[11px] text-text-subtle">{emp.department.name}</p>
                       )}
                     </div>
                   </div>
@@ -369,19 +349,22 @@ export default function ShiftsClient({
                       <div
                         key={day.toISOString()}
                         className={`min-h-[72px] px-1 py-1 border-l border-gray-100 ${
-                          isToday ? "bg-blue-50/40" : ""
+                          isToday ? "bg-primary-muted/30" : ""
                         }`}
                       >
                         {cellAssignments.map((a) => (
                           <div
                             key={a.id}
-                            className="group relative mb-1 rounded-lg px-2 py-1 text-white text-xs leading-tight cursor-default"
+                            className="group relative mb-1 rounded px-2 py-1.5 text-white text-[11px] leading-tight cursor-default shadow-xs"
                             style={{ backgroundColor: a.template.color }}
                           >
-                            <div className="font-semibold flex items-center gap-1">
+                            <div className="font-bold flex items-center gap-1">
                               {a.template.name}
                               {a.hasAbsenceConflict && (
-                                <span title="Medarbejderen har godkendt fravær denne dag" className="text-yellow-300">⚠️</span>
+                                <span title="Konflikt: godkendt fravær denne dag"
+                                  className="absolute -top-[5px] -right-[5px] w-4 h-4 rounded-full bg-amber-400 border-2 border-white flex items-center justify-center">
+                                  <AlertTriangle size={8} className="text-white" />
+                                </span>
                               )}
                             </div>
                             <div className="opacity-80">
@@ -392,7 +375,7 @@ export default function ShiftsClient({
                             )}
                             <button
                               onClick={() => deleteAssignment(a.id)}
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs items-center justify-center hidden group-hover:flex"
+                              className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-[10px] items-center justify-center hidden group-hover:flex"
                               title="Fjern vagt"
                             >
                               ×
@@ -408,7 +391,7 @@ export default function ShiftsClient({
                               setAssignError("");
                               setAssignConflict(false);
                             }}
-                            className="w-full text-xs text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded py-0.5 transition-colors mt-0.5"
+                            className="w-full text-[11px] text-text-subtle hover:text-primary hover:bg-primary-muted rounded-sm py-0.5 transition-colors mt-0.5 border border-dashed border-border"
                             title="Tilføj vagt"
                           >
                             + vagt
@@ -421,7 +404,7 @@ export default function ShiftsClient({
               ))}
 
               {deptEmployees.length === 0 && (
-                <div className="text-center py-12 text-gray-400 text-sm">
+                <div className="text-center py-12 text-text-subtle text-[13px]">
                   Ingen medarbejdere at vise
                 </div>
               )}
@@ -433,18 +416,18 @@ export default function ShiftsClient({
             {deptEmployees.map((emp) => {
               const empAssignments = assignments.filter((a) => a.user.id === emp.id);
               return (
-                <div key={emp.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <p className="font-semibold text-gray-900 text-sm">{emp.name}</p>
+                <div key={emp.id} className="bg-surface border border-border rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-bg border-b border-border">
+                    <p className="font-semibold text-text text-[13px]">{emp.name}</p>
                   </div>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-border">
                     {weekDays.map((day) => {
                       const cellA = getAssignmentsForCell(emp.id, day);
                       const isToday = isSameDay(day, today);
                       return (
                         <div
                           key={day.toISOString()}
-                          className={`px-4 py-2.5 flex items-center gap-3 ${isToday ? "bg-blue-50/40" : ""}`}
+                          className={`px-4 py-2.5 flex items-center gap-3 ${isToday ? "bg-primary-muted/30" : ""}`}
                         >
                           <div className={`text-xs w-16 shrink-0 ${isToday ? "font-bold text-blue-700" : "text-gray-500"}`}>
                             {format(day, "EEE d.", { locale: da })}
@@ -453,7 +436,7 @@ export default function ShiftsClient({
                             {cellA.map((a) => (
                               <span
                                 key={a.id}
-                                className="inline-flex items-center gap-1 text-white text-xs px-2 py-0.5 rounded-full"
+                                className="inline-flex items-center gap-1 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold"
                                 style={{ backgroundColor: a.template.color }}
                               >
                                 {a.hasAbsenceConflict && (
@@ -496,7 +479,7 @@ export default function ShiftsClient({
       {tab === "templates" && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">
+            <h2 className="text-[13px] font-bold text-text">
               Vagttyper{selectedDeptId && departments.find((d) => d.id === selectedDeptId) ? ` — ${departments.find((d) => d.id === selectedDeptId)?.name}` : ""}
             </h2>
             <button
@@ -512,8 +495,8 @@ export default function ShiftsClient({
           </div>
 
           {showTemplateForm && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 space-y-4">
-              <h3 className="text-sm font-semibold text-gray-700">
+            <div className="bg-bg border border-border rounded-lg p-4 mb-4 space-y-4">
+              <h3 className="text-[13px] font-bold text-text">
                 {editTplId ? "Rediger vagttype" : "Ny vagttype"}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -523,8 +506,7 @@ export default function ShiftsClient({
                     value={tplForm.name}
                     onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })}
                     placeholder="f.eks. Dagvagt"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Farve</label>
@@ -547,8 +529,7 @@ export default function ShiftsClient({
                     type="time"
                     value={tplForm.startTime}
                     onChange={(e) => setTplForm({ ...tplForm, startTime: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Sluttid</label>
@@ -556,8 +537,7 @@ export default function ShiftsClient({
                     type="time"
                     value={tplForm.endTime}
                     onChange={(e) => setTplForm({ ...tplForm, endTime: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                    className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -580,7 +560,7 @@ export default function ShiftsClient({
 
           <div className="space-y-2">
             {deptTemplates.length === 0 && (
-              <div className="text-center py-10 text-gray-400 text-sm">
+              <div className="text-center py-10 text-text-subtle text-[13px]">
                 Ingen vagttyper endnu. Opret den første.
               </div>
             )}
@@ -594,8 +574,8 @@ export default function ShiftsClient({
                   style={{ backgroundColor: t.color }}
                 />
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="font-semibold text-text text-[13px]">{t.name}</p>
+                  <p className="text-[12px] text-text-muted">
                     {t.startTime} – {t.endTime}
                     {isAdmin && (
                       <span className="ml-2 text-gray-400">{t.department.name}</span>
@@ -624,11 +604,11 @@ export default function ShiftsClient({
 
       {/* Assignment Modal */}
       {assignModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-[3px] z-50 flex items-center justify-center p-4">
+          <div className="bg-surface rounded-xl shadow-lg w-full max-w-sm p-6 space-y-4">
             <div>
-              <h2 className="font-bold text-gray-900">Tilføj vagt</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h2 className="text-[17px] font-extrabold tracking-tight text-text">Tilføj vagt</h2>
+              <p className="text-[13px] text-text-muted mt-0.5">
                 {employees.find((e) => e.id === assignModal.userId)?.name} ·{" "}
                 {format(assignModal.date, "EEEE d. MMMM", { locale: da })}
               </p>
@@ -642,8 +622,8 @@ export default function ShiftsClient({
                     key={t.id}
                     className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                       assignTemplateId === t.id
-                        ? "border-blue-400 bg-blue-50"
-                        : "border-gray-200 hover:bg-gray-50"
+                        ? "border-primary bg-primary-light"
+                        : "border-border hover:bg-bg"
                     }`}
                   >
                     <input
@@ -652,15 +632,15 @@ export default function ShiftsClient({
                       value={t.id}
                       checked={assignTemplateId === t.id}
                       onChange={() => setAssignTemplateId(t.id)}
-                      className="accent-blue-600"
+                      className="accent-primary"
                     />
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
                       style={{ backgroundColor: t.color }}
                     />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{t.name}</p>
-                      <p className="text-xs text-gray-500">{t.startTime}–{t.endTime}</p>
+                      <p className="text-[13px] font-semibold text-text">{t.name}</p>
+                      <p className="text-[12px] text-text-muted">{t.startTime}–{t.endTime}</p>
                     </div>
                   </label>
                 ))}
@@ -673,13 +653,13 @@ export default function ShiftsClient({
                 value={assignNote}
                 onChange={(e) => setAssignNote(e.target.value)}
                 placeholder="Fx overtid, kørsel..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]"
               />
             </div>
 
             {assignError && <p className="text-red-600 text-xs">{assignError}</p>}
             {assignConflict && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+              <div className="bg-warning-bg border border-[rgba(217,119,6,.2)] rounded-lg p-3 text-[13px] text-warning-text">
                 ⚠️ <strong>Advarsel:</strong> Medarbejderen har godkendt fravær denne dag. Vagten er gemt, men der er en konflikt.
               </div>
             )}
@@ -702,6 +682,15 @@ export default function ShiftsClient({
           </div>
         </div>
       )}
+        {/* Conflict legend */}
+        {assignments.some((a) => a.hasAbsenceConflict) && (
+          <p className="mt-3 text-[12px] text-text-muted flex items-center gap-1.5">
+            <span className="w-4 h-4 rounded-full bg-amber-400 border-2 border-white inline-flex items-center justify-center shrink-0">
+              <AlertTriangle size={8} className="text-white" />
+            </span>
+            Markerede vagter har konflikt med godkendt fravær.
+          </p>
+        )}
       </div>{/* end no-print */}
 
       {/* Print view – only visible when printing */}
