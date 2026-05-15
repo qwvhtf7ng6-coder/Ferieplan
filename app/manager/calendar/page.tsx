@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import CalendarGrid from "@/components/CalendarGrid";
-import { isManager } from "@/lib/permissions";
-import { getCalendarVisibility } from "@/lib/settings";
+import { isManager, isAdmin } from "@/lib/permissions";
+import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function CalendarPage({
@@ -16,7 +16,10 @@ export default async function CalendarPage({
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const visibility = await getCalendarVisibility();
+  const [visibility, shiftsVisible] = await Promise.all([
+    getCalendarVisibility(),
+    canSeeShifts(user.role, user.departmentId),
+  ]);
   if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
     redirect("/dashboard");
   }
@@ -77,6 +80,7 @@ export default async function CalendarPage({
     id: d.id,
     name: d.name,
     maxConcurrent: d.maxConcurrent,
+    shiftsEnabled: d.shiftsEnabled,
     users: d.users,
   }));
 
@@ -113,7 +117,7 @@ export default async function CalendarPage({
 
   return (
     <div className="flex flex-col h-full">
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
       <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
           year={year}

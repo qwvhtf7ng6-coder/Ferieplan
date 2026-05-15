@@ -17,7 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 interface CalendarUser { id: string; name: string; }
 
 interface CalendarDepartment {
-  id: string; name: string; maxConcurrent: number; users: CalendarUser[];
+  id: string; name: string; maxConcurrent: number; shiftsEnabled: boolean; users: CalendarUser[];
 }
 
 interface CalendarEntry { date: string; type: string; absenceType: string; days: number; }
@@ -246,7 +246,9 @@ function CalendarTable({
                   {days.map((d) => {
                     const dk = format(d, "yyyy-MM-dd");
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
-                    const cellShifts = shiftLookup.get(emp.id)?.get(dk) ?? [];
+                    const cellShifts = dept.shiftsEnabled
+                      ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
+                      : [];
                     const weekend = isWeekend(d);
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");

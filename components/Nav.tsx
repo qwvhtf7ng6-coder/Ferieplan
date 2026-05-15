@@ -11,6 +11,7 @@ interface NavProps {
   role: string;
   name: string;
   calendarVisible?: boolean;
+  shiftsVisible?: boolean;
 }
 
 interface NavLink {
@@ -20,7 +21,7 @@ interface NavLink {
   roles: string[];
 }
 
-export default function Nav({ role, name, calendarVisible = false }: NavProps) {
+export default function Nav({ role, name, calendarVisible = false, shiftsVisible = true }: NavProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -43,7 +44,9 @@ export default function Nav({ role, name, calendarVisible = false }: NavProps) {
     { href: "/dashboard",         label: "Mine ansøgninger",  icon: "🏠", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/requests/new",      label: "Ny ansøgning",      icon: "＋", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/manager/requests",  label: "Ansøgninger",       icon: "📋", roles: ["MANAGER", "ADMIN"] },
-    { href: "/manager/shifts",    label: "Vagtplan",          icon: "🗓️", roles: ["MANAGER", "ADMIN"] },
+    ...(shiftsVisible
+      ? [{ href: "/manager/shifts", label: "Vagtplan", icon: "🗓️", roles: ["MANAGER", "ADMIN"] }]
+      : []),
     { href: "/manager/calendar",  label: "Kalender",          icon: "📅", roles: ["MANAGER", "ADMIN"] },
     ...(calendarVisible && role === "EMPLOYEE"
       ? [{ href: "/manager/calendar", label: "Kalender", icon: "📅", roles: ["EMPLOYEE"] }]

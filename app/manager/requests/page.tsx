@@ -7,6 +7,7 @@ import { RequestFilters } from "@/components/manager/RequestFilters";
 import { ManagerRequestsClient } from "./ManagerRequestsClient";
 import { getManagerRequests } from "@/actions/manager";
 import { isManager, isAdmin } from "@/lib/permissions";
+import { canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function ManagerRequestsPage({
@@ -24,7 +25,7 @@ export default async function ManagerRequestsPage({
   const user = session.user as SessionUser;
   if (!isManager(user.role)) redirect("/dashboard");
 
-  const sp = await searchParams;
+  const shiftsVisible = await canSeeShifts(user.role, user.departmentId);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -69,7 +70,7 @@ export default async function ManagerRequestsPage({
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
       <main className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Today widget */}

@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
-import { canSeeCalendar } from "@/lib/settings";
+import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
 
@@ -18,9 +18,10 @@ export default async function RequestDetailPage({
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [{ id }, calendarVisible] = await Promise.all([
+  const [{ id }, calendarVisible, shiftsVisible] = await Promise.all([
     params,
     canSeeCalendar(user.role),
+    canSeeShifts(user.role, user.departmentId),
   ]);
 
   const request = await prisma.vacationRequest.findUnique({
@@ -48,7 +49,7 @@ export default async function RequestDetailPage({
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6 flex items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900">Ansøgning</h1>

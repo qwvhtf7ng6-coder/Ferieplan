@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { OnBehalfForm } from "./OnBehalfForm";
 import { isManager, isAdmin } from "@/lib/permissions";
-import { canSeeCalendar } from "@/lib/settings";
+import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function NewRequestOnBehalfPage() {
@@ -13,7 +13,10 @@ export default async function NewRequestOnBehalfPage() {
   const user = session.user as SessionUser;
   if (!isManager(user.role)) redirect("/dashboard");
 
-  const calendarVisible = await canSeeCalendar(user.role);
+  const [calendarVisible, shiftsVisible] = await Promise.all([
+    canSeeCalendar(user.role),
+    canSeeShifts(user.role, user.departmentId),
+  ]);
 
   const employees = await prisma.user.findMany({
     where: isAdmin(user.role)
@@ -30,7 +33,7 @@ export default async function NewRequestOnBehalfPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         <div className="mb-6">
           <h1 className="text-xl font-bold text-gray-900">Opret på vegne af</h1>

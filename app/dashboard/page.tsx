@@ -4,7 +4,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
-import { getCalendarVisibility } from "@/lib/settings";
+import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
 import { isManager } from "@/lib/permissions";
 import type { SessionUser } from "@/types";
 
@@ -13,9 +13,10 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [result, visibility] = await Promise.all([
+  const [result, visibility, shiftsVisible] = await Promise.all([
     getMyRequests(),
     getCalendarVisibility(),
+    canSeeShifts(user.role, user.departmentId),
   ]);
 
   const requests = result.ok ? result.data ?? [] : [];
@@ -33,7 +34,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
       <main className="max-w-3xl mx-auto px-4 py-6 sm:py-8">
         <div className="flex items-start justify-between mb-6 gap-3">
           <div>
