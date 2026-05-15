@@ -15,7 +15,7 @@ const ACTION_CONFIG: Record<string, { label: string; icon: string; color: string
   REJECTED:          { label: "Afvist",                 icon: "✕", color: "var(--c-danger)",   bg: "var(--c-danger-bg)",      textColor: "var(--c-danger-text)" },
   CANCELLED:         { label: "Annulleret",             icon: "○", color: "var(--c-text-subtle)", bg: "var(--c-bg)",           textColor: "var(--c-text-muted)" },
   EDITED:            { label: "Redigeret",              icon: "✎", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
-  UPDATE:            { label: "Opdateret",              icon: "✎", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
+  UPDATE:            { label: "Redigeret",              icon: "✎", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
   DELETE:            { label: "Slettet",                icon: "✕", color: "var(--c-danger)",   bg: "var(--c-danger-bg)",      textColor: "var(--c-danger-text)" },
   REMINDER:          { label: "Påmindelse",             icon: "⏰", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
 };

@@ -17,7 +17,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   REJECTED:           { label: "Afvist",              color: "#dc2626" },
   CANCELLED:          { label: "Annulleret",          color: "#9ca3af" },
   EDITED:             { label: "Redigeret",           color: "#d97706" },
-  UPDATE:             { label: "Opdateret",           color: "#d97706" },
+  UPDATE:             { label: "Redigeret",           color: "#d97706" },
   DELETE:             { label: "Slettet",             color: "#dc2626" },
   REMINDER:           { label: "Påmindelse",          color: "#d97706" },
 };
@@ -30,7 +30,7 @@ export function AuditLogPanel({ logs }: { logs: AuditLogEntry[] }) {
   return (
     <ol className="relative space-y-4 pl-5" style={{ borderLeft: "2px solid var(--c-border)" }}>
       {logs.map((log) => {
-        const meta = ACTION_LABELS[log.action] ?? { label: log.action, color: "var(--c-text-subtle)" };
+        const meta = ACTION_LABELS[log.action] ?? { label: "Hændelse", color: "var(--c-text-subtle)" };
         return (
           <li key={log.id} className="relative">
             {/* Timeline dot */}
