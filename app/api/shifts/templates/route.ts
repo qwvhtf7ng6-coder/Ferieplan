@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
   if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name, startTime, endTime, color, departmentId } = await req.json();
+  const { name, startTime, endTime, color, departmentId, dayTimeRules } = await req.json();
 
   if (!name || !startTime || !endTime || !departmentId) {
     return NextResponse.json({ error: "Navn, starttid, sluttid og afdeling er påkrævet" }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       endTime,
       color: color || "#3b82f6",
       departmentId,
+      dayTimeRules: dayTimeRules ? JSON.stringify(dayTimeRules) : null,
     },
   });
 
