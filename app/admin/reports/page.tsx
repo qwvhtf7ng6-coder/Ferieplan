@@ -42,25 +42,23 @@ export default async function ReportsPage() {
     }),
   ]);
 
-  // Serialise dates — filtrer ansøgninger fra slettede brugere (userId=null) fra
-  const serializedRequests = requests
-    .filter((r) => r.userId !== null && r.user !== null)
-    .map((r) => ({
-      id: r.id,
-      status: r.status as string,
-      note: r.note,
-      createdAt: r.createdAt.toISOString(),
-      userId: r.userId as string,
-      departmentId: r.departmentId,
-      user: r.user as { id: string; name: string; email: string },
-      department: r.department,
-      entries: r.entries.map((e) => ({
-        id: e.id,
-        date: e.date.toISOString(),
-        type: e.type as string,
-        days: e.days,
-      })),
-    }));
+  // Serialise dates
+  const serializedRequests = requests.map((r) => ({
+    id: r.id,
+    status: r.status as string,
+    note: r.note,
+    createdAt: r.createdAt.toISOString(),
+    userId: r.userId,
+    departmentId: r.departmentId,
+    user: r.user,
+    department: r.department,
+    entries: r.entries.map((e) => ({
+      id: e.id,
+      date: e.date.toISOString(),
+      type: e.type as string,
+      days: e.days,
+    })),
+  }));
 
   return (
     <AppShell>

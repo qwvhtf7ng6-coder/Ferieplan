@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         userId: managerId,
         type: "PENDING_REMINDER",
         title: "⏰ Ansøgning afventer svar",
-        message: `${req.user.name}s ansøgning har ventet i ${daysWaiting} dag${daysWaiting !== 1 ? "e" : ""} — id: ${req.id}`,
+        message: `${req.user!.name}s ansøgning har ventet i ${daysWaiting} dag${daysWaiting !== 1 ? "e" : ""} — id: ${req.id}`,
         link: `/manager/requests`,
       });
       sent++;

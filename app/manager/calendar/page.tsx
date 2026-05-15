@@ -85,9 +85,7 @@ export default async function CalendarPage({
     users: d.users,
   }));
 
-  const serializedRequests = requests
-    .filter((r: ReqRow) => r.user !== null)
-    .map((r: ReqRow) => ({
+  const serializedRequests = requests.map((r: ReqRow) => ({
     id: r.id,
     status: r.status as "APPROVED" | "PENDING",
     note: r.note,
