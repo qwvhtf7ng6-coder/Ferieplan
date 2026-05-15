@@ -10,6 +10,7 @@ import { SlideOver } from "@/components/ui/SlideOver";
 import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Pencil, Trash2, Key, User, Shield, Users } from "lucide-react";
 
@@ -44,6 +45,8 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
   const [editLoading, setEditLoading] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleteSummary, setDeleteSummary] = useState<{ requestCount: number; shiftCount: number } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [search, setSearch] = useState("");
   const filtered = initialUsers.filter((u) =>
@@ -78,10 +81,24 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditLoading(false);
   }
 
-  async function confirmDelete() {
+  async function openDeleteDialog(u: UserRow) {
+    setDeleteTarget(u);
+    setDeleteSummary(null);
+    // Fetch data summary in background
+    const res = await fetch(`/api/users/${u.id}`);
+    if (res.ok) {
+      const data = await res.json();
+      setDeleteSummary(data);
+    }
+  }
+
+  async function confirmDelete(mode: "keep" | "delete") {
     if (!deleteTarget) return;
-    await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteLoading(true);
+    await fetch(`/api/users/${deleteTarget.id}?mode=${mode}`, { method: "DELETE" });
+    setDeleteLoading(false);
     setDeleteTarget(null);
+    setDeleteSummary(null);
     router.refresh();
   }
 
@@ -125,7 +142,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-primary hover:bg-primary-muted transition-colors">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => setDeleteTarget(u)}
+                    <button onClick={() => openDeleteDialog(u)}
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors">
                       <Trash2 size={14} />
                     </button>
@@ -239,15 +256,83 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
         </div>
       </SlideOver>
 
-      {/* Delete confirm dialog */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Slet bruger"
-        message={`Er du sikker på at du vil slette "${deleteTarget?.name}"? Dette kan ikke fortrydes.`}
-        confirmLabel="Slet bruger"
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTarget(null)}
-      />
+      {/* Delete user dialog */}
+      <Modal open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setDeleteSummary(null); }} title="Slet bruger">
+        <div className="space-y-4">
+          <p className="text-[13px] text-text">
+            Du er ved at slette <span className="font-semibold text-text">{deleteTarget?.name}</span>.
+          </p>
+
+          {deleteSummary === null ? (
+            <div className="flex items-center gap-2 text-[13px] text-text-muted py-2">
+              <svg className="w-4 h-4 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Henter brugerdata…
+            </div>
+          ) : (deleteSummary.requestCount > 0 || deleteSummary.shiftCount > 0) ? (
+            <>
+              <div className="p-3.5 rounded-lg bg-warning-bg border border-[rgba(217,119,6,.2)] text-[13px] text-warning-text space-y-1">
+                <p className="font-semibold">Brugeren har registrerede data:</p>
+                {deleteSummary.requestCount > 0 && (
+                  <p>· {deleteSummary.requestCount} fraværsansøgning{deleteSummary.requestCount !== 1 ? "er" : ""}</p>
+                )}
+                {deleteSummary.shiftCount > 0 && (
+                  <p>· {deleteSummary.shiftCount} vagtregistrering{deleteSummary.shiftCount !== 1 ? "er" : ""}</p>
+                )}
+              </div>
+              <p className="text-[13px] text-text-muted">Hvad vil du gøre med disse data?</p>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => confirmDelete("keep")}
+                  disabled={deleteLoading}
+                  className="flex items-start gap-3 p-3.5 rounded-lg border-[1.5px] border-border hover:border-primary hover:bg-primary-light text-left transition-all disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary-muted text-primary mt-0.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-text">Behold eksisterende data</p>
+                    <p className="text-[12px] text-text-muted mt-0.5">Ansøgninger og vagter bevares uden tilknyttet bruger. Historikken er intakt.</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => confirmDelete("delete")}
+                  disabled={deleteLoading}
+                  className="flex items-start gap-3 p-3.5 rounded-lg border-[1.5px] border-border hover:border-danger hover:bg-danger-bg text-left transition-all disabled:opacity-50"
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-danger-bg text-danger mt-0.5">
+                    <Trash2 size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-danger">Slet alt data</p>
+                    <p className="text-[12px] text-text-muted mt-0.5">Brugeren og alle tilknyttede ansøgninger og vagter slettes permanent.</p>
+                  </div>
+                </button>
+              </div>
+              <Btn variant="secondary" onClick={() => { setDeleteTarget(null); setDeleteSummary(null); }} full>
+                Annuller
+              </Btn>
+            </>
+          ) : (
+            /* No data — simple confirm */
+            <>
+              <p className="text-[13px] text-text-muted">Brugeren har ingen registrerede data. Sletningen kan ikke fortrydes.</p>
+              <div className="flex gap-2">
+                <Btn variant="danger" onClick={() => confirmDelete("delete")} disabled={deleteLoading} full>
+                  {deleteLoading ? "Sletter…" : "Slet bruger"}
+                </Btn>
+                <Btn variant="secondary" onClick={() => { setDeleteTarget(null); setDeleteSummary(null); }} full>
+                  Annuller
+                </Btn>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

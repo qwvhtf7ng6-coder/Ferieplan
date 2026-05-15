@@ -10,14 +10,53 @@ export async function DELETE(
 ) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = session.user as any;
-  if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const actor = session.user as any;
+  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  if (id === user.id) return NextResponse.json({ error: "Kan ikke slette dig selv" }, { status: 400 });
+  if (id === actor.id) return NextResponse.json({ error: "Kan ikke slette dig selv" }, { status: 400 });
 
-  await prisma.user.delete({ where: { id } });
+  // mode=keep → anonymise (set userId=null on related records), keep data
+  // mode=delete → cascade delete all user data (default)
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("mode") ?? "delete";
+
+  if (mode === "keep") {
+    // Anonymise: set userId=null on requests and audit logs, then delete user
+    await prisma.$transaction([
+      prisma.vacationRequest.updateMany({ where: { userId: id }, data: { userId: null } }),
+      prisma.auditLog.updateMany({ where: { userId: id }, data: { userId: null } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+  } else {
+    // Delete all related data first (ShiftAssignments cascade, but VacationRequests don't)
+    await prisma.$transaction([
+      prisma.vacationRequest.deleteMany({ where: { userId: id } }),
+      prisma.user.delete({ where: { id } }),
+    ]);
+  }
+
   return NextResponse.json({ ok: true });
+}
+
+// GET a user's data summary before deletion
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const actor = session.user as any;
+  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await params;
+
+  const [requestCount, shiftCount] = await Promise.all([
+    prisma.vacationRequest.count({ where: { userId: id } }),
+    prisma.shiftAssignment.count({ where: { userId: id } }),
+  ]);
+
+  return NextResponse.json({ requestCount, shiftCount });
 }
 
 export async function PATCH(
@@ -39,10 +78,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Ugyldig email-adresse" }, { status: 400 });
   }
 
-  // Check email uniqueness (exclude self)
-  const existing = await prisma.user.findFirst({
-    where: { email, NOT: { id } },
-  });
+  const existing = await prisma.user.findFirst({ where: { email, NOT: { id } } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
   const data: any = {
