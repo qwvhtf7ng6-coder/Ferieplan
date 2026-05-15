@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { StatusBadge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { Alert } from "@/components/ui/Alert";
-import { formatDate, formatDateShort, totalDaysFromEntries, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { SlideOver } from "@/components/ui/SlideOver";
+import { Card } from "@/components/ui/Card";
+import { Btn } from "@/components/ui/Btn";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { formatDate, totalDaysFromEntries, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS } from "@/lib/utils";
 import { cancelOwnRequest } from "@/actions/requests";
 import type { VacationRequestRow } from "@/types";
 
@@ -20,11 +22,14 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
   const [error, setError] = useState("");
 
   const sortedEntries = [...request.entries].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
   const totalDays = totalDaysFromEntries(request.entries);
   const firstDate = sortedEntries[0]?.date;
   const lastDate = sortedEntries[sortedEntries.length - 1]?.date;
+
+  const absTypes = [...new Set(sortedEntries.map((e) => (e as any).absenceType))];
+  const absColor = ABSENCE_TYPE_COLORS[absTypes[0] as string];
 
   async function handleCancel() {
     if (!confirm("Annuller ansøgning?")) return;
@@ -39,117 +44,113 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
     }
   }
 
+  const dateRange = firstDate && lastDate
+    ? firstDate === lastDate
+      ? formatDate(firstDate)
+      : `${formatDate(firstDate)} – ${formatDate(lastDate)}`
+    : "—";
+
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors">
-        <div className="flex items-start justify-between gap-3">
+      <Card interactive onClick={() => setExpanded(true)} className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Status dot */}
+          <div className="mt-1 w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: absColor?.text ?? "var(--c-text-subtle)" }} />
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <StatusBadge status={request.status} />
-              <span className="text-xs text-gray-400">
-                Oprettet {formatDate(request.createdAt)}
-              </span>
-            </div>
-
-            <p className="text-sm font-medium text-gray-800">
-              {firstDate && lastDate
-                ? firstDate === lastDate
-                  ? formatDate(firstDate)
-                  : `${formatDate(firstDate)} – ${formatDate(lastDate)}`
-                : "—"}
-            </p>
-
-            <p className="text-xs text-gray-500 mt-0.5">
-              {totalDays} dag{totalDays !== 1 ? "e" : ""}
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-[13px] font-semibold text-text">{dateRange}</span>
               {request.note && (
-                <span className="ml-2 italic text-gray-400">"{request.note}"</span>
+                <span className="text-[12px] italic text-text-subtle truncate max-w-[200px]">
+                  "{request.note}"
+                </span>
               )}
-            </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap text-[12px] text-text-muted">
+              <span>{totalDays} dag{totalDays !== 1 ? "e" : ""}</span>
+              <span>·</span>
+              <span>Oprettet {formatDate(request.createdAt)}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
             {showCancelButton && request.status === "PENDING" && (
-              <button
+              <Btn
+                variant="ghost"
+                size="sm"
                 onClick={handleCancel}
                 disabled={cancelling}
-                className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                className="text-danger hover:text-danger"
               >
                 {cancelling ? "..." : "Annuller"}
-              </button>
+              </Btn>
             )}
-            <button
-              onClick={() => setExpanded(true)}
-              className="text-xs text-blue-600 hover:text-blue-800"
-            >
-              Detaljer
-            </button>
+            <StatusBadge status={request.status as any} />
           </div>
         </div>
+        {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+      </Card>
 
-        {error && (
-          <Alert variant="error" className="mt-2">
-            {error}
-          </Alert>
-        )}
-      </div>
-
-      <Modal
+      <SlideOver
         open={expanded}
         onClose={() => setExpanded(false)}
         title="Ansøgningsdetaljer"
-        className="max-w-lg"
+        subtitle={request.department?.name}
+        width={480}
       >
-        <div className="space-y-3">
+        <div className="space-y-5">
           <div className="flex items-center gap-2">
-            <StatusBadge status={request.status} />
-            <span className="text-sm text-gray-500">
-              {request.department?.name}
-            </span>
+            <StatusBadge status={request.status as any} />
+            <span className="text-[12px] text-text-muted">Oprettet {formatDate(request.createdAt)}</span>
           </div>
 
-          {request.note && (
-            <p className="text-sm text-gray-600 italic bg-gray-50 rounded px-3 py-2">
-              "{request.note}"
-            </p>
-          )}
+          {/* Summary grid */}
+          <Card className="p-4 bg-bg">
+            <div className="grid grid-cols-2 gap-3 text-[13px]">
+              <div>
+                <p className="text-text-subtle text-[11px] font-bold uppercase tracking-wide mb-0.5">Periode</p>
+                <p className="font-semibold text-text">{dateRange}</p>
+              </div>
+              <div>
+                <p className="text-text-subtle text-[11px] font-bold uppercase tracking-wide mb-0.5">Dage</p>
+                <p className="font-semibold text-text">{totalDays}</p>
+              </div>
+            </div>
+            {request.note && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-text-subtle text-[11px] font-bold uppercase tracking-wide mb-0.5">Note</p>
+                <p className="text-[13px] italic text-text-muted">"{request.note}"</p>
+              </div>
+            )}
+          </Card>
 
+          {/* Entries */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-              Datolinjer ({sortedEntries.length})
-            </p>
-            <div className="space-y-1">
+            <SectionLabel>Datolinjer ({sortedEntries.length})</SectionLabel>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
               {sortedEntries.map((entry) => {
-                const absColor = ABSENCE_TYPE_COLORS[(entry as any).absenceType];
+                const ac = ABSENCE_TYPE_COLORS[(entry as any).absenceType];
                 return (
-                  <div key={entry.id} className="flex items-center justify-between text-sm py-1 border-b border-gray-100 last:border-0">
-                    <span className="text-gray-700">{formatDate(entry.date)}</span>
+                  <div key={entry.id}
+                    className="flex items-center justify-between text-[13px] px-3 py-2 rounded-md bg-bg">
+                    <span className="text-text">{formatDate(entry.date)}</span>
                     <div className="flex items-center gap-2">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: absColor?.bg ?? "#f3f4f6", color: absColor?.text ?? "#374151" }}
-                      >
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                        style={{ backgroundColor: ac?.bg ?? "var(--c-bg)", color: ac?.text ?? "var(--c-text-muted)" }}>
                         {ABSENCE_TYPE_LABELS[(entry as any).absenceType] ?? "Ferie"}
                       </span>
-                      <span className="text-xs text-gray-400">{ENTRY_TYPE_LABELS[entry.type] ?? entry.type}</span>
+                      <span className="text-[11px] text-text-subtle">
+                        {ENTRY_TYPE_LABELS[entry.type] ?? entry.type}
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
           </div>
-
-          <div className="pt-2 border-t border-gray-100 flex justify-between text-sm">
-            <span className="text-gray-500">Total</span>
-            <span className="font-semibold text-gray-800">
-              {totalDays} dag{totalDays !== 1 ? "e" : ""}
-            </span>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            Oprettet {formatDate(request.createdAt)}
-          </p>
         </div>
-      </Modal>
+      </SlideOver>
     </>
   );
 }

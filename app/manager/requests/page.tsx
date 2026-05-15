@@ -27,6 +27,8 @@ export default async function ManagerRequestsPage({
 
   const shiftsVisible = await canSeeShifts(user.role, user.departmentId);
 
+  const sp = await searchParams;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayEnd = new Date(today);
@@ -95,7 +97,7 @@ export default async function ManagerRequestsPage({
             <p className="text-sm text-gray-400 italic">Ingen godkendte fraværsansøgninger i dag.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {todayAbsences.map((req) => {
+              {todayAbsences.map((req: any) => {
                 const entry = req.entries[0];
                 const absLabels: Record<string, string> = {
                   VACATION: "Ferie", VACATION_FREE: "Feriefri", MATERNITY: "Barsel",

@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
-import { Alert } from "@/components/ui/Alert";
-import { Spinner } from "@/components/ui/Spinner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Btn } from "@/components/ui/Btn";
+import { Card } from "@/components/ui/Card";
+import { FieldInput } from "@/components/ui/FieldInput";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { Flag, Trash2, Download, Plus } from "lucide-react";
 
 interface Holiday {
   id: string;
@@ -54,10 +58,7 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
     });
     const data = await res.json();
     if (data.ok) {
-      setImportMsg({
-        ok: true,
-        text: `${data.inserted} helligdage importeret for ${data.year} (${data.skipped} fandtes allerede)`,
-      });
+      setImportMsg({ ok: true, text: `${data.inserted} helligdage importeret for ${data.year} (${data.skipped} fandtes allerede)` });
       router.refresh();
     } else {
       setImportMsg({ ok: false, text: data.error ?? "Fejl ved import" });
@@ -70,173 +71,137 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 gap-3">
-        <h1 className="text-xl font-bold text-gray-800">Helligdage</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shrink-0"
-        >
-          + Tilføj manuelt
-        </button>
-      </div>
+      <PageHeader
+        title="Helligdage"
+        subtitle={`${sorted.length} helligdage registreret`}
+        actions={
+          <Btn onClick={() => setShowForm(!showForm)} icon={<Plus size={14} />} size="sm">
+            Tilføj manuelt
+          </Btn>
+        }
+      />
 
-      {/* Auto-import */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <p className="text-sm font-semibold text-blue-800 mb-1">
-          Importer danske helligdage automatisk
-        </p>
-        <p className="text-xs text-blue-600 mb-3">
-          Henter fra Nager.Date API — inkluderer nytår, påske, pinse, grundlovsdag og jul.
-        </p>
+      {/* Import card */}
+      <Card className="p-5 mb-5" style={{ background: "var(--c-primary-light)" }}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--c-primary-muted)", color: "var(--c-primary)" }}>
+            <Download size={16} />
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold text-text">Importer danske helligdage automatisk</p>
+            <p className="text-[12px] text-text-muted mt-0.5">
+              Henter fra Nager.Date API — inkluderer nytår, påske, pinse, grundlovsdag og jul.
+            </p>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label htmlFor="import-year" className="block text-xs text-blue-700 mb-1">År</label>
+            <label htmlFor="import-year" className="block text-[12px] font-semibold text-text mb-1">År</label>
             <select
               id="import-year"
               value={importYear}
               onChange={(e) => setImportYear(e.target.value)}
-              className="border border-blue-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary"
             >
-              {years.map((y) => (
-                <option key={y} value={String(y)}>{y}</option>
-              ))}
+              {years.map((y) => <option key={y} value={String(y)}>{y}</option>)}
             </select>
           </div>
-          <button
-            onClick={importHolidays}
-            disabled={importLoading}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {importLoading && <Spinner />}
+          <Btn onClick={importHolidays} disabled={importLoading} icon={<Download size={14} />} size="sm">
             {importLoading ? "Importerer..." : "Importer"}
-          </button>
+          </Btn>
         </div>
         {importMsg && (
-          <div className="mt-3">
-            <Alert variant={importMsg.ok ? "success" : "error"}>{importMsg.text}</Alert>
-          </div>
+          <p className={`mt-3 text-[12px] font-medium ${importMsg.ok ? "text-success" : "text-danger"}`}>
+            {importMsg.text}
+          </p>
         )}
-      </div>
+      </Card>
 
       {/* Manual form */}
       {showForm && (
-        <form onSubmit={create} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6 space-y-3">
-          <h2 className="font-semibold text-gray-700 text-sm">Tilføj helligdag</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="h-name" className="block text-xs text-gray-600 mb-1">Navn</label>
-              <input
+        <Card className="p-5 mb-5">
+          <SectionLabel>Tilføj helligdag manuelt</SectionLabel>
+          <form onSubmit={create} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FieldInput
                 id="h-name"
+                label="Navn"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-            </div>
-            <div>
-              <label htmlFor="h-date" className="block text-xs text-gray-600 mb-1">Dato</label>
-              <input
+              <FieldInput
                 id="h-date"
+                label="Dato"
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.isNational}
-              onChange={(e) => setForm({ ...form, isNational: e.target.checked })}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-gray-600">National helligdag</span>
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? "..." : "Tilføj"}
-            </button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500 px-3 py-2">
-              Annuller
-            </button>
-          </div>
-        </form>
+            <label className="flex items-center gap-2 cursor-pointer text-[13px] text-text">
+              <input
+                type="checkbox"
+                checked={form.isNational}
+                onChange={(e) => setForm({ ...form, isNational: e.target.checked })}
+                className="w-4 h-4 accent-primary"
+              />
+              National helligdag
+            </label>
+            <div className="flex gap-2">
+              <Btn type="submit" disabled={loading} size="sm">
+                {loading ? "Tilføjer..." : "Tilføj"}
+              </Btn>
+              <Btn type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+                Annuller
+              </Btn>
+            </div>
+          </form>
+        </Card>
       )}
 
-      {/* Desktop table */}
-      <div className="hidden sm:block bg-white border border-gray-200 rounded-xl overflow-hidden">
-        {sorted.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-8">
-            Ingen helligdage endnu — brug import-knappen ovenfor.
-          </p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="px-4 py-3 text-left">Dato</th>
-                <th className="px-4 py-3 text-left">Navn</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((h) => (
-                <tr key={h.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-700">{formatDate(h.date)}</td>
-                  <td className="px-4 py-3 font-medium">{h.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{h.isNational ? "National" : "Lokal"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => del(h.id)}
-                      className="text-xs text-red-400 hover:text-red-600 py-1 px-2"
-                      aria-label={`Slet ${h.name}`}
-                    >
-                      Slet
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* Mobile card list */}
-      <div className="sm:hidden">
-        {sorted.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-8">
-            Ingen helligdage endnu.
-          </p>
-        ) : (
-          <div className="space-y-2">
+      {/* List */}
+      {sorted.length === 0 ? (
+        <Card className="py-14 text-center">
+          <Flag size={28} className="mx-auto mb-2 text-text-subtle" />
+          <p className="text-[13px] text-text-muted">Ingen helligdage endnu — brug import-knappen ovenfor.</p>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="divide-y divide-border">
             {sorted.map((h) => (
-              <div key={h.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium text-sm text-gray-900">{h.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
-                    <span>{formatDate(h.date)}</span>
-                    <span>·</span>
-                    <span>{h.isNational ? "National" : "Lokal"}</span>
-                  </div>
+              <div key={h.id} className="flex items-center gap-3 px-5 py-3.5">
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    background: h.isNational ? "var(--c-primary-muted)" : "rgba(217,119,6,.1)",
+                    color: h.isNational ? "var(--c-primary)" : "var(--c-warning)",
+                  }}>
+                  <Flag size={16} />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-text">{h.name}</p>
+                  <p className="text-[12px] text-text-muted">{formatDate(h.date)}</p>
+                </div>
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                  h.isNational
+                    ? "bg-primary-light text-primary"
+                    : "bg-warning-bg text-warning-text"
+                }`}>
+                  {h.isNational ? "National" : "Lokal"}
+                </span>
                 <button
                   onClick={() => del(h.id)}
-                  className="text-xs text-red-400 hover:text-red-600 py-1 px-2 shrink-0"
+                  className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors"
                   aria-label={`Slet ${h.name}`}
                 >
-                  Slet
+                  <Trash2 size={14} />
                 </button>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </Card>
+      )}
     </div>
   );
 }

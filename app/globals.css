@@ -2,52 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --c-primary:        #4f46e5;
+  --c-primary-hover:  #4338ca;
+  --c-primary-light:  #eef2ff;
+  --c-primary-muted:  rgba(79,70,229,.1);
+  --c-accent:         #7c3aed;
+
+  --c-success:      #059669; --c-success-bg: #d1fae5; --c-success-text: #065f46;
+  --c-warning:      #d97706; --c-warning-bg: #fef3c7; --c-warning-text: #92400e;
+  --c-danger:       #dc2626; --c-danger-bg:  #fee2e2; --c-danger-text:  #991b1b;
+
+  --c-bg:           #f0f3fb;
+  --c-topbar-bg:    rgba(240,243,251,.92);
+  --c-surface:      #ffffff;
+  --c-border:       #e2e8f0;
+  --c-border-hover: #bfcce0;
+
+  --c-text:        #111827;
+  --c-text-muted:  #6b7280;
+  --c-text-subtle: #9ca3af;
+
+  --c-sidebar: #0d1117;
+
+  --sh-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --sh-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --sh-md: 0 4px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+  --sh-lg: 0 12px 28px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.06);
+
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+}
+
+html.dark {
+  --c-primary-light: rgba(79,70,229,.18);
+  --c-primary-muted: rgba(79,70,229,.15);
+  --c-success-bg:    rgba(5,150,105,.2);   --c-success-text: #34d399;
+  --c-warning-bg:    rgba(217,119,6,.2);   --c-warning-text: #fbbf24;
+  --c-danger-bg:     rgba(220,38,38,.2);   --c-danger-text:  #f87171;
+  --c-bg:            #0b0f1a;
+  --c-topbar-bg:     rgba(11,15,26,.92);
+  --c-surface:       #141929;
+  --c-border:        #1e2d45;
+  --c-border-hover:  #2d4265;
+  --c-text:          #f0f4ff;
+  --c-text-muted:    #8899b5;
+  --c-text-subtle:   #4b6080;
+  --sh-xs: 0 1px 2px rgba(0,0,0,.3);
+  --sh-sm: 0 1px 3px rgba(0,0,0,.4);
+  --sh-md: 0 4px 12px rgba(0,0,0,.4);
+  --sh-lg: 0 12px 28px rgba(0,0,0,.5);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  /* Prevent horizontal overflow globally */
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Prevent any element from causing horizontal scroll */
 *, *::before, *::after {
   box-sizing: border-box;
   min-width: 0;
 }
 
-/* Safe-area support for bottom nav on iOS */
 .safe-area-pb {
   padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
 }
 
-/* Improve tap targets on touch devices */
 @media (pointer: coarse) {
   button, a, select, input[type="checkbox"], input[type="radio"] {
     min-height: 44px;
   }
   input[type="date"], select {
-    font-size: 16px; /* Prevents iOS auto-zoom */
+    font-size: 16px;
   }
 }
 
-/* Visible focus ring for keyboard nav */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--c-primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* Better scrolling on iOS */
 .overflow-auto, .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Prevent input zoom on iOS (16px triggers no-zoom) */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -59,43 +102,22 @@ select {
 }
 
 @layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
+  .scrollbar-thin { scrollbar-width: thin; }
 }
 
-/* ── Print styles ─────────────────────────────────────────────────────────── */
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 12mm 10mm;
-  }
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
 
-  /* Force colors to print */
+@media print {
+  @page { size: A4 landscape; margin: 12mm 10mm; }
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-
-  /* Hide everything on screen except print view */
-  .no-print {
-    display: none !important;
-  }
-
-  /* Remove layout padding added by the app shell */
-  .md\:pl-56 {
-    padding-left: 0 !important;
-  }
-  .pt-14 {
-    padding-top: 0 !important;
-  }
-  .pb-20 {
-    padding-bottom: 0 !important;
-  }
-
-  /* Show print view */
-  #shift-print-view {
-    display: block !important;
-  }
+  .no-print { display: none !important; }
+  .md\:pl-56 { padding-left: 0 !important; }
+  .pt-14 { padding-top: 0 !important; }
+  .pb-20 { padding-bottom: 0 !important; }
+  #shift-print-view { display: block !important; }
 }

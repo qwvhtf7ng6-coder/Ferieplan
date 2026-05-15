@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { CalendarDays, CheckCircle, Shield, Users } from "lucide-react";
+import { Btn } from "@/components/ui/Btn";
+import { FieldInput } from "@/components/ui/FieldInput";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,16 +20,11 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    const res = await signIn("credentials", { email, password, redirect: false });
 
     if (res?.error) {
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
-
       if (newAttempts >= 5) {
         setError("Kontoen er midlertidigt låst i 15 minutter pga. for mange fejlede forsøg.");
       } else if (newAttempts >= 3) {
@@ -40,51 +38,109 @@ export default function LoginPage() {
     }
   }
 
+  const features = [
+    { icon: <CalendarDays size={16} />, text: "Ferie- og fraværshåndtering" },
+    { icon: <Users size={16} />,        text: "Teamoversigt og godkendelser" },
+    { icon: <Shield size={16} />,       text: "Rollebaseret adgangskontrol" },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          📅 WorkPlan
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
+    <div className="min-h-screen flex md:flex-row flex-col" style={{ background: "var(--c-bg)" }}>
+      {/* Left panel */}
+      <div className="hidden md:flex flex-col justify-between w-[420px] shrink-0 p-10"
+        style={{ background: "#0d1117" }}>
+        <div>
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+              <CalendarDays size={20} className="text-white" />
+            </div>
+            <span className="font-extrabold text-white text-[18px]">WorkPlan</span>
+          </div>
+
+          <h2 className="text-[32px] font-extrabold text-white leading-tight tracking-[-0.025em] mb-4">
+            Planlæg ferier.<br />Effektivt.
+          </h2>
+          <p className="text-white/50 text-[14px] mb-10 leading-relaxed">
+            Én platform til ferieplanlægning, fraværshåndtering og teamkoordinering for hele virksomheden.
+          </p>
+
+          <div className="space-y-4">
+            {features.map((f, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(79,70,229,.2)", color: "#818cf8" }}>
+                  {f.icon}
+                </div>
+                <span className="text-white/70 text-[13px]">{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-white/20 text-[11px]">© {new Date().getFullYear()} WorkPlan</p>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12">
+        <div className="w-full max-w-[380px]">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 md:hidden">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+              <CalendarDays size={16} className="text-white" />
+            </div>
+            <span className="font-extrabold text-text text-[16px]">WorkPlan</span>
+          </div>
+
+          <div className="mb-8">
+            <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Log ind</h1>
+            <p className="text-[13px] text-text-muted mt-1">Indtast dine oplysninger for at fortsætte</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FieldInput
+              id="email"
+              label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="din@email.dk"
+              autoComplete="email"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Adgangskode
-            </label>
-            <input
+            <FieldInput
+              id="password"
+              label="Adgangskode"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
+              autoComplete="current-password"
             />
-          </div>
-          {error && (
-            <div className={`text-sm rounded-lg px-3 py-2 ${attempts >= 5 ? "bg-red-50 text-red-700 border border-red-200" : "text-red-600"}`}>
-              {error}
-            </div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Logger ind..." : "Log ind"}
-          </button>
-        </form>
+
+            {error && (
+              <div className={`text-[13px] rounded-md px-3.5 py-2.5 border ${
+                attempts >= 5
+                  ? "bg-danger-bg text-danger-text border-danger/20"
+                  : "bg-warning-bg text-warning-text border-warning/20"
+              }`}>
+                {error}
+              </div>
+            )}
+
+            <Btn
+              type="submit"
+              disabled={loading}
+              full
+              size="lg"
+              icon={loading ? undefined : <CheckCircle size={16} />}
+            >
+              {loading ? "Logger ind..." : "Log ind"}
+            </Btn>
+          </form>
+        </div>
       </div>
     </div>
   );

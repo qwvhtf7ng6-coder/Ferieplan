@@ -3,16 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RequestCard } from "@/components/RequestCard";
-import { StatusBadge } from "@/components/ui/Badge";
-import { Spinner } from "@/components/ui/Spinner";
+import { cn } from "@/lib/utils";
 import type { VacationRequestRow } from "@/types";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "Alle" },
-  { value: "PENDING", label: "Afventer" },
-  { value: "APPROVED", label: "Godkendt" },
-  { value: "REJECTED", label: "Afvist" },
-  { value: "CANCELLED", label: "Annulleret" },
+  { value: "",            label: "Alle" },
+  { value: "PENDING",     label: "Afventer" },
+  { value: "APPROVED",    label: "Godkendt" },
+  { value: "REJECTED",    label: "Afvist" },
+  { value: "CANCELLED",   label: "Annulleret" },
 ];
 
 interface RequestListProps {
@@ -21,67 +20,59 @@ interface RequestListProps {
   emptyMessage?: string;
 }
 
-export function RequestList({
-  requests,
-  showCancelButton = false,
-  emptyMessage = "Ingen ansøgninger",
-}: RequestListProps) {
+export function RequestList({ requests, showCancelButton = false, emptyMessage = "Ingen ansøgninger" }: RequestListProps) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
-  const filtered = statusFilter
-    ? requests.filter((r) => r.status === statusFilter)
-    : requests;
-
-  function onCancelled() {
-    startTransition(() => router.refresh());
-  }
+  const filtered = statusFilter ? requests.filter((r) => r.status === statusFilter) : requests;
 
   return (
     <div>
-      {/* Filter bar */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      {/* Filter tabs */}
+      <div className="flex items-center gap-1 p-1 rounded-lg border border-border bg-bg mb-4 w-fit flex-wrap">
         {STATUS_OPTIONS.map((opt) => {
-          const count =
-            opt.value === ""
-              ? requests.length
-              : requests.filter((r) => r.status === opt.value).length;
+          const count = opt.value === "" ? requests.length : requests.filter((r) => r.status === opt.value).length;
           const active = statusFilter === opt.value;
           return (
             <button
               key={opt.value}
               onClick={() => setStatusFilter(opt.value)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-semibold transition-colors",
                 active
-                  ? "bg-gray-800 text-white border-gray-800"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-              }`}
+                  ? "bg-surface text-text shadow-xs"
+                  : "text-text-muted hover:text-text",
+              )}
             >
               {opt.label}
               {count > 0 && (
-                <span className={`ml-1.5 ${active ? "text-gray-300" : "text-gray-400"}`}>
+                <span className={cn(
+                  "text-[10px] font-bold rounded-full px-1.5 py-0.5",
+                  active
+                    ? opt.value === "PENDING" ? "bg-warning-bg text-warning-text" : "bg-primary-muted text-primary"
+                    : "bg-border text-text-subtle",
+                )}>
                   {count}
                 </span>
               )}
             </button>
           );
         })}
-        {isPending && <Spinner className="text-gray-400" />}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-gray-400 text-sm">{emptyMessage}</p>
+        <div className="py-16 text-center">
+          <p className="text-text-subtle text-[13px]">{emptyMessage}</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filtered.map((req) => (
             <RequestCard
               key={req.id}
               request={req}
               showCancelButton={showCancelButton}
-              onCancelled={onCancelled}
+              onCancelled={() => startTransition(() => router.refresh())}
             />
           ))}
         </div>

@@ -19,7 +19,7 @@ export default async function DepartmentsPage() {
   return (
     <div>
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
-      <main className="max-w-2xl mx-auto p-6">
+      <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <DepartmentsClient departments={departments as any} />
       </main>
     </div>

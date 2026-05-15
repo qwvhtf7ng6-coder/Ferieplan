@@ -6,6 +6,10 @@ import { signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import {
+  Home, Plus, ClipboardList, Calendar, Users, Building2, Flag,
+  BarChart3, Settings, User, LogOut, Menu, X, CalendarDays,
+} from "lucide-react";
 
 interface NavProps {
   role: string;
@@ -17,7 +21,7 @@ interface NavProps {
 interface NavLink {
   href: string;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   roles: string[];
 }
 
@@ -25,213 +29,182 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Close menu on route change
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
   useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  // Lock body scroll when menu is open
-  useEffect(() => {
-    if (menuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
   const links: NavLink[] = [
-    { href: "/dashboard",         label: "Mine ansøgninger",  icon: "🏠", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/requests/new",      label: "Ny ansøgning",      icon: "＋", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/manager/requests",  label: "Ansøgninger",       icon: "📋", roles: ["MANAGER", "ADMIN"] },
-    ...(shiftsVisible
-      ? [{ href: "/manager/shifts", label: "Vagtplan", icon: "🗓️", roles: ["MANAGER", "ADMIN"] }]
-      : []),
-    { href: "/manager/calendar",  label: "Kalender",          icon: "📅", roles: ["MANAGER", "ADMIN"] },
+    { href: "/dashboard",         label: "Mine ansøgninger",  icon: <Home size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
+    { href: "/requests/new",      label: "Ny ansøgning",      icon: <Plus size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
+    { href: "/manager/requests",  label: "Ansøgninger",       icon: <ClipboardList size={16} />, roles: ["MANAGER", "ADMIN"] },
+    ...(shiftsVisible ? [{ href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />, roles: ["MANAGER", "ADMIN"] }] : []),
+    { href: "/manager/calendar",  label: "Kalender",          icon: <Calendar size={16} />,    roles: ["MANAGER", "ADMIN"] },
     ...(calendarVisible && role === "EMPLOYEE"
-      ? [{ href: "/manager/calendar", label: "Kalender", icon: "📅", roles: ["EMPLOYEE"] }]
+      ? [{ href: "/manager/calendar", label: "Kalender", icon: <Calendar size={16} />, roles: ["EMPLOYEE"] }]
       : []),
-    { href: "/admin/users",       label: "Brugere",           icon: "👥", roles: ["ADMIN"] },
-    { href: "/admin/departments", label: "Afdelinger",        icon: "🏢", roles: ["ADMIN"] },
-    { href: "/admin/holidays",    label: "Helligdage",        icon: "🎌", roles: ["ADMIN"] },
-    { href: "/admin/reports",     label: "Rapporter",         icon: "📊", roles: ["ADMIN"] },
-    { href: "/admin/settings",    label: "Indstillinger",     icon: "⚙️",  roles: ["ADMIN"] },
-    { href: "/profile",           label: "Min profil",        icon: "👤", roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
+    { href: "/admin/users",       label: "Brugere",           icon: <Users size={16} />,       roles: ["ADMIN"] },
+    { href: "/admin/departments",  label: "Afdelinger",       icon: <Building2 size={16} />,   roles: ["ADMIN"] },
+    { href: "/admin/holidays",    label: "Helligdage",        icon: <Flag size={16} />,        roles: ["ADMIN"] },
+    { href: "/admin/reports",     label: "Rapporter",         icon: <BarChart3 size={16} />,   roles: ["ADMIN"] },
+    { href: "/admin/settings",    label: "Indstillinger",     icon: <Settings size={16} />,    roles: ["ADMIN"] },
+    { href: "/profile",           label: "Min profil",        icon: <User size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
   ].filter((l) => l.roles.includes(role));
 
-  // Bottom nav: max 5 most important links for mobile
+  const mainLinks = links.filter((l) => l.href !== "/profile");
   const bottomLinks = links.slice(0, 5);
 
   return (
     <>
-      {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 bg-white border-r border-gray-200 z-40">
+      {/* ── Desktop Sidebar ─────────────────────────────────────────────── */}
+      <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-56 z-40"
+        style={{ background: "linear-gradient(180deg, #1a1744 0%, #0d1117 100%)" }}>
+
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-100">
-          <span className="font-bold text-blue-700 text-lg">📅 WorkPlan</span>
+        <div className="px-5 py-5 border-b border-white/[0.07]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-[34px] h-[34px] rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+              <CalendarDays size={18} className="text-white" />
+            </div>
+            <span className="font-extrabold text-white text-[15px] tracking-tight">WorkPlan</span>
+          </div>
         </div>
 
-        {/* Links */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1" aria-label="Primær navigation">
-          {links.filter(l => l.href !== "/profile").map((l, i) => {
-            const active = pathname === l.href;
+        {/* Nav links */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+          {mainLinks.map((l) => {
+            const active = pathname === l.href || (l.href !== "/dashboard" && pathname.startsWith(l.href));
             return (
               <Link
-                key={i}
+                key={l.href}
                 href={l.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                  "flex items-center gap-3 px-3 py-[9px] rounded-md text-[13px] font-medium transition-colors duration-150 relative",
                   active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-white/[0.12] text-white font-semibold"
+                    : "text-white/60 hover:text-white hover:bg-white/[0.07]",
                 )}
-                aria-current={active ? "page" : undefined}
               >
-                <span className="text-base leading-none" aria-hidden="true">{l.icon}</span>
-                {l.label}
+                <span className="shrink-0">{l.icon}</span>
+                <span className="flex-1">{l.label}</span>
+                {active && (
+                  <span className="w-[5px] h-[5px] rounded-full bg-primary shrink-0" />
+                )}
               </Link>
             );
           })}
-          {/* Notification bell as nav item */}
-          <NotificationBell variant="sidebar" />
         </nav>
 
-        {/* User section */}
-        <div className="border-t border-gray-100 p-3">
+        {/* Footer */}
+        <div className="border-t border-white/[0.07] px-3 py-3 space-y-0.5">
           <Link
             href="/profile"
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full",
+              "flex items-center gap-3 px-3 py-[9px] rounded-md text-[13px] font-medium transition-colors",
               pathname === "/profile"
-                ? "bg-blue-600 text-white"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-white/[0.12] text-white font-semibold"
+                : "text-white/60 hover:text-white hover:bg-white/[0.07]",
             )}
-            aria-current={pathname === "/profile" ? "page" : undefined}
           >
-            <span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0" aria-hidden="true">
-              {name?.charAt(0).toUpperCase()}
-            </span>
-            <span className="truncate">{name}</span>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-[11px]"
+              style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+              {name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[12px] font-semibold truncate">{name}</p>
+              <p className="text-white/40 text-[11px] truncate capitalize">{role.toLowerCase()}</p>
+            </div>
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors w-full mt-1"
+            className="w-full flex items-center gap-3 px-3 py-[9px] rounded-md text-[13px] text-white/50 hover:text-white hover:bg-white/[0.07] transition-colors"
           >
-            <span className="text-base" aria-hidden="true">🚪</span>
-            Log ud
+            <LogOut size={16} />
+            <span>Log ud</span>
           </button>
         </div>
       </aside>
 
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 h-14 flex items-center justify-between">
-        <span className="font-bold text-blue-700 text-base">📅 WorkPlan</span>
-        <Link
-          href="/profile"
-          className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold"
-          aria-label={`Profil: ${name}`}
-        >
-          {name?.charAt(0).toUpperCase()}
-        </Link>
-      </header>
-
-      {/* ── Mobile full-screen menu overlay ── */}
-      {menuOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-50 bg-black/50"
-          onClick={() => setMenuOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-      <div
-        className={cn(
-          "md:hidden fixed top-0 right-0 bottom-0 z-50 w-72 bg-white shadow-xl flex flex-col transition-transform duration-200",
-          menuOpen ? "translate-x-0" : "translate-x-full"
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Navigation menu"
-      >
-        <div className="flex items-center justify-between px-4 h-14 border-b border-gray-100">
-          <span className="font-semibold text-gray-800">Menu</span>
+      {/* ── Mobile Top Bar ───────────────────────────────────────────────── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-40 flex items-center justify-between px-4 border-b border-border"
+        style={{ background: "var(--c-topbar-bg)", backdropFilter: "blur(12px)" }}>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)" }}>
+            <CalendarDays size={14} className="text-white" />
+          </div>
+          <span className="font-extrabold text-text text-[14px]">WorkPlan</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <NotificationBell variant="topbar" />
           <button
-            onClick={() => setMenuOpen(false)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100"
-            aria-label="Luk menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-9 h-9 flex items-center justify-center rounded-md text-text-muted hover:text-text hover:bg-primary-muted transition-colors"
+            aria-label="Menu"
           >
-            ✕
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1" aria-label="Fuld navigation">
-          {links.map((l, i) => {
+      </header>
+
+      {/* Mobile full-screen menu */}
+      {menuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col"
+          style={{ background: "linear-gradient(180deg, #1a1744 0%, #0d1117 100%)", top: 56 }}>
+          <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+            {links.map((l) => {
+              const active = pathname === l.href;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-md text-[14px] font-medium transition-colors",
+                    active ? "bg-white/[0.12] text-white font-semibold" : "text-white/60 hover:text-white hover:bg-white/[0.07]",
+                  )}
+                >
+                  <span className="shrink-0">{l.icon}</span>
+                  {l.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="border-t border-white/[0.07] px-4 py-4">
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-[14px] text-white/50 hover:text-white hover:bg-white/[0.07] transition-colors"
+            >
+              <LogOut size={16} />
+              Log ud
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Bottom Nav ────────────────────────────────────────────── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border safe-area-pb"
+        style={{ background: "var(--c-topbar-bg)", backdropFilter: "blur(12px)" }}>
+        <div className="flex items-center justify-around h-16 px-2">
+          {bottomLinks.map((l) => {
             const active = pathname === l.href;
             return (
               <Link
-                key={i}
+                key={l.href}
                 href={l.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors",
-                  active
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-700 hover:bg-gray-100"
+                  "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[52px]",
+                  active ? "text-primary" : "text-text-subtle hover:text-text-muted",
                 )}
-                aria-current={active ? "page" : undefined}
               >
-                <span className="text-base w-6 text-center" aria-hidden="true">{l.icon}</span>
-                {l.label}
+                <span className="shrink-0">{l.icon}</span>
+                <span className="text-[10px] font-semibold leading-tight text-center">{l.label.split(" ")[0]}</span>
               </Link>
             );
           })}
-        </nav>
-        <div className="border-t border-gray-100 p-3">
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors w-full"
-          >
-            <span className="text-base w-6 text-center" aria-hidden="true">🚪</span>
-            Log ud
-          </button>
+          <NotificationBell variant="bottomnav" />
         </div>
-      </div>
-
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex items-center justify-around px-1 safe-area-pb"
-        aria-label="Primær navigation"
-      >
-        {bottomLinks.map((l, i) => {
-          const active = pathname === l.href;
-          return (
-            <Link
-              key={i}
-              href={l.href}
-              className={cn(
-                "flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors flex-1",
-                active ? "text-blue-600" : "text-gray-400"
-              )}
-              aria-current={active ? "page" : undefined}
-              aria-label={l.label}
-            >
-              <span className={cn("text-xl leading-none", active && "scale-110 transition-transform")} aria-hidden="true">
-                {l.icon}
-              </span>
-              <span className="text-[10px] font-medium truncate max-w-[56px] text-center leading-tight">
-                {l.label}
-              </span>
-            </Link>
-          );
-        })}
-        {/* Notification bell */}
-        <NotificationBell variant="bottomnav" />
-        {/* "More" button if > 5 links */}
-        {links.length > 5 && (
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-gray-400 flex-1"
-            aria-label="Flere menupunkter"
-          >
-            <span className="text-xl leading-none" aria-hidden="true">•••</span>
-            <span className="text-[10px] font-medium">Mere</span>
-          </button>
-        )}
       </nav>
     </>
   );
