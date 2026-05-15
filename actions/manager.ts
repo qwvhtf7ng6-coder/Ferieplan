@@ -128,8 +128,7 @@ export async function approveRequest(
   });
 
   // Notify employee
-  notifyEmployeeOfDecision(requestId, request.userId ?? "", "REQUEST_APPROVED", user.name ?? "Leder")
-    .catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_APPROVED", user.name ?? "Leder").catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
@@ -178,8 +177,7 @@ export async function rejectRequest(
     details: trimmedReason || undefined,
   });
 
-  notifyEmployeeOfDecision(requestId, request.userId ?? "", "REQUEST_REJECTED", user.name ?? "Leder", trimmedReason ?? undefined)
-    .catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder", trimmedReason ?? undefined).catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
   revalidatePath("/dashboard");
@@ -214,8 +212,7 @@ export async function cancelRequestAsManager(
     details: `Annulleret af ${user.role === "ADMIN" ? "admin" : "leder"}`,
   });
 
-  notifyEmployeeOfDecision(requestId, request.userId ?? "", "REQUEST_CANCELLED", user.name ?? "Leder")
-    .catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_CANCELLED", user.name ?? "Leder").catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
@@ -249,8 +246,7 @@ export async function editRequestNote(
     details: `Note opdateret`,
   });
 
-  notifyEmployeeOfDecision(requestId, request.userId ?? "", "REQUEST_EDITED", user.name ?? "Leder")
-    .catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_EDITED", user.name ?? "Leder").catch(() => {/* silent */});
 
   revalidatePath("/manager/requests");
 
