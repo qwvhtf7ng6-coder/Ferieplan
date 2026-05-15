@@ -305,6 +305,34 @@ export default function ShiftsClient({
             </div>
           )}
 
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex items-center justify-center gap-2.5 py-10 text-[13px] text-text-muted">
+              <svg className="w-4 h-4 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Henter vagter…
+            </div>
+          )}
+
+          {/* Empty week notice — shown when there are employees + templates but no assignments */}
+          {!loading && deptEmployees.length > 0 && deptTemplates.length > 0 && assignments.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-10 text-center mb-4">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ background: "var(--c-primary-muted)", color: "var(--c-primary)" }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round"
+                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+              </div>
+              <p className="text-[14px] font-semibold text-text">Ingen vagter planlagt denne uge</p>
+              <p className="text-[13px] text-text-muted max-w-[300px]">
+                Klik <strong>+ vagt</strong> i en celle for at tilføje vagter til medarbejderne.
+              </p>
+            </div>
+          )}
+
           {/* Desktop grid */}
           <div className="hidden md:block overflow-x-auto">
             <div className="min-w-[700px]">
