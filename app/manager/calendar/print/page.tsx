@@ -77,7 +77,9 @@ export default async function PrintCalendarPage({
     users: d.users,
   }));
 
-  const serializedRequests = requests.map((r: ReqRow) => ({
+  const serializedRequests = requests
+    .filter((r: ReqRow) => r.user !== null)
+    .map((r: ReqRow) => ({
     id: r.id,
     status: r.status as string,
     note: r.note,
