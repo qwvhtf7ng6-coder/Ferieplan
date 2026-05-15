@@ -16,11 +16,11 @@ export async function POST(req: NextRequest) {
   const user = session.user as any;
   if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { name, maxConcurrent } = await req.json();
+  const { name, maxConcurrent, shiftsEnabled } = await req.json();
   if (!name) return NextResponse.json({ error: "Navn påkrævet" }, { status: 400 });
 
   const dept = await prisma.department.create({
-    data: { name, maxConcurrent: maxConcurrent ?? 2 },
+    data: { name, maxConcurrent: maxConcurrent ?? 2, shiftsEnabled: shiftsEnabled !== false },
   });
   return NextResponse.json(dept, { status: 201 });
 }

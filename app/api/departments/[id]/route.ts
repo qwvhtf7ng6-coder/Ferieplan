@@ -27,7 +27,7 @@ export async function PATCH(
   if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const { name, maxConcurrent } = await req.json();
+  const { name, maxConcurrent, shiftsEnabled } = await req.json();
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Navn er påkrævet" }, { status: 400 });
@@ -38,7 +38,7 @@ export async function PATCH(
 
   const updated = await prisma.department.update({
     where: { id },
-    data: { name: name.trim(), maxConcurrent },
+    data: { name: name.trim(), maxConcurrent, shiftsEnabled: shiftsEnabled !== false },
   });
 
   return NextResponse.json(updated);

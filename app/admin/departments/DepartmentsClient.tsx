@@ -7,17 +7,18 @@ interface Department {
   id: string;
   name: string;
   maxConcurrent: number;
+  shiftsEnabled: boolean;
   _count: { users: number };
 }
 
 export default function DepartmentsClient({ departments: initial }: { departments: Department[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", maxConcurrent: "2" });
+  const [form, setForm] = useState({ name: "", maxConcurrent: "2", shiftsEnabled: true });
   const [loading, setLoading] = useState(false);
 
   const [editId, setEditId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", maxConcurrent: "2" });
+  const [editForm, setEditForm] = useState({ name: "", maxConcurrent: "2", shiftsEnabled: true });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -27,10 +28,14 @@ export default function DepartmentsClient({ departments: initial }: { department
     await fetch("/api/departments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: form.name, maxConcurrent: parseInt(form.maxConcurrent) }),
+      body: JSON.stringify({
+        name: form.name,
+        maxConcurrent: parseInt(form.maxConcurrent),
+        shiftsEnabled: form.shiftsEnabled,
+      }),
     });
     setShowForm(false);
-    setForm({ name: "", maxConcurrent: "2" });
+    setForm({ name: "", maxConcurrent: "2", shiftsEnabled: true });
     setLoading(false);
     router.refresh();
   }
@@ -43,7 +48,7 @@ export default function DepartmentsClient({ departments: initial }: { department
 
   function startEdit(d: Department) {
     setEditId(d.id);
-    setEditForm({ name: d.name, maxConcurrent: String(d.maxConcurrent) });
+    setEditForm({ name: d.name, maxConcurrent: String(d.maxConcurrent), shiftsEnabled: d.shiftsEnabled });
     setEditError("");
   }
 
@@ -58,7 +63,11 @@ export default function DepartmentsClient({ departments: initial }: { department
     const res = await fetch(`/api/departments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editForm.name, maxConcurrent: parseInt(editForm.maxConcurrent) }),
+      body: JSON.stringify({
+        name: editForm.name,
+        maxConcurrent: parseInt(editForm.maxConcurrent),
+        shiftsEnabled: editForm.shiftsEnabled,
+      }),
     });
     if (res.ok) {
       setEditId(null);
@@ -108,6 +117,24 @@ export default function DepartmentsClient({ departments: initial }: { department
               />
             </div>
           </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.shiftsEnabled}
+              onClick={() => setForm({ ...form, shiftsEnabled: !form.shiftsEnabled })}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ${
+                form.shiftsEnabled ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  form.shiftsEnabled ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </button>
+            <span className="text-sm text-gray-700">Vagtplan aktiveret</span>
+          </div>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -130,6 +157,7 @@ export default function DepartmentsClient({ departments: initial }: { department
             <tr>
               <th className="px-4 py-3 text-left">Navn</th>
               <th className="px-4 py-3 text-left">Max samtidige</th>
+              <th className="px-4 py-3 text-left">Vagtplan</th>
               <th className="px-4 py-3 text-left">Brugere</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -138,7 +166,7 @@ export default function DepartmentsClient({ departments: initial }: { department
             {initial.map((d) => (
               <tr key={d.id} className="border-t border-gray-100">
                 {editId === d.id ? (
-                  <td colSpan={4} className="px-4 py-3 bg-blue-50">
+                  <td colSpan={5} className="px-4 py-3 bg-blue-50">
                     <div className="flex items-center gap-3 flex-wrap">
                       <input
                         value={editForm.name}
@@ -155,6 +183,24 @@ export default function DepartmentsClient({ departments: initial }: { department
                           onChange={(e) => setEditForm({ ...editForm, maxConcurrent: e.target.value })}
                           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-20"
                         />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={editForm.shiftsEnabled}
+                          onClick={() => setEditForm({ ...editForm, shiftsEnabled: !editForm.shiftsEnabled })}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ${
+                            editForm.shiftsEnabled ? "bg-blue-600" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              editForm.shiftsEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">Vagtplan</span>
                       </div>
                       {editError && <p className="text-red-600 text-xs">{editError}</p>}
                       <div className="flex gap-2 ml-auto">
@@ -175,6 +221,13 @@ export default function DepartmentsClient({ departments: initial }: { department
                   <>
                     <td className="px-4 py-3 font-medium">{d.name}</td>
                     <td className="px-4 py-3 text-gray-600">{d.maxConcurrent}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        d.shiftsEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {d.shiftsEnabled ? "Aktiv" : "Inaktiv"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-gray-500">{d._count.users}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -224,6 +277,24 @@ export default function DepartmentsClient({ departments: initial }: { department
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={editForm.shiftsEnabled}
+                    onClick={() => setEditForm({ ...editForm, shiftsEnabled: !editForm.shiftsEnabled })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ${
+                      editForm.shiftsEnabled ? "bg-blue-600" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        editForm.shiftsEnabled ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-gray-700">Vagtplan aktiveret</span>
+                </div>
                 {editError && <p className="text-red-600 text-xs">{editError}</p>}
                 <div className="flex gap-2">
                   <button
@@ -242,9 +313,14 @@ export default function DepartmentsClient({ departments: initial }: { department
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-gray-900 text-sm">{d.name}</p>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
+                  <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
                     <span>Max {d.maxConcurrent} samtidige</span>
                     <span>{d._count.users} brugere</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-medium ${
+                      d.shiftsEnabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                    }`}>
+                      Vagtplan: {d.shiftsEnabled ? "Aktiv" : "Inaktiv"}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
