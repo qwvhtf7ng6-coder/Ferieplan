@@ -2,12 +2,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager, isAdmin } from "@/lib/permissions";
 import { NextRequest, NextResponse } from "next/server";
-import { generateAssignmentsFromPattern } from "../route";
+import { generateAssignmentsFromPattern } from "@/lib/shift-patterns";
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
@@ -33,14 +30,10 @@ export async function PATCH(
       user: { select: { id: true, name: true } },
     },
   });
-
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
@@ -57,11 +50,8 @@ export async function DELETE(
   return NextResponse.json({ ok: true });
 }
 
-// POST to /api/shifts/patterns/[id]/regenerate
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// POST /api/shifts/patterns/[id] => regenerer vagter
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
