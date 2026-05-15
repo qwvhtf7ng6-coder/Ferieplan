@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Avatar } from "@/components/ui/Avatar";
 import { Check, X, Loader2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { AuditLogPanel } from "@/components/manager/AuditLogPanel";
 import { CapacityWarningDialog } from "@/components/manager/CapacityWarningDialog";
 import { RejectDialog } from "@/components/manager/RejectDialog";
@@ -32,6 +33,7 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [actionState, setActionState] = useState<"idle"|"approving"|"cancelling">("idle");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [data, setData] = useState<{
     request: VacationRequestRow;
     auditLogs: { id: string; action: string; details: string | null; createdAt: Date; user: { name: string } }[];
@@ -91,7 +93,13 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
   }
 
   async function handleCancel() {
-    if (!requestId || !confirm("Annuller denne ansøgning?")) return;
+    if (!requestId) return;
+    setShowCancelConfirm(true);
+  }
+
+  async function confirmCancel() {
+    if (!requestId) return;
+    setShowCancelConfirm(false);
     setError(""); setActionState("cancelling");
     const result = await cancelRequestAsManager(requestId);
     if (!result.ok) { setError(result.error ?? "Fejl"); setActionState("idle"); return; }
@@ -236,6 +244,14 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
         )}
       </Modal>
 
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Annuller ansøgning"
+        message="Er du sikker på at du vil annullere denne ansøgning?"
+        confirmLabel="Annuller ansøgning"
+        onConfirm={confirmCancel}
+        onClose={() => setShowCancelConfirm(false)}
+      />
       <CapacityWarningDialog
         open={showCapacityDialog}
         warning={capacityWarning}

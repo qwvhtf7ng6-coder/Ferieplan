@@ -15,6 +15,12 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Navn, email og adgangskode er påkrævet" }, { status: 400 });
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Ugyldig email-adresse" }, { status: 400 });
+  }
+  if (typeof password === "string" && password.length < 8) {
+    return NextResponse.json({ error: "Adgangskode skal være mindst 8 tegn" }, { status: 400 });
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });

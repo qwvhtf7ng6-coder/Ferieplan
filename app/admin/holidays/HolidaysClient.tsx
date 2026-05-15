@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Flag, Trash2, Download, Plus } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Holiday {
   id: string;
@@ -19,6 +20,7 @@ interface Holiday {
 
 export default function HolidaysClient({ holidays: initial }: { holidays: Holiday[] }) {
   const router = useRouter();
+  const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", date: "", isNational: true });
   const [loading, setLoading] = useState(false);
@@ -42,9 +44,10 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
     router.refresh();
   }
 
-  async function del(id: string) {
-    if (!confirm("Slet helligdag?")) return;
-    await fetch(`/api/holidays/${id}`, { method: "DELETE" });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await fetch(`/api/holidays/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteTarget(null);
     router.refresh();
   }
 
@@ -191,7 +194,7 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
                   {h.isNational ? "National" : "Lokal"}
                 </span>
                 <button
-                  onClick={() => del(h.id)}
+                  onClick={() => setDeleteTarget(h)}
                   className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors"
                   aria-label={`Slet ${h.name}`}
                 >
@@ -202,6 +205,14 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
           </div>
         </Card>
       )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Slet helligdag"
+        message={`Er du sikker på at du vil slette "${deleteTarget?.name}"?`}
+        confirmLabel="Slet helligdag"
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

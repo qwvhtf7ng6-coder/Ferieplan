@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SlideOver } from "@/components/ui/SlideOver";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card } from "@/components/ui/Card";
 import { Btn } from "@/components/ui/Btn";
 import { SectionLabel } from "@/components/ui/SectionLabel";
@@ -19,6 +20,7 @@ interface RequestCardProps {
 export function RequestCard({ request, showCancelButton, onCancelled }: RequestCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState("");
 
   const sortedEntries = [...request.entries].sort(
@@ -32,7 +34,11 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
   const absColor = ABSENCE_TYPE_COLORS[absTypes[0] as string];
 
   async function handleCancel() {
-    if (!confirm("Annuller ansøgning?")) return;
+    setShowCancelConfirm(true);
+  }
+
+  async function confirmCancel() {
+    setShowCancelConfirm(false);
     setCancelling(true);
     setError("");
     const result = await cancelOwnRequest(request.id);
@@ -79,7 +85,7 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
               <Btn
                 variant="ghost"
                 size="sm"
-                onClick={handleCancel}
+                onClick={() => setShowCancelConfirm(true)}
                 disabled={cancelling}
                 className="text-danger hover:text-danger"
               >
@@ -151,6 +157,14 @@ export function RequestCard({ request, showCancelButton, onCancelled }: RequestC
           </div>
         </div>
       </SlideOver>
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Annuller ansøgning"
+        message="Er du sikker på at du vil annullere denne ansøgning?"
+        confirmLabel="Annuller ansøgning"
+        onConfirm={confirmCancel}
+        onClose={() => setShowCancelConfirm(false)}
+      />
     </>
   );
 }

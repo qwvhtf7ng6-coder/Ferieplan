@@ -10,6 +10,7 @@ import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Toggle } from "@/components/ui/Toggle";
 import { Plus, Building2, Pencil, Trash2, Clock, Users } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 interface Department {
@@ -31,6 +32,7 @@ export default function DepartmentsClient({ departments: initial }: { department
   const [createLoading, setCreateLoading] = useState(false);
 
   // Edit
+  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
   const [editDept, setEditDept] = useState<Department | null>(null);
   const [editForm, setEditForm] = useState({ name: "", maxConcurrent: "2", shiftsEnabled: true, color: DEPT_COLORS[0] });
   const [editError, setEditError] = useState("");
@@ -67,9 +69,10 @@ export default function DepartmentsClient({ departments: initial }: { department
     setEditLoading(false);
   }
 
-  async function del(id: string, name: string) {
-    if (!confirm(`Slet afdelingen "${name}"? Dette kan ikke fortrydes.`)) return;
-    await fetch(`/api/departments/${id}`, { method: "DELETE" });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await fetch(`/api/departments/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteTarget(null);
     router.refresh();
   }
 
@@ -123,7 +126,7 @@ export default function DepartmentsClient({ departments: initial }: { department
                       className="flex items-center gap-1.5 text-[12px] font-semibold text-text-muted hover:text-primary hover:bg-primary-muted px-2.5 py-1.5 rounded-md transition-colors">
                       <Pencil size={12} /> Rediger
                     </button>
-                    <button onClick={() => del(d.id, d.name)}
+                    <button onClick={() => setDeleteTarget(d)}
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors">
                       <Trash2 size={13} />
                     </button>
@@ -224,6 +227,14 @@ export default function DepartmentsClient({ departments: initial }: { department
           </div>
         </div>
       </SlideOver>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Slet afdeling"
+        message={`Er du sikker på at du vil slette afdelingen "${deleteTarget?.name}"? Dette kan ikke fortrydes.`}
+        confirmLabel="Slet afdeling"
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

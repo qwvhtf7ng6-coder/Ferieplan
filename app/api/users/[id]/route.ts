@@ -35,6 +35,9 @@ export async function PATCH(
   if (!name || !email) {
     return NextResponse.json({ error: "Navn og email er påkrævet" }, { status: 400 });
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Ugyldig email-adresse" }, { status: 400 });
+  }
 
   // Check email uniqueness (exclude self)
   const existing = await prisma.user.findFirst({
@@ -49,7 +52,10 @@ export async function PATCH(
     departmentId: departmentId || null,
   };
 
-  if (newPassword && newPassword.length >= 6) {
+  if (newPassword) {
+    if (newPassword.length < 8) {
+      return NextResponse.json({ error: "Adgangskode skal være mindst 8 tegn" }, { status: 400 });
+    }
     data.password = await bcrypt.hash(newPassword, 10);
   }
 

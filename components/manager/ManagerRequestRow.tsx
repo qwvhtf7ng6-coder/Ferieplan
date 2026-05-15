@@ -11,6 +11,7 @@ import { formatDate, totalDaysFromEntries } from "@/lib/utils";
 import { approveRequest, rejectRequest, cancelRequestAsManager } from "@/actions/manager";
 import type { VacationRequestRow } from "@/types";
 import { Check, X, Loader2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 interface ManagerRequestRowProps {
@@ -24,6 +25,7 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [actionState, setActionState] = useState<ActionState>("idle");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState("");
   const [showCapacity, setShowCapacity] = useState(false);
   const [capacityWarning, setCapacityWarning] = useState("");
@@ -66,7 +68,11 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
 
   async function handleCancel(e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm("Annuller ansøgning?")) return;
+    setShowCancelConfirm(true);
+  }
+
+  async function confirmCancel() {
+    setShowCancelConfirm(false);
     setError("");
     setActionState("cancelling");
     const result = await cancelRequestAsManager(request.id);
@@ -153,6 +159,14 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
         {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
       </Card>
 
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Annuller ansøgning"
+        message="Er du sikker på at du vil annullere denne ansøgning?"
+        confirmLabel="Annuller ansøgning"
+        onConfirm={confirmCancel}
+        onClose={() => setShowCancelConfirm(false)}
+      />
       <CapacityWarningDialog open={showCapacity} warning={capacityWarning}
         onConfirm={() => { setShowCapacity(false); setCapacityWarning(""); }}
         onClose={() => { setShowCapacity(false); setCapacityWarning(""); }} />

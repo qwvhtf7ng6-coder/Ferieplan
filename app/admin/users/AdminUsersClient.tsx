@@ -9,18 +9,14 @@ import { Avatar } from "@/components/ui/Avatar";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Pencil, Trash2, Key, User, Shield, Users } from "lucide-react";
 
 interface UserRow {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  departmentId: string | null;
-  department: { name: string } | null;
+  id: string; name: string; email: string; role: string;
+  departmentId: string | null; department: { name: string } | null;
 }
-
 interface Department { id: string; name: string; }
 
 const ROLE_CONFIG = {
@@ -28,30 +24,27 @@ const ROLE_CONFIG = {
   MANAGER:  { label: "Leder",       color: "var(--c-primary)",       bg: "var(--c-primary-muted)", icon: <Users size={16} /> },
   ADMIN:    { label: "Admin",       color: "var(--c-accent)",        bg: "rgba(124,58,237,.12)",   icon: <Shield size={16} /> },
 };
-
 const ROLE_OPTIONS = [
-  { value: "EMPLOYEE", label: "Medarbejder", desc: "Kan oprette og se egne ansøgninger" },
-  { value: "MANAGER",  label: "Leder",       desc: "Kan godkende/afvise ansøgninger i afdelingen" },
+  { value: "EMPLOYEE", label: "Medarbejder",   desc: "Kan oprette og se egne ansøgninger" },
+  { value: "MANAGER",  label: "Leder",         desc: "Kan godkende/afvise ansøgninger i afdelingen" },
   { value: "ADMIN",    label: "Administrator", desc: "Fuld adgang til alle funktioner" },
 ];
 
 export default function AdminUsersClient({ users: initialUsers, departments }: { users: UserRow[]; departments: Department[] }) {
   const router = useRouter();
-
-  // Create
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm]   = useState({ name: "", email: "", password: "", role: "EMPLOYEE", departmentId: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "EMPLOYEE", departmentId: "" });
   const [createError, setCreateError] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
 
-  // Edit slide-over
-  const [editUser, setEditUser]   = useState<UserRow | null>(null);
-  const [editForm, setEditForm]   = useState({ name: "", email: "", role: "EMPLOYEE", departmentId: "", newPassword: "" });
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "EMPLOYEE", departmentId: "", newPassword: "" });
   const [showPwField, setShowPwField] = useState(false);
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
-  // Search
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+
   const [search, setSearch] = useState("");
   const filtered = initialUsers.filter((u) =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -85,9 +78,10 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditLoading(false);
   }
 
-  async function deleteUser(id: string, name: string) {
-    if (!confirm(`Slet brugeren "${name}"? Dette kan ikke fortrydes.`)) return;
-    await fetch(`/api/users/${id}`, { method: "DELETE" });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteTarget(null);
     router.refresh();
   }
 
@@ -99,18 +93,12 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
         actions={<Btn onClick={() => setShowCreate(true)} icon={<Plus size={14} />} size="sm">Ny bruger</Btn>}
       />
 
-      {/* Search */}
       <div className="relative mb-4 max-w-sm">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Søg navn eller email..."
-          className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]"
-        />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Søg navn eller email..."
+          className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
       </div>
 
-      {/* User list */}
       <Card className="overflow-hidden">
         {filtered.length === 0 ? (
           <div className="py-14 text-center">
@@ -131,15 +119,13 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
                     </p>
                   </div>
                   <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0"
-                    style={{ background: rc.bg, color: rc.color }}>
-                    {rc.label}
-                  </span>
+                    style={{ background: rc.bg, color: rc.color }}>{rc.label}</span>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => openEdit(u)}
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-primary hover:bg-primary-muted transition-colors">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => deleteUser(u.id, u.name)}
+                    <button onClick={() => setDeleteTarget(u)}
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors">
                       <Trash2 size={14} />
                     </button>
@@ -157,7 +143,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FieldInput id="c-name" label="Navn" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             <FieldInput id="c-email" label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            <FieldInput id="c-pw" label="Adgangskode" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            <FieldInput id="c-pw" label="Adgangskode" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required hint="Mindst 8 tegn" />
             <div>
               <label className="block text-[13px] font-semibold text-text mb-1">Afdeling</label>
               <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
@@ -167,15 +153,12 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               </select>
             </div>
           </div>
-
           <div>
             <SectionLabel>Rolle</SectionLabel>
             <div className="space-y-2">
               {ROLE_OPTIONS.map((opt) => (
-                <label key={opt.value} className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
-                  form.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover"
-                )}>
+                <label key={opt.value} className={cn("flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
+                  form.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
                   <input type="radio" name="c-role" value={opt.value} checked={form.role === opt.value}
                     onChange={() => setForm({ ...form, role: opt.value })} className="mt-0.5 accent-primary" />
                   <div>
@@ -186,7 +169,6 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               ))}
             </div>
           </div>
-
           {createError && <p className="text-[12px] text-danger">{createError}</p>}
           <div className="flex gap-2 pt-2">
             <Btn type="submit" disabled={createLoading}>{createLoading ? "Opretter..." : "Opret bruger"}</Btn>
@@ -196,10 +178,8 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
       </SlideOver>
 
       {/* Edit SlideOver */}
-      <SlideOver open={!!editUser} onClose={() => setEditUser(null)}
-        title="Rediger bruger" subtitle={editUser?.email}>
+      <SlideOver open={!!editUser} onClose={() => setEditUser(null)} title="Rediger bruger" subtitle={editUser?.email}>
         <div className="space-y-5">
-          {/* Avatar preview */}
           {editUser && (
             <div className="flex items-center gap-4 p-4 rounded-lg bg-bg">
               <Avatar name={editForm.name || editUser.name} size={48} />
@@ -209,7 +189,6 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               </div>
             </div>
           )}
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FieldInput label="Fulde navn" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
             <FieldInput label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
@@ -222,15 +201,12 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               </select>
             </div>
           </div>
-
           <div>
             <SectionLabel>Rolle</SectionLabel>
             <div className="space-y-2">
               {ROLE_OPTIONS.map((opt) => (
-                <label key={opt.value} className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
-                  editForm.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover"
-                )}>
+                <label key={opt.value} className={cn("flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
+                  editForm.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
                   <input type="radio" name="e-role" value={opt.value} checked={editForm.role === opt.value}
                     onChange={() => setEditForm({ ...editForm, role: opt.value })} className="mt-0.5 accent-primary" />
                   <div>
@@ -241,8 +217,6 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               ))}
             </div>
           </div>
-
-          {/* Password reset */}
           <div>
             <SectionLabel>Adgangskode</SectionLabel>
             {!showPwField ? (
@@ -253,11 +227,10 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
             ) : (
               <FieldInput label="Ny adgangskode" type="password" value={editForm.newPassword}
                 onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                placeholder="Min. 6 tegn — tom = behold nuværende"
-              />
+                placeholder="Min. 8 tegn — tom = behold nuværende"
+                hint="Mindst 8 tegn" />
             )}
           </div>
-
           {editError && <p className="text-[12px] text-danger">{editError}</p>}
           <div className="flex gap-2 pt-2">
             <Btn onClick={saveEdit} disabled={editLoading}>{editLoading ? "Gemmer..." : "Gem ændringer"}</Btn>
@@ -265,6 +238,16 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
           </div>
         </div>
       </SlideOver>
+
+      {/* Delete confirm dialog */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Slet bruger"
+        message={`Er du sikker på at du vil slette "${deleteTarget?.name}"? Dette kan ikke fortrydes.`}
+        confirmLabel="Slet bruger"
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 import { da } from "date-fns/locale";
 import { PrintShiftPlan } from "@/components/PrintShiftPlan";
 import { Btn } from "@/components/ui/Btn";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { FieldInput } from "@/components/ui/FieldInput";
@@ -119,6 +120,7 @@ export default function ShiftsClient({
     name: "", startTime: "08:00", endTime: "16:00", color: "#3b82f6",
   });
   const [tplLoading, setTplLoading] = useState(false);
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState<{ id: string; name: string } | null>(null);
   const [editTplId, setEditTplId] = useState<string | null>(null);
 
   const [assignModal, setAssignModal] = useState<{
@@ -238,9 +240,10 @@ export default function ShiftsClient({
     setTplLoading(false);
   }
 
-  async function deleteTemplate(id: string, name: string) {
-    if (!confirm(`Slet vagtskabelonen "${name}"?`)) return;
-    await fetch(`/api/shifts/templates/${id}`, { method: "DELETE" });
+  async function confirmDeleteTemplate() {
+    if (!deleteTemplateTarget) return;
+    await fetch(`/api/shifts/templates/${deleteTemplateTarget.id}`, { method: "DELETE" });
+    setDeleteTemplateTarget(null);
     loadTemplates();
   }
 
@@ -618,7 +621,7 @@ export default function ShiftsClient({
                     Rediger
                   </button>
                   <button
-                    onClick={() => deleteTemplate(t.id, t.name)}
+                    onClick={() => setDeleteTemplateTarget({ id: t.id, name: t.name })}
                     className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded"
                   >
                     Slet
@@ -720,6 +723,15 @@ export default function ShiftsClient({
           </p>
         )}
       </div>{/* end no-print */}
+
+      <ConfirmDialog
+        open={!!deleteTemplateTarget}
+        title="Slet vagttype"
+        message={`Er du sikker på at du vil slette vagttypen "${deleteTemplateTarget?.name}"? Alle tilknyttede vagter slettes også.`}
+        confirmLabel="Slet vagttype"
+        onConfirm={confirmDeleteTemplate}
+        onClose={() => setDeleteTemplateTarget(null)}
+      />
 
       {/* Print view – only visible when printing */}
       <PrintShiftPlan
