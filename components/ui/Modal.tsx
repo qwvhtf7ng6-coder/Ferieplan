@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 interface ModalProps {
   open: boolean;
@@ -20,9 +21,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
     }
     if (open) {
       document.addEventListener("keydown", onKey);
-      // Lock body scroll
       document.body.style.overflow = "hidden";
-      // Focus the panel
       setTimeout(() => panelRef.current?.focus(), 0);
     }
     return () => {
@@ -35,7 +34,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[3px] p-0 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
       role="presentation"
     >
@@ -46,8 +45,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         aria-labelledby={title ? "modal-title" : undefined}
         tabIndex={-1}
         className={cn(
-          // Full-width bottom sheet on mobile, centered card on desktop
-          "bg-white w-full sm:rounded-xl shadow-xl outline-none",
+          "bg-surface border border-border w-full sm:rounded-xl shadow-lg outline-none",
           "rounded-t-2xl sm:rounded-xl",
           "max-h-[90dvh] sm:max-h-[85vh]",
           "flex flex-col",
@@ -56,16 +54,16 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         )}
       >
         {title && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-            {/* Drag handle indicator on mobile */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 sm:hidden" aria-hidden="true" />
-            <h2 id="modal-title" className="font-bold text-gray-800 text-base">{title}</h2>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0 relative">
+            {/* Mobile drag handle */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-border sm:hidden" aria-hidden="true" />
+            <h2 id="modal-title" className="font-bold text-text text-[15px]">{title}</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors text-xl leading-none"
+              className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-text hover:bg-bg transition-colors"
               aria-label="Luk"
             >
-              ×
+              <X size={16} />
             </button>
           </div>
         )}

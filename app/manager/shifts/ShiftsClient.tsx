@@ -348,7 +348,7 @@ export default function ShiftsClient({
                     return (
                       <div
                         key={day.toISOString()}
-                        className={`min-h-[72px] px-1 py-1 border-l border-gray-100 ${
+                        className={`min-h-[72px] px-1 py-1 border-l border-border ${
                           isToday ? "bg-primary-muted/30" : ""
                         }`}
                       >
@@ -429,7 +429,7 @@ export default function ShiftsClient({
                           key={day.toISOString()}
                           className={`px-4 py-2.5 flex items-center gap-3 ${isToday ? "bg-primary-muted/30" : ""}`}
                         >
-                          <div className={`text-xs w-16 shrink-0 ${isToday ? "font-bold text-blue-700" : "text-gray-500"}`}>
+                          <div className={`text-xs w-16 shrink-0 ${isToday ? "font-bold text-blue-700" : "text-text-muted"}`}>
                             {format(day, "EEE d.", { locale: da })}
                           </div>
                           <div className="flex-1 flex flex-wrap gap-1">
@@ -461,7 +461,7 @@ export default function ShiftsClient({
                               </button>
                             )}
                             {cellA.length === 0 && deptTemplates.length === 0 && (
-                              <span className="text-xs text-gray-300">—</span>
+                              <span className="text-xs text-text-subtle">—</span>
                             )}
                           </div>
                         </div>
@@ -501,7 +501,7 @@ export default function ShiftsClient({
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Navn</label>
+                  <label className="block text-xs text-text-muted mb-1">Navn</label>
                   <input
                     value={tplForm.name}
                     onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })}
@@ -509,14 +509,14 @@ export default function ShiftsClient({
                     className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Farve</label>
+                  <label className="block text-xs text-text-muted mb-1">Farve</label>
                   <div className="flex gap-2 flex-wrap mt-1">
                     {COLORS.map((c) => (
                       <button
                         key={c}
                         onClick={() => setTplForm({ ...tplForm, color: c })}
                         className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                          tplForm.color === c ? "border-gray-800 scale-110" : "border-transparent"
+                          tplForm.color === c ? "border-text scale-110" : "border-transparent"
                         }`}
                         style={{ backgroundColor: c }}
                       />
@@ -524,7 +524,7 @@ export default function ShiftsClient({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Starttid</label>
+                  <label className="block text-xs text-text-muted mb-1">Starttid</label>
                   <input
                     type="time"
                     value={tplForm.startTime}
@@ -532,7 +532,7 @@ export default function ShiftsClient({
                     className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Sluttid</label>
+                  <label className="block text-xs text-text-muted mb-1">Sluttid</label>
                   <input
                     type="time"
                     value={tplForm.endTime}
@@ -550,7 +550,7 @@ export default function ShiftsClient({
                 </button>
                 <button
                   onClick={() => { setShowTemplateForm(false); setEditTplId(null); }}
-                  className="text-sm text-gray-500 px-3 py-2"
+                  className="text-sm text-text-muted px-3 py-2"
                 >
                   Annuller
                 </button>
@@ -567,7 +567,7 @@ export default function ShiftsClient({
             {deptTemplates.map((t) => (
               <div
                 key={t.id}
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3"
+                className="bg-surface border border-border rounded-xl px-4 py-3 flex items-center gap-3"
               >
                 <div
                   className="w-4 h-4 rounded-full shrink-0"
@@ -578,7 +578,7 @@ export default function ShiftsClient({
                   <p className="text-[12px] text-text-muted">
                     {t.startTime} – {t.endTime}
                     {isAdmin && (
-                      <span className="ml-2 text-gray-400">{t.department.name}</span>
+                      <span className="ml-2 text-text-subtle">{t.department.name}</span>
                     )}
                   </p>
                 </div>
@@ -615,7 +615,7 @@ export default function ShiftsClient({
             </div>
 
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Vagttype</label>
+              <label className="block text-xs text-text-muted mb-1">Vagttype</label>
               <div className="space-y-2">
                 {deptTemplates.map((t) => (
                   <label
@@ -648,7 +648,7 @@ export default function ShiftsClient({
             </div>
 
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Note (valgfri)</label>
+              <label className="block text-xs text-text-muted mb-1">Note (valgfri)</label>
               <input
                 value={assignNote}
                 onChange={(e) => setAssignNote(e.target.value)}
@@ -674,7 +674,7 @@ export default function ShiftsClient({
               </button>
               <button
                 onClick={() => { setAssignModal(null); setAssignConflict(false); }}
-                className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700"
+                className="px-4 py-2.5 text-sm text-text-muted hover:text-text"
               >
                 {assignConflict ? "Luk" : "Annuller"}
               </button>

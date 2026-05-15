@@ -225,7 +225,7 @@ export default function NotificationBell({ variant = "topbar" }: NotificationBel
           aria-expanded={open}
           className={cn(
             "flex items-center gap-3 w-full px-3 py-[9px] rounded-md text-[13px] font-medium transition-colors",
-            open ? "bg-white/[0.12] text-white font-semibold" : "text-white/60 hover:text-white hover:bg-white/[0.07]"
+            open ? "bg-surface/[0.12] text-white font-semibold" : "text-white/60 hover:text-white hover:bg-surface/[0.07]"
           )}
         >
           <span className="relative shrink-0" aria-hidden="true">
@@ -267,7 +267,7 @@ export default function NotificationBell({ variant = "topbar" }: NotificationBel
         aria-expanded={open}
         className={cn(
           "relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors",
-          open ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-100"
+          open ? "bg-blue-100 text-blue-700" : "text-text-muted hover:bg-bg"
         )}
       >
         <Bell size={16} />

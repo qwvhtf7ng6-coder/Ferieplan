@@ -64,8 +64,8 @@ export default async function ReportsPage() {
       <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Rapporter</h1>
-          <p className="text-sm text-gray-500 mt-1">Fraværsoversigt, afdelingsstatistik og dataeksport</p>
+          <h1 className="text-2xl font-bold text-text">Rapporter</h1>
+          <p className="text-sm text-text-muted mt-1">Fraværsoversigt, afdelingsstatistik og dataeksport</p>
         </div>
         <ReportsClient
           departments={departments}

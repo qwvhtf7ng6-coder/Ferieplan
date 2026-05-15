@@ -8,124 +8,68 @@ interface AuditLog {
   user: { name: string };
 }
 
-const ACTION_CONFIG: Record<string, {
-  label: string;
-  icon: string;
-  dotColor: string;
-  textColor: string;
-  bgColor: string;
-}> = {
-  CREATE: {
-    label: "Ansøgning oprettet",
-    icon: "✦",
-    dotColor: "bg-blue-500",
-    textColor: "text-blue-700",
-    bgColor: "bg-blue-50 border-blue-100",
-  },
-  APPROVED: {
-    label: "Godkendt",
-    icon: "✓",
-    dotColor: "bg-green-500",
-    textColor: "text-green-700",
-    bgColor: "bg-green-50 border-green-100",
-  },
-  REJECTED: {
-    label: "Afvist",
-    icon: "✕",
-    dotColor: "bg-red-500",
-    textColor: "text-red-700",
-    bgColor: "bg-red-50 border-red-100",
-  },
-  CANCELLED: {
-    label: "Annulleret",
-    icon: "○",
-    dotColor: "bg-gray-400",
-    textColor: "text-gray-600",
-    bgColor: "bg-gray-50 border-gray-200",
-  },
-  EDITED: {
-    label: "Redigeret",
-    icon: "✎",
-    dotColor: "bg-orange-400",
-    textColor: "text-orange-700",
-    bgColor: "bg-orange-50 border-orange-100",
-  },
-  UPDATE: {
-    label: "Opdateret",
-    icon: "✎",
-    dotColor: "bg-orange-400",
-    textColor: "text-orange-700",
-    bgColor: "bg-orange-50 border-orange-100",
-  },
-  DELETE: {
-    label: "Slettet",
-    icon: "✕",
-    dotColor: "bg-red-500",
-    textColor: "text-red-700",
-    bgColor: "bg-red-50 border-red-100",
-  },
+const ACTION_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string; textColor: string }> = {
+  CREATE:            { label: "Ansøgning oprettet",     icon: "✦", color: "var(--c-primary)",  bg: "var(--c-primary-muted)",  textColor: "var(--c-primary)" },
+  CREATED_ON_BEHALF: { label: "Oprettet på vegne af",   icon: "✦", color: "var(--c-primary)",  bg: "var(--c-primary-muted)",  textColor: "var(--c-primary)" },
+  APPROVED:          { label: "Godkendt",               icon: "✓", color: "var(--c-success)",  bg: "var(--c-success-bg)",     textColor: "var(--c-success-text)" },
+  REJECTED:          { label: "Afvist",                 icon: "✕", color: "var(--c-danger)",   bg: "var(--c-danger-bg)",      textColor: "var(--c-danger-text)" },
+  CANCELLED:         { label: "Annulleret",             icon: "○", color: "var(--c-text-subtle)", bg: "var(--c-bg)",           textColor: "var(--c-text-muted)" },
+  EDITED:            { label: "Redigeret",              icon: "✎", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
+  UPDATE:            { label: "Opdateret",              icon: "✎", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
+  DELETE:            { label: "Slettet",                icon: "✕", color: "var(--c-danger)",   bg: "var(--c-danger-bg)",      textColor: "var(--c-danger-text)" },
+  REMINDER:          { label: "Påmindelse",             icon: "⏰", color: "var(--c-warning)",  bg: "var(--c-warning-bg)",     textColor: "var(--c-warning-text)" },
 };
 
-const DEFAULT_CONFIG = {
-  label: "Hændelse",
-  icon: "·",
-  dotColor: "bg-gray-400",
-  textColor: "text-gray-600",
-  bgColor: "bg-gray-50 border-gray-200",
-};
+const DEFAULT_CONFIG = { label: "Hændelse", icon: "·", color: "var(--c-text-subtle)", bg: "var(--c-bg)", textColor: "var(--c-text-muted)" };
 
 function formatDateTime(date: Date): string {
-  const d = new Date(date);
-  return d.toLocaleString("da-DK", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(date).toLocaleString("da-DK", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function RequestTimeline({ logs }: { logs: AuditLog[] }) {
   if (logs.length === 0) return null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5">
-      <p className="text-sm font-semibold text-gray-700 mb-5">Historik</p>
+    <div className="bg-surface border border-border rounded-lg p-5">
+      <p className="text-[13px] font-bold text-text mb-5">Historik</p>
 
       <div className="relative">
         {/* Vertical line */}
-        <div className="absolute left-3.5 top-0 bottom-0 w-px bg-gray-200" />
+        <div className="absolute left-3.5 top-0 bottom-0 w-px bg-border" />
 
         <ol className="space-y-4">
           {logs.map((log, idx) => {
             const cfg = ACTION_CONFIG[log.action] ?? DEFAULT_CONFIG;
             const isFirst = idx === 0;
-            const isLast = idx === logs.length - 1;
-
             return (
               <li key={log.id} className="relative flex gap-4 pl-9">
                 {/* Dot */}
                 <div
-                  className={`absolute left-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${cfg.dotColor} ${isFirst ? "ring-2 ring-offset-2 ring-blue-200" : ""}`}
+                  className="absolute left-0 w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0"
+                  style={{
+                    backgroundColor: cfg.color,
+                    boxShadow: isFirst ? `0 0 0 3px var(--c-surface), 0 0 0 5px ${cfg.color}44` : undefined,
+                  }}
                 >
                   {cfg.icon}
                 </div>
 
-                {/* Content */}
-                <div className={`flex-1 rounded-xl border px-4 py-3 ${cfg.bgColor} ${isLast && logs.length === 1 ? "" : ""}`}>
+                {/* Content card */}
+                <div className="flex-1 rounded-lg border px-4 py-3"
+                  style={{ backgroundColor: cfg.bg, borderColor: `${cfg.color}33` }}>
                   <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <span className={`text-sm font-semibold ${cfg.textColor}`}>
+                    <span className="text-[13px] font-semibold" style={{ color: cfg.textColor }}>
                       {cfg.label}
                     </span>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                    <span className="text-[11px] text-text-subtle whitespace-nowrap">
                       {formatDateTime(log.createdAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    af <span className="font-medium text-gray-700">{log.user.name}</span>
+                  <p className="text-[12px] text-text-muted mt-0.5">
+                    af <span className="font-semibold text-text">{log.user.name}</span>
                   </p>
                   {log.details && (
-                    <p className="text-xs mt-1.5 italic text-gray-600 bg-white/60 rounded-lg px-2 py-1 border border-white">
+                    <p className="text-[12px] mt-1.5 italic text-text-muted bg-surface/60 rounded-md px-2 py-1">
                       {log.details}
                     </p>
                   )}

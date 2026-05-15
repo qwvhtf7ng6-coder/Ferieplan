@@ -15,7 +15,7 @@ export function ManagerRequestsClient({ requests }: ManagerRequestsClientProps) 
   if (requests.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-gray-400 text-sm">Ingen ansøgninger matcher de valgte filtre.</p>
+        <p className="text-text-subtle text-sm">Ingen ansøgninger matcher de valgte filtre.</p>
       </div>
     );
   }

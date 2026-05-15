@@ -26,31 +26,19 @@ export function EditNoteDialog({ open, onClose, onConfirm, currentNote }: EditNo
     <Modal open={open} onClose={onClose} title="Rediger note">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+          <label className="block text-[13px] font-semibold text-text mb-1">Note</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             maxLength={500}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+            className="w-full border-[1.5px] border-border rounded-md px-3.5 py-2.5 text-sm bg-surface text-text placeholder:text-text-subtle focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)] resize-none"
           />
-          <p className="text-xs text-gray-400 text-right mt-0.5">{note.length}/500</p>
+          <p className="text-[11px] text-text-subtle text-right mt-0.5">{note.length}/500</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 flex-1 justify-center bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            Gem note
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors"
-          >
-            Annuller
-          </button>
+        <div className="flex gap-2">
+          <Btn type="submit" disabled={loading} full>{loading ? "Gemmer..." : "Gem note"}</Btn>
+          <Btn type="button" variant="secondary" onClick={onClose} full>Annuller</Btn>
         </div>
       </form>
     </Modal>

@@ -144,7 +144,7 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-bg text-[11px] font-bold text-text-subtle uppercase tracking-wide">
                 <tr>
-                  <th className="px-4 py-3 text-left sticky left-0 bg-gray-50">Medarbejder</th>
+                  <th className="px-4 py-3 text-left sticky left-0 bg-bg">Medarbejder</th>
                   <th className="px-4 py-3 text-left">Afdeling</th>
                   {month === "all"
                     ? MONTHS.map((m, i) => <th key={i} className="px-2 py-3 text-center min-w-[44px]">{m.slice(0, 3)}</th>)
@@ -156,8 +156,8 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.user.id} className="border-t border-border hover:bg-bg">
-                    <td className="px-4 py-3 sticky left-0 bg-white">
-                      <p className="font-medium text-gray-900">{r.user.name}</p>
+                    <td className="px-4 py-3 sticky left-0 bg-surface">
+                      <p className="font-medium text-text">{r.user.name}</p>
                       <p className="text-xs text-text-subtle">{r.user.email}</p>
                     </td>
                     <td className="px-4 py-3 text-text-muted text-xs">{r.user.department?.name ?? "—"}</td>
@@ -169,13 +169,13 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
                         ))
                       : <td className="px-4 py-3 text-center font-semibold text-primary">{r.totalDays}</td>
                     }
-                    <td className="px-4 py-3 text-center font-bold text-gray-900">{r.totalDays}</td>
+                    <td className="px-4 py-3 text-center font-bold text-text">{r.totalDays}</td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tfoot className="bg-bg border-t border-border">
                 <tr>
-                  <td className="px-4 py-2 text-xs font-semibold text-text-muted sticky left-0 bg-gray-50">I alt</td>
+                  <td className="px-4 py-2 text-xs font-semibold text-text-muted sticky left-0 bg-bg">I alt</td>
                   <td />
                   {month === "all"
                     ? Array.from({ length: 12 }, (_, m) => (
@@ -185,7 +185,7 @@ function AbsenceReport({ users, requests, departments, currentYear }: Props) {
                       ))
                     : <td className="px-4 py-2 text-center text-xs font-semibold text-text-muted">{rows.reduce((s, r) => s + r.totalDays, 0)}</td>
                   }
-                  <td className="px-4 py-2 text-center text-sm font-bold text-gray-900">
+                  <td className="px-4 py-2 text-center text-sm font-bold text-text">
                     {rows.reduce((s, r) => s + r.totalDays, 0)}
                   </td>
                 </tr>
@@ -256,7 +256,7 @@ function DepartmentReport({ departments, requests, currentYear }: Props) {
         {rows.map((r) => (
           <div key={r.dept.id} className="bg-surface border border-border rounded-lg p-4">
             <div className="flex items-start justify-between mb-3">
-              <h3 className="font-semibold text-gray-900">{r.dept.name}</h3>
+              <h3 className="font-semibold text-text">{r.dept.name}</h3>
               <span className="text-2xl font-bold text-primary">{r.totalDays}</span>
             </div>
             <p className="text-xs text-text-muted mb-3">godkendte feriedage i {year}</p>
@@ -504,7 +504,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
               <div className="w-28 text-xs text-text-muted text-right shrink-0">
                 {ABSENCE_LABELS[type] ?? type}
               </div>
-              <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+              <div className="flex-1 bg-bg rounded-full h-5 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${pct}%`, backgroundColor: TYPE_COLORS[type] ?? "#6b7280" }}
@@ -527,7 +527,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200">
+              <tr className="border-b border-border">
                 <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Uge</th>
                 <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Fraværsdage</th>
                 <th className="text-left py-2 text-xs font-semibold text-text-muted uppercase">Belastning</th>
@@ -538,12 +538,12 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                 const maxDays = daysByWeek[0]?.[1] ?? 1;
                 const pct = Math.round((days / maxDays) * 100);
                 return (
-                  <tr key={week} className="border-b border-gray-50">
+                  <tr key={week} className="border-b border-border">
                     <td className="py-2 pr-4 font-mono text-text">{week}</td>
                     <td className="py-2 pr-4 text-text-muted">{days}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-100 rounded-full h-2">
+                        <div className="w-24 bg-bg rounded-full h-2">
                           <div
                             className="h-full rounded-full bg-primary-light0"
                             style={{ width: `${pct}%` }}
@@ -568,7 +568,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-text">Sygedage pr. medarbejder</h3>
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+            className="border border-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
             <option value="">Alle afdelinger</option>
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
@@ -578,7 +578,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
         ) : (
           <div className="space-y-1">
             {topSickUsers.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-gray-50">
+              <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-border">
                 <div className="flex-1">
                   <span className="text-sm font-medium text-text">{u.name}</span>
                   {u.department && (
@@ -586,7 +586,7 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-20 bg-gray-100 rounded-full h-2">
+                  <div className="w-20 bg-bg rounded-full h-2">
                     <div
                       className="h-full rounded-full bg-red-400"
                       style={{ width: `${Math.min(100, (u.sickDays / (topSickUsers[0]?.sickDays ?? 1)) * 100)}%` }}

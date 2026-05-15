@@ -10,7 +10,7 @@ export function StatusBadge({ status, className }: BadgeProps) {
     <span
       className={cn(
         "inline-block text-xs font-medium px-2 py-0.5 rounded-full",
-        STATUS_COLORS[status] ?? "bg-gray-100 text-gray-600",
+        STATUS_COLORS[status] ?? "bg-bg text-text-muted",
         className
       )}
     >

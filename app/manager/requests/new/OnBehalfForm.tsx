@@ -93,12 +93,12 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
 
       {/* Employee selector */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Medarbejder</label>
+        <label className="block text-[13px] font-semibold text-text mb-2">Medarbejder</label>
         <select
           value={targetUserId}
           onChange={(e) => setTargetUserId(e.target.value)}
           required
-          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]"
         >
           {employees.map((emp) => (
             <option key={emp.id} value={emp.id}>
@@ -106,7 +106,7 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
             </option>
           ))}
         </select>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-[12px] text-text-subtle mt-1">
           Ansøgningen oprettes direkte som godkendt på vegne af medarbejderen.
         </p>
       </div>
@@ -116,19 +116,19 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
         <p className="text-xs font-semibold text-blue-700 mb-3 uppercase tracking-wide">Udfyld fra datointerval</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Fra</label>
+            <label className="block text-[12px] text-text-muted mb-1">Fra</label>
             <input type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Til</label>
+            <label className="block text-[12px] text-text-muted mb-1">Til</label>
             <input type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
           </div>
         </div>
         <div className="flex gap-2">
           <select value={rangeAbsenceType} onChange={(e) => setRangeAbsenceType(e.target.value as AbsenceType)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            className="flex-1 border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
             {Object.entries(ABSENCE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <button type="button" onClick={fillRange}
@@ -141,7 +141,7 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
       {/* Entries */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-semibold text-gray-700">
+          <label className="text-[13px] font-semibold text-text">
             Dage ({entries.length})
           </label>
           <button type="button" onClick={addEntry}
@@ -153,21 +153,21 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
           {entries.map((entry, i) => {
             const absColor = ABSENCE_TYPE_COLORS[entry.absenceType];
             return (
-              <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl p-2">
+              <div key={i} className="flex items-center gap-2 bg-bg rounded-lg p-2">
                 <input type="date" value={entry.date}
                   onChange={(e) => updateEntry(i, "date", e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  className="flex-1 border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]" />
                 <select value={entry.type} onChange={(e) => updateEntry(i, "type", e.target.value)}
-                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
                   {Object.entries(ENTRY_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
                 <select value={entry.absenceType} onChange={(e) => updateEntry(i, "absenceType", e.target.value)}
                   style={{ backgroundColor: absColor?.bg, color: absColor?.text }}
-                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
                   {Object.entries(ABSENCE_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
                 <button type="button" onClick={() => removeEntry(i)}
-                  className="text-gray-400 hover:text-red-500 w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 flex-shrink-0">
+                  className="text-text-subtle hover:text-danger w-6 h-6 flex items-center justify-center rounded-full hover:bg-danger-bg flex-shrink-0">
                   ×
                 </button>
               </div>
@@ -178,17 +178,17 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
 
       {/* Note */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Note <span className="font-normal text-gray-400">(valgfri)</span>
+        <label className="block text-[13px] font-semibold text-text mb-2">
+          Note <span className="font-normal text-text-subtle">(valgfri)</span>
         </label>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500}
           placeholder="F.eks. barsel, sygemelding registreret bagud..."
-          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
+          className="w-full border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)] resize-none" />
       </div>
 
       <div className="flex gap-3 pt-1">
         <button type="button" onClick={() => router.back()}
-          className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl text-sm font-semibold hover:bg-gray-200">
+          className="flex-1 bg-bg text-text-muted py-3 rounded-lg text-sm font-semibold hover:bg-border">
           Annuller
         </button>
         <button type="submit" disabled={loading || success}
