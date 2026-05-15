@@ -10,20 +10,26 @@ import { RejectDialog } from "@/components/manager/RejectDialog";
 import { formatDate, totalDaysFromEntries } from "@/lib/utils";
 import { approveRequest, rejectRequest, cancelRequestAsManager } from "@/actions/manager";
 import type { VacationRequestRow } from "@/types";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ManagerRequestRowProps {
   request: VacationRequestRow;
   onOpenDetail: (id: string) => void;
 }
 
+type ActionState = "idle" | "approving" | "cancelling";
+
 export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [actionState, setActionState] = useState<ActionState>("idle");
   const [error, setError] = useState("");
   const [showCapacity, setShowCapacity] = useState(false);
   const [capacityWarning, setCapacityWarning] = useState("");
   const [showReject, setShowReject] = useState(false);
+
+  const busy = actionState !== "idle";
 
   const sortedEntries = [...request.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const totalDays = totalDaysFromEntries(request.entries);
@@ -34,15 +40,25 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
   function refresh() { startTransition(() => router.refresh()); }
 
   async function handleApprove(e: React.MouseEvent) {
-    e.stopPropagation(); setError("");
+    e.stopPropagation();
+    setError("");
+    setActionState("approving");
     const result = await approveRequest(request.id);
-    if (!result.ok) { setError(result.error ?? "Fejl"); return; }
-    if (result.data?.capacityWarning) { setCapacityWarning(result.data.capacityWarning); setShowCapacity(true); }
+    if (!result.ok) {
+      setError(result.error ?? "Fejl");
+      setActionState("idle");
+      return;
+    }
+    if (result.data?.capacityWarning) {
+      setCapacityWarning(result.data.capacityWarning);
+      setShowCapacity(true);
+    }
     refresh();
   }
 
   async function handleReject(reason: string) {
-    setShowReject(false); setError("");
+    setShowReject(false);
+    setError("");
     const result = await rejectRequest(request.id, reason);
     if (!result.ok) { setError(result.error ?? "Fejl"); return; }
     refresh();
@@ -52,14 +68,19 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
     e.stopPropagation();
     if (!confirm("Annuller ansøgning?")) return;
     setError("");
+    setActionState("cancelling");
     const result = await cancelRequestAsManager(request.id);
-    if (!result.ok) { setError(result.error ?? "Fejl"); return; }
+    if (!result.ok) {
+      setError(result.error ?? "Fejl");
+      setActionState("idle");
+      return;
+    }
     refresh();
   }
 
   return (
     <>
-      <Card interactive onClick={() => onOpenDetail(request.id)} className="p-4">
+      <Card interactive onClick={() => !busy && onOpenDetail(request.id)} className="p-4">
         <div className="flex items-start gap-3">
           <Avatar name={request.user.name} size={36} className="mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -75,25 +96,55 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
             </div>
           </div>
 
-          {/* Actions — stop propagation so card click doesn't trigger */}
+          {/* Actions */}
           {(request.status === "PENDING" || request.status === "APPROVED") && (
             <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
               {request.status === "PENDING" && (
                 <>
-                  <button onClick={handleApprove} disabled={isPending}
-                    className="h-8 px-3 rounded-md text-[12px] font-semibold bg-success-bg text-success-text hover:opacity-80 disabled:opacity-50 transition-opacity flex items-center gap-1">
-                    <Check size={12} /> Godkend
+                  {/* Godkend */}
+                  <button
+                    onClick={handleApprove}
+                    disabled={busy}
+                    className={cn(
+                      "h-8 px-3 rounded-md text-[12px] font-semibold flex items-center gap-1.5 transition-all",
+                      actionState === "approving"
+                        ? "bg-success text-white cursor-wait"
+                        : "bg-success-bg text-success-text hover:bg-success hover:text-white disabled:opacity-50",
+                    )}
+                  >
+                    {actionState === "approving"
+                      ? <><Loader2 size={12} className="animate-spin" /> Godkender…</>
+                      : <><Check size={12} /> Godkend</>
+                    }
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); setShowReject(true); }} disabled={isPending}
-                    className="h-8 px-3 rounded-md text-[12px] font-semibold bg-danger-bg text-danger-text hover:opacity-80 disabled:opacity-50 transition-opacity flex items-center gap-1">
+
+                  {/* Afvis */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowReject(true); }}
+                    disabled={busy}
+                    className="h-8 px-3 rounded-md text-[12px] font-semibold bg-danger-bg text-danger-text hover:bg-danger hover:text-white disabled:opacity-50 transition-all flex items-center gap-1.5"
+                  >
                     <X size={12} /> Afvis
                   </button>
                 </>
               )}
-              {["PENDING","APPROVED"].includes(request.status) && (
-                <button onClick={handleCancel} disabled={isPending}
-                  className="h-8 px-3 rounded-md text-[12px] font-semibold bg-bg text-text-muted hover:text-text hover:bg-border disabled:opacity-50 transition-colors">
-                  Annuller
+
+              {/* Annuller */}
+              {["PENDING", "APPROVED"].includes(request.status) && (
+                <button
+                  onClick={handleCancel}
+                  disabled={busy}
+                  className={cn(
+                    "h-8 px-3 rounded-md text-[12px] font-semibold flex items-center gap-1.5 transition-all",
+                    actionState === "cancelling"
+                      ? "bg-border text-text-muted cursor-wait"
+                      : "bg-bg text-text-muted hover:text-text hover:bg-border disabled:opacity-50",
+                  )}
+                >
+                  {actionState === "cancelling"
+                    ? <><Loader2 size={12} className="animate-spin" /> Annullerer…</>
+                    : "Annuller"
+                  }
                 </button>
               )}
             </div>

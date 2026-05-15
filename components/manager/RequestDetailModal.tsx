@@ -8,7 +8,7 @@ import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Avatar } from "@/components/ui/Avatar";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { AuditLogPanel } from "@/components/manager/AuditLogPanel";
 import { CapacityWarningDialog } from "@/components/manager/CapacityWarningDialog";
 import { RejectDialog } from "@/components/manager/RejectDialog";
@@ -30,7 +30,8 @@ interface RequestDetailModalProps {
 
 export function RequestDetailModal({ requestId, onClose }: RequestDetailModalProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [actionState, setActionState] = useState<"idle"|"approving"|"cancelling">("idle");
   const [data, setData] = useState<{
     request: VacationRequestRow;
     auditLogs: { id: string; action: string; details: string | null; createdAt: Date; user: { name: string } }[];
@@ -64,9 +65,9 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
 
   async function handleApprove() {
     if (!requestId) return;
-    setError("");
+    setError(""); setActionState("approving");
     const result = await approveRequest(requestId);
-    if (!result.ok) { setError(result.error ?? "Fejl"); return; }
+    if (!result.ok) { setError(result.error ?? "Fejl"); setActionState("idle"); return; }
     if (result.data?.capacityWarning) {
       setCapacityWarning(result.data.capacityWarning);
       setShowCapacityDialog(true);
@@ -91,9 +92,9 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
 
   async function handleCancel() {
     if (!requestId || !confirm("Annuller denne ansøgning?")) return;
-    setError("");
+    setError(""); setActionState("cancelling");
     const result = await cancelRequestAsManager(requestId);
-    if (!result.ok) { setError(result.error ?? "Fejl"); return; }
+    if (!result.ok) { setError(result.error ?? "Fejl"); setActionState("idle"); return; }
     refresh();
   }
 
@@ -106,6 +107,7 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
     refresh();
   }
 
+  const busy = actionState !== "idle";
   const req = data?.request;
   const totalDays = req ? totalDaysFromEntries(req.entries) : 0;
 
@@ -193,19 +195,33 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
             <div className="space-y-2 pt-1">
               {req.status === "PENDING" && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Btn onClick={handleApprove} disabled={isPending} variant="success" full icon={<Check size={14} />}>
-                    Godkend
+                  <Btn
+                    onClick={handleApprove}
+                    disabled={busy}
+                    variant="success"
+                    full
+                    icon={actionState === "approving" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  >
+                    {actionState === "approving" ? "Godkender…" : "Godkend"}
                   </Btn>
-                  <Btn onClick={() => setShowRejectDialog(true)} disabled={isPending} variant="danger" full icon={<X size={14} />}>
+                  <Btn onClick={() => setShowRejectDialog(true)} disabled={busy} variant="danger" full icon={<X size={14} />}>
                     Afvis
                   </Btn>
                 </div>
               )}
               <div className="flex gap-2">
                 {["PENDING", "APPROVED"].includes(req.status) && (
-                  <Btn onClick={handleCancel} disabled={isPending} variant="secondary" full>Annuller</Btn>
+                  <Btn
+                    onClick={handleCancel}
+                    disabled={busy}
+                    variant="secondary"
+                    full
+                    icon={actionState === "cancelling" ? <Loader2 size={14} className="animate-spin" /> : undefined}
+                  >
+                    {actionState === "cancelling" ? "Annullerer…" : "Annuller"}
+                  </Btn>
                 )}
-                <Btn onClick={() => setShowEditDialog(true)} variant="ghost" full>Rediger note</Btn>
+                <Btn onClick={() => setShowEditDialog(true)} disabled={busy} variant="ghost" full>Rediger note</Btn>
               </div>
             </div>
 
