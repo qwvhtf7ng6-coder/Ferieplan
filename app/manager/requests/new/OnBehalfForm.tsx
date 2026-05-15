@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { createRequestOnBehalf } from "@/actions/manager";
 import { ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS } from "@/lib/utils";
-import { Alert } from "@/components/ui/Alert";
-import { Spinner } from "@/components/ui/Spinner";
+import { Btn } from "@/components/ui/Btn";
 import type { EntryInput, EntryType, AbsenceType } from "@/types";
 
 interface Employee {
@@ -83,12 +82,14 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {success && (
-        <Alert variant="success">
+        <p className="text-[12px] text-success bg-success-bg px-3 py-2 rounded-md">
           Ansøgning oprettet og godkendt for {selectedEmployee?.name}. Omdirigerer...
-        </Alert>
+        </p>
       )}
 
-      {errors.map((e, i) => <Alert key={i} variant="error">{e}</Alert>)}
+      {errors.map((e, i) => (
+        <p key={i} className="text-[12px] text-danger bg-danger-bg px-3 py-2 rounded-md">{e}</p>
+      ))}
 
       {/* Employee selector */}
       <div>
@@ -192,7 +193,6 @@ export function OnBehalfForm({ employees }: { employees: Employee[] }) {
         </button>
         <button type="submit" disabled={loading || success}
           className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
-          {loading && <Spinner />}
           Opret og godkend
         </button>
       </div>

@@ -2,8 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Nav from "@/components/Nav";
-import { StatusBadge } from "@/components/ui/Badge";
-import { Alert } from "@/components/ui/Alert";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import { RequestTimeline } from "@/components/RequestTimeline";

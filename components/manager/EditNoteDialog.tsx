@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Spinner } from "@/components/ui/Spinner";
+import { Btn } from "@/components/ui/Btn";
 
 interface EditNoteDialogProps {
   open: boolean;
@@ -42,7 +42,6 @@ export function EditNoteDialog({ open, onClose, onConfirm, currentNote }: EditNo
             disabled={loading}
             className="flex items-center gap-2 flex-1 justify-center bg-blue-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {loading && <Spinner />}
             Gem note
           </button>
           <button
