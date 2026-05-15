@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkPlan – Redesign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Light mode (default) ── */
+    :root {
+      --c-primary: #4f46e5;
+      --c-primary-hover: #4338ca;
+      --c-primary-light: #eef2ff;
+      --c-primary-muted: rgba(79,70,229,.1);
+      --c-accent: #7c3aed;
+      --c-success: #059669; --c-success-bg: #d1fae5; --c-success-text: #065f46;
+      --c-warning: #d97706; --c-warning-bg: #fef3c7; --c-warning-text: #92400e;
+      --c-danger:  #dc2626; --c-danger-bg:  #fee2e2; --c-danger-text:  #991b1b;
+      --c-bg: #f0f3fb;
+      --c-topbar-bg: rgba(240,243,251,.92);
+      --c-surface: #ffffff;
+      --c-border: #e2e8f0;
+      --c-border-hover: #bfcce0;
+      --c-text: #111827;
+      --c-text-muted: #6b7280;
+      --c-text-subtle: #9ca3af;
+      --c-sidebar: #0d1117;
+      --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --sh-xs: 0 1px 2px rgba(0,0,0,0.05);
+      --sh-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --sh-md: 0 4px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+      --sh-lg: 0 12px 28px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.06);
+      --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-full: 999px;
+    }
+
+    /* ── Dark mode ── */
+    html.dark {
+      --c-primary-light: rgba(79,70,229,.18);
+      --c-primary-muted: rgba(79,70,229,.15);
+      --c-success-bg: rgba(5,150,105,.2);  --c-success-text: #34d399;
+      --c-warning-bg: rgba(217,119,6,.2);  --c-warning-text: #fbbf24;
+      --c-danger-bg:  rgba(220,38,38,.2);  --c-danger-text:  #f87171;
+      --c-bg: #0b0f1a;
+      --c-topbar-bg: rgba(11,15,26,.92);
+      --c-surface: #141929;
+      --c-border: #1e2d45;
+      --c-border-hover: #2d4265;
+      --c-text: #f0f4ff;
+      --c-text-muted: #8899b5;
+      --c-text-subtle: #4b6080;
+      --sh-xs: 0 1px 2px rgba(0,0,0,.3);
+      --sh-sm: 0 1px 3px rgba(0,0,0,.4);
+      --sh-md: 0 4px 12px rgba(0,0,0,.4);
+      --sh-lg: 0 12px 28px rgba(0,0,0,.5);
+    }
+
+    html, body, #root { height: 100%; }
+    body { font-family: var(--font); background: var(--c-bg); color: var(--c-text); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; transition: background .2s, color .2s; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 99px; }
+    :focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; border-radius: var(--r-sm); }
+    input, select, textarea, button { font-family: var(--font); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="workplan-ui.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ══ MOCK DATA ══════════════════════════════════════════════════ */
+const MOCK_REQS = [
+  { id:"1", status:"APPROVED",  createdAt:"2026-04-15", note:"Sommerferie",
+    entries:[{date:"2026-06-16",days:1},{date:"2026-06-17",days:1},{date:"2026-06-18",days:1},{date:"2026-06-19",days:1},{date:"2026-06-20",days:1}] },
+  { id:"2", status:"PENDING",   createdAt:"2026-05-10", note:"",
+    entries:[{date:"2026-07-14",days:1},{date:"2026-07-15",days:1}] },
+  { id:"3", status:"REJECTED",  createdAt:"2026-03-02", note:"Bryllup",
+    entries:[{date:"2026-04-07",days:1}] },
+  { id:"4", status:"APPROVED",  createdAt:"2026-01-10", note:"",
+    entries:[{date:"2026-02-13",days:0.5}] },
+];
+const MGR_MOCK = [
+  { id:"m1", status:"PENDING",  user:{name:"Maria Hansen"},     department:{name:"Salg"},    note:"Ferie med familien", createdAt:"2026-05-08", entries:[{date:"2026-06-02",days:1},{date:"2026-06-03",days:1},{date:"2026-06-04",days:1}] },
+  { id:"m2", status:"PENDING",  user:{name:"Peter Nielsen"},    department:{name:"IT"},      note:"",                   createdAt:"2026-05-09", entries:[{date:"2026-06-16",days:1},{date:"2026-06-17",days:1}] },
+  { id:"m3", status:"APPROVED", user:{name:"Sofie Madsen"},     department:{name:"Salg"},    note:"Sommerferie",        createdAt:"2026-04-20", entries:[{date:"2026-07-07",days:1},{date:"2026-07-08",days:1},{date:"2026-07-09",days:1},{date:"2026-07-10",days:1},{date:"2026-07-11",days:1}] },
+  { id:"m4", status:"PENDING",  user:{name:"Lars Christensen"}, department:{name:"Support"}, note:"",                   createdAt:"2026-05-11", entries:[{date:"2026-06-23",days:0.5}] },
+  { id:"m5", status:"REJECTED", user:{name:"Anna Sørensen"},    department:{name:"Support"}, note:"Konference",         createdAt:"2026-05-01", entries:[{date:"2026-06-09",days:1},{date:"2026-06-10",days:1}] },
+];
+const USERS_DATA = [
+  { id:"u1", name:"Anders Andersen",   email:"anders@firma.dk",  role:"ADMIN",    dept:"Ledelse",  active:true  },
+  { id:"u2", name:"Maria Hansen",      email:"maria@firma.dk",   role:"EMPLOYEE", dept:"Salg",     active:true  },
+  { id:"u3", name:"Sofie Madsen",      email:"sofie@firma.dk",   role:"EMPLOYEE", dept:"Salg",     active:true  },
+  { id:"u4", name:"Peter Nielsen",     email:"peter@firma.dk",   role:"EMPLOYEE", dept:"IT",       active:true  },
+  { id:"u5", name:"Lone Frederiksen",  email:"lone@firma.dk",    role:"EMPLOYEE", dept:"IT",       active:false },
+  { id:"u6", name:"Lars Christensen",  email:"lars@firma.dk",    role:"EMPLOYEE", dept:"Support",  active:true  },
+  { id:"u7", name:"Anna Sørensen",     email:"anna@firma.dk",    role:"MANAGER",  dept:"Support",  active:true  },
+];
+const DEPT_DATA = [
+  { id:"d1", name:"Salg",    color:"#4f46e5", max:3, shiftsEnabled:true,  users:["Maria Hansen","Sofie Madsen","Anders Andersen"] },
+  { id:"d2", name:"IT",      color:"#7c3aed", max:2, shiftsEnabled:false, users:["Peter Nielsen","Lone Frederiksen"] },
+  { id:"d3", name:"Support", color:"#0d9488", max:2, shiftsEnabled:true,  users:["Lars Christensen","Anna Sørensen"] },
+  { id:"d4", name:"Ledelse", color:"#d97706", max:1, shiftsEnabled:false, users:["Anders Andersen"] },
+];
+const CAL_DATA = [
+  { name:"Salg",    color:"#4f46e5", users:[
+    { name:"Maria Hansen",    approved:[2,3,4,16,17,18,19,20], pending:[] },
+    { name:"Sofie Madsen",    approved:[7,8,9,10,11], pending:[25,26,27] },
+    { name:"Anders Andersen", approved:[], pending:[14,15] },
+  ]},
+  { name:"IT",      color:"#7c3aed", users:[
+    { name:"Peter Nielsen",   approved:[16,17], pending:[9,10] },
+    { name:"Lone Frederiksen",approved:[2,3,4,5,6], pending:[] },
+  ]},
+  { name:"Support", color:"#0d9488", users:[
+    { name:"Lars Christensen",approved:[], pending:[23] },
+    { name:"Anna Sørensen",  approved:[9,10], pending:[] },
+  ]},
+];
+const HOLIDAYS_DATA = [
+  { id:"h1", date:"2026-01-01", name:"Nytårsdag", national:true },
+  { id:"h2", date:"2026-04-02", name:"Skærtorsdag", national:true },
+  { id:"h3", date:"2026-04-03", name:"Langfredag", national:true },
+  { id:"h4", date:"2026-04-06", name:"2. påskedag", national:true },
+  { id:"h5", date:"2026-05-01", name:"Store bededag", national:false },
+  { id:"h6", date:"2026-05-14", name:"Kristi Himmelfartsdag", national:true },
+  { id:"h7", date:"2026-05-25", name:"2. pinsedag", national:true },
+  { id:"h8", date:"2026-12-25", name:"1. juledag", national:true },
+  { id:"h9", date:"2026-12-26", name:"2. juledag", national:true },
+  { id:"h10",date:"2026-06-05", name:"Grundlovsdag", national:false },
+];
+const ABS_TYPES = [
+  { value:"VACATION",       label:"Ferie",              color:"#4f46e5" },
+  { value:"VACATION_FREE",  label:"Feriefri",           color:"#7c3aed" },
+  { value:"MATERNITY",      label:"Barsel",             color:"#ec4899" },
+  { value:"CHILD_SICK_DAY", label:"Barns 1. sygedag",   color:"#f59e0b" },
+  { value:"SICK",           label:"Sygdom",             color:"#ef4444" },
+];
+
+/* Shift planning data */
+const SHIFT_TEMPLATES = [
+  { id:"st1", name:"Dagvagt",   startTime:"08:00", endTime:"16:00", color:"#3b82f6", department:"Salg" },
+  { id:"st2", name:"Aftenvagt", startTime:"16:00", endTime:"00:00", color:"#8b5cf6", department:"Salg" },
+  { id:"st3", name:"Tidlig",    startTime:"06:00", endTime:"14:00", color:"#10b981", department:"Support" },
+  { id:"st4", name:"Sen",       startTime:"14:00", endTime:"22:00", color:"#f59e0b", department:"Support" },
+  { id:"st5", name:"Kontor",    startTime:"09:00", endTime:"17:00", color:"#06b6d4", department:"IT" },
+];
+const SHIFT_ASSIGNMENTS = [
+  { day:0, user:"Maria Hansen",     templateId:"st1" },
+  { day:0, user:"Sofie Madsen",     templateId:"st2" },
+  { day:1, user:"Maria Hansen",     templateId:"st1" },
+  { day:1, user:"Sofie Madsen",     templateId:"st2", conflict:true },
+  { day:1, user:"Peter Nielsen",    templateId:"st5" },
+  { day:2, user:"Maria Hansen",     templateId:"st1" },
+  { day:2, user:"Peter Nielsen",    templateId:"st5" },
+  { day:2, user:"Lars Christensen", templateId:"st3" },
+  { day:2, user:"Anna Sørensen",    templateId:"st4" },
+  { day:3, user:"Sofie Madsen",     templateId:"st1" },
+  { day:3, user:"Peter Nielsen",    templateId:"st5", note:"Hjemmearbejde" },
+  { day:3, user:"Lars Christensen", templateId:"st3" },
+  { day:4, user:"Maria Hansen",     templateId:"st1" },
+  { day:4, user:"Anna Sørensen",    templateId:"st4" },
+];
+
+/* Audit log mock */
+const AUDIT_BY_REQ = {
+  m1: [
+    { action:"created",    by:"Maria Hansen", time:"8. maj kl. 09:14", detail:"Ansøgning oprettet (3 dage)" },
+    { action:"reminder",   by:"System",        time:"11. maj kl. 08:00", detail:"Påmindelse sendt til leder" },
+  ],
+  m3: [
+    { action:"created",    by:"Sofie Madsen", time:"20. apr. kl. 14:22", detail:"Ansøgning oprettet (5 dage)" },
+    { action:"approved",   by:"Anders Andersen", time:"22. apr. kl. 10:08", detail:"Godkendt" },
+  ],
+  m5: [
+    { action:"created",    by:"Anna Sørensen",   time:"1. maj kl. 11:30", detail:"Ansøgning oprettet (2 dage)" },
+    { action:"rejected",   by:"Anders Andersen", time:"3. maj kl. 16:45", detail:"Afvist: \"Konflikt med planlagt projektafslutning\"" },
+  ],
+};
+
+/* Notifications data */
+const NOTIF_FEED = [
+  { id:1, title:"Maria Hansen ansøgte om ferie", sub:"3 dage · Salg · venter på dig", time:"For 2 timer siden", read:false, accent:"#4f46e5", icon:"list" },
+  { id:2, title:"Påmindelse: Peter Nielsens ansøgning har ventet i 4 dage", sub:"2 dage · IT", time:"I dag kl. 08:00", read:false, accent:"#f59e0b", icon:"alert" },
+  { id:3, title:"Sofie Madsens sommerferie er godkendt", sub:"5 dage · Salg", time:"22. apr. kl. 10:08", read:true, accent:"#10b981", icon:"check" },
+  { id:4, title:"Lars Christensen har annulleret sin ansøgning", sub:"½ dag · Support", time:"I går", read:true, accent:"#94a3b8", icon:"x" },
+];
+
+/* ══ SCREENS ════════════════════════════════════════════════════ */
+
+/* ── Login ────────────────────────────────────────────────────── */
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("admin@firma.dk");
+  const [pw, setPw] = useState("admin123");
+  const [loading, setLoading] = useState(false);
+  function submit(e) { e.preventDefault(); setLoading(true); setTimeout(() => { setLoading(false); onLogin(); }, 900); }
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", background:"var(--c-bg)", overflow:"hidden", position:"relative" }}>
+      <div style={{ position:"absolute", top:-200, right:-200, width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle,rgba(79,70,229,.1) 0%,transparent 65%)", pointerEvents:"none" }} />
+      <div style={{ position:"absolute", bottom:-120, left:-120, width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(124,58,237,.07) 0%,transparent 65%)", pointerEvents:"none" }} />
+      <div style={{ width:420, flexShrink:0, background:"#0d1117", display:"flex", flexDirection:"column", justifyContent:"space-between", padding:"52px 48px" }}>
+        <div>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:56 }}>
+            <div style={{ width:40, height:40, borderRadius:10, background:"linear-gradient(135deg,#4f46e5,#7c3aed)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 16px rgba(79,70,229,.55)" }}>
+              <Icon name="calendar" size={20} color="white" sw={2.2} />
+            </div>
+            <span style={{ fontSize:20, fontWeight:800, color:"white", letterSpacing:"-0.03em" }}>WorkPlan</span>
+          </div>
+          <h2 style={{ fontSize:28, fontWeight:800, color:"white", lineHeight:1.25, letterSpacing:"-0.03em", marginBottom:14 }}>Planlæg ferier.<br /><span style={{ color:"#a5b4fc" }}>Effektivt.</span></h2>
+          <p style={{ fontSize:14, color:"#94a3b8", lineHeight:1.75, maxWidth:280 }}>Erstatter Excel-ark med et moderne system for ferieansøgninger, godkendelser og kapacitetsstyring.</p>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {[{icon:"list",text:"Ansøg om ferie med enkeltdage og intervaller"},{icon:"users",text:"Rollebaseret adgang for medarbejdere og ledere"},{icon:"calendar",text:"Månedlig oversigt med kapacitetsstyring"}].map((f,i) => (
+            <div key={i} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+              <div style={{ width:34, height:34, borderRadius:9, background:"rgba(79,70,229,.18)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <Icon name={f.icon} size={16} color="#a5b4fc" />
+              </div>
+              <span style={{ fontSize:13, color:"#94a3b8", lineHeight:1.6, paddingTop:8 }}>{f.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 32px" }}>
+        <div style={{ width:"100%", maxWidth:380 }}>
+          <h1 style={{ fontSize:26, fontWeight:800, letterSpacing:"-0.03em", color:"var(--c-text)", marginBottom:6 }}>Velkommen tilbage</h1>
+          <p style={{ fontSize:14, color:"var(--c-text-muted)", marginBottom:28 }}>Log ind på din WorkPlan-konto</p>
+          <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <FieldInput id="e" label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="din@email.dk" required />
+            <FieldInput id="p" label="Adgangskode" type="password" value={pw} onChange={e=>setPw(e.target.value)} required />
+            <button type="submit" disabled={loading} style={{ marginTop:6, width:"100%", padding:"12px", background:loading?"#8b83f7":"var(--c-primary)", color:"white", border:"none", borderRadius:"var(--r-md)", fontSize:14.5, fontWeight:700, cursor:loading?"not-allowed":"pointer", boxShadow:"0 2px 12px rgba(79,70,229,.4)", transition:"all .2s" }}>
+              {loading ? "Logger ind…" : "Log ind"}
+            </button>
+          </form>
+          <div style={{ marginTop:20, fontSize:12, color:"var(--c-text-subtle)", textAlign:"center", background:"var(--c-bg)", padding:"9px 16px", borderRadius:"var(--r-md)", border:"1px solid var(--c-border)" }}>Demo: admin@firma.dk / admin123</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Dashboard ────────────────────────────────────────────────── */
+function DashboardScreen({ setScreen, userName }) {
+  const pending = MOCK_REQS.filter(r=>r.status==="PENDING").length;
+  const approved = MOCK_REQS.filter(r=>r.status==="APPROVED").length;
+  const days = MOCK_REQS.filter(r=>r.status==="APPROVED").reduce((s,r)=>s+r.entries.reduce((ss,e)=>ss+e.days,0),0);
+  const stats = [
+    {value:MOCK_REQS.length, label:"I alt",          color:"var(--c-primary)", bg:"var(--c-primary-light)", icon:"list"},
+    {value:pending,          label:"Afventer",        color:"#d97706",          bg:"rgba(217,119,6,.12)",    icon:"alert"},
+    {value:approved,         label:"Godkendt",        color:"#059669",          bg:"rgba(5,150,105,.12)",    icon:"check"},
+    {value:days,             label:"Godkendte dage",  color:"#7c3aed",          bg:"rgba(124,58,237,.12)",   icon:"calendar"},
+  ];
+  const DOT = {APPROVED:"#10b981",PENDING:"#f59e0b",REJECTED:"#ef4444",CANCELLED:"#94a3b8"};
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Mine ansøgninger" sub={`${userName} · Salgsafdelingen`}
+        actions={<Btn icon="plus" onClick={()=>setScreen("new")}>Ny ansøgning</Btn>} />
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:32 }}>
+        {stats.map((s,i) => (
+          <Card key={i} style={{ padding:"18px 20px" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+              <div><p style={{ fontSize:32, fontWeight:800, color:s.color, letterSpacing:"-0.03em", lineHeight:1 }}>{s.value}</p>
+                <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:6, fontWeight:600 }}>{s.label}</p></div>
+              <div style={{ width:38, height:38, borderRadius:10, background:s.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Icon name={s.icon} size={18} color={s.color} /></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <div style={{ marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <h2 style={{ fontSize:15, fontWeight:700, color:"var(--c-text)" }}>Alle ansøgninger</h2>
+        <span style={{ fontSize:12, color:"var(--c-text-subtle)" }}>{MOCK_REQS.length} i alt</span>
+      </div>
+      <Card>
+        {MOCK_REQS.map((req,i) => {
+          const s=[...req.entries].sort((a,b)=>new Date(a.date)-new Date(b.date));
+          const f=s[0]?.date,l=s[s.length-1]?.date,d=req.entries.reduce((x,e)=>x+e.days,0);
+          return (
+            <div key={req.id} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 20px", borderBottom:i<MOCK_REQS.length-1?"1px solid var(--c-border)":"none" }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:DOT[req.status]??"#9ca3af", flexShrink:0 }} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>{f===l?fmtDK(f):`${fmtShort(f)} – ${fmtDK(l)}`}</span>
+                  {req.note&&<span style={{ fontSize:12, color:"var(--c-text-muted)", fontStyle:"italic" }}>"{req.note}"</span>}
+                </div>
+                <div style={{ fontSize:12, color:"var(--c-text-subtle)", marginTop:2 }}>{d} dag{d!==1?"e":""} · Oprettet {fmtDK(req.createdAt)}</div>
+              </div>
+              <StatusBadge status={req.status} />
+              {req.status==="PENDING"&&<button style={{ fontSize:12, color:"#ef4444", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--font)", fontWeight:600, padding:"4px 8px", borderRadius:"var(--r-sm)" }}>Annuller</button>}
+              <button style={{ fontSize:12, color:"var(--c-primary)", background:"var(--c-primary-light)", border:"none", cursor:"pointer", padding:"5px 11px", borderRadius:"var(--r-sm)", fontWeight:600, fontFamily:"var(--font)" }}>Detaljer</button>
+            </div>
+          );
+        })}
+      </Card>
+    </div>
+  );
+}
+
+/* ── New Request ──────────────────────────────────────────────── */
+function NewRequestScreen({ setScreen }) {
+  const [entries, setEntries] = useState([
+    {date:"2026-07-14",type:"FULL_DAY",absenceType:"VACATION"},
+    {date:"2026-07-15",type:"FULL_DAY",absenceType:"VACATION"},
+  ]);
+  const [note, setNote] = useState("");
+  const [done, setDone] = useState(false);
+  const add = () => setEntries(p=>[...p,{date:new Date().toISOString().slice(0,10),type:"FULL_DAY",absenceType:"VACATION"}]);
+  const remove = i => setEntries(p=>p.filter((_,x)=>x!==i));
+  const update = (i,f,v) => setEntries(p=>p.map((e,x)=>x===i?{...e,[f]:v}:e));
+  if (done) return (
+    <div style={{ padding:"32px 36px", display:"flex", alignItems:"center", justifyContent:"center", minHeight:"75vh" }}>
+      <div style={{ textAlign:"center", maxWidth:340 }}>
+        <div style={{ width:64, height:64, borderRadius:"50%", background:"var(--c-success-bg)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
+          <Icon name="check" size={28} color="var(--c-success)" sw={2.5} />
+        </div>
+        <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:"-0.02em", marginBottom:8, color:"var(--c-text)" }}>Ansøgning indsendt!</h2>
+        <p style={{ fontSize:14, color:"var(--c-text-muted)", marginBottom:24 }}>Din ansøgning er sendt til din leder til godkendelse.</p>
+        <Btn onClick={()=>setScreen("dashboard")}>Tilbage til oversigt</Btn>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Ny ansøgning" sub="Tilføj de dage du ønsker fri" actions={<Btn variant="secondary" onClick={()=>setScreen("dashboard")}>Annuller</Btn>} />
+      <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+        <Card style={{ padding:"20px 24px" }}>
+          <SectionLabel label="Datointerval" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+            {["Fra","Til"].map((lbl,i)=>(
+              <div key={i}>
+                <label style={{ display:"block", fontSize:12, fontWeight:600, color:"var(--c-text-muted)", marginBottom:6 }}>{lbl}</label>
+                <input type="date" style={{ width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"9px 12px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", color:"var(--c-text)", background:"var(--c-surface)" }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <span style={{ fontSize:12, color:"var(--c-text-subtle)" }}>Weekender springes automatisk over</span>
+            <Btn size="sm">Tilføj hverdage</Btn>
+          </div>
+        </Card>
+        <Card style={{ padding:"20px 24px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+            <SectionLabel label={`Datolinjer (${entries.length})`} />
+            {entries.length>0&&<button onClick={()=>setEntries([])} style={{ fontSize:12, color:"var(--c-text-subtle)", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--font)", marginBottom:12 }}>Ryd alle</button>}
+          </div>
+          {entries.length===0
+            ? <div style={{ textAlign:"center", padding:"24px", border:"2px dashed var(--c-border)", borderRadius:"var(--r-md)", color:"var(--c-text-subtle)", fontSize:13 }}>Ingen datoer valgt endnu</div>
+            : <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:260, overflowY:"auto" }}>
+              {entries.map((entry,i)=>{
+                const abs=ABS_TYPES.find(t=>t.value===entry.absenceType);
+                return (
+                  <div key={i} style={{ display:"flex", gap:8, alignItems:"center", padding:"8px 12px", background:"var(--c-bg)", borderRadius:"var(--r-sm)", border:"1px solid var(--c-border)" }}>
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:abs?.color??"#6b7280", flexShrink:0 }} />
+                    <input type="date" value={entry.date} onChange={e=>update(i,"date",e.target.value)}
+                      style={{ fontFamily:"var(--font)", fontSize:13, padding:"5px 8px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-sm)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)", flexShrink:0 }} />
+                    <select value={entry.absenceType} onChange={e=>update(i,"absenceType",e.target.value)}
+                      style={{ fontFamily:"var(--font)", fontSize:13, padding:"5px 8px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-sm)", flex:1, outline:"none", background:"var(--c-surface)", color:"var(--c-text)" }}>
+                      {ABS_TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                    <select value={entry.type} onChange={e=>update(i,"type",e.target.value)}
+                      style={{ fontFamily:"var(--font)", fontSize:13, padding:"5px 8px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-sm)", flexShrink:0, outline:"none", background:"var(--c-surface)", color:"var(--c-text)" }}>
+                      <option value="FULL_DAY">Hel dag</option>
+                      <option value="HALF_DAY_AM">½ dag (fm)</option>
+                      <option value="HALF_DAY_PM">½ dag (em)</option>
+                    </select>
+                    <button onClick={()=>remove(i)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--c-text-subtle)", padding:4, display:"flex", borderRadius:4 }}
+                      onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="var(--c-text-subtle)"}>
+                      <Icon name="x" size={15} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          }
+          <button onClick={add} style={{ marginTop:12, display:"flex", alignItems:"center", gap:6, fontSize:13, color:"var(--c-primary)", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--font)", fontWeight:700, padding:"4px 0" }}>
+            <Icon name="plus" size={14} sw={2.2} /> Tilføj enkelt dato
+          </button>
+        </Card>
+        <Card style={{ padding:"20px 24px" }}>
+          <SectionLabel label="Note (valgfri)" />
+          <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="F.eks. sommerferie, bryllup, konference…" rows={3} maxLength={500}
+            style={{ width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", resize:"none", outline:"none", color:"var(--c-text)", background:"var(--c-surface)" }} />
+          <div style={{ fontSize:12, color:"var(--c-text-subtle)", textAlign:"right", marginTop:4 }}>{note.length}/500</div>
+        </Card>
+        <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+          <Btn variant="secondary" onClick={()=>setScreen("dashboard")}>Annuller</Btn>
+          <Btn icon="check" disabled={entries.length===0} onClick={()=>setDone(true)}>Indsend ansøgning</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Today widget ─────────────────────────────────────────────── */
+function TodayWidget({ absentToday }) {
+  const today = new Date();
+  const total = USERS_DATA.filter(u => u.active && u.role !== "ADMIN").length;
+  const absent = absentToday.length;
+  const present = Math.max(0, total - absent);
+  const label = today.toLocaleDateString("da-DK", { weekday:"long", day:"numeric", month:"long" });
+  return (
+    <Card style={{ padding:"14px 18px", marginBottom:18 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: absent>0 ? 10 : 0, flexWrap:"wrap", gap:10 }}>
+        <p style={{ fontSize:13, fontWeight:700, color:"var(--c-text)" }}>I dag — <span style={{ color:"var(--c-text-muted)", fontWeight:500, textTransform:"capitalize" }}>{label}</span></p>
+        <div style={{ display:"flex", gap:14, fontSize:12.5 }}>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:"#059669", fontWeight:600 }}><span style={{ width:7, height:7, borderRadius:"50%", background:"#10b981" }} />{present} til stede</span>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:6, color:"#d97706", fontWeight:600 }}><span style={{ width:7, height:7, borderRadius:"50%", background:"#f59e0b" }} />{absent} fraværende</span>
+        </div>
+      </div>
+      {absent === 0
+        ? null
+        : <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {absentToday.map((a,i) => (
+              <span key={i} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"3px 9px", borderRadius:"var(--r-full)", background:"rgba(245,158,11,.1)", border:"1px solid rgba(245,158,11,.25)", fontSize:11.5 }}>
+                <span style={{ fontWeight:600, color:"var(--c-text)" }}>{a.name}</span>
+                <span style={{ color:"var(--c-text-subtle)" }}>·</span>
+                <span style={{ color:"#d97706", fontWeight:600 }}>{a.type}</span>
+              </span>
+            ))}
+          </div>}
+    </Card>
+  );
+}
+
+/* ── Request Detail Panel ─────────────────────────────────────── */
+function RequestDetailPanel({ req, open, onClose, onApprove, onReject, onCancel, onEditNote }) {
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showEditNote, setShowEditNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [showCapacity, setShowCapacity] = useState(false);
+  useEffect(() => {
+    setShowReject(false); setRejectReason("");
+    setShowEditNote(false); setNoteDraft(req?.note ?? "");
+    setShowCapacity(false);
+  }, [req?.id, open]);
+
+  if (!req) return <SlideOver open={open} onClose={onClose} title="Ansøgningsdetaljer" />;
+  const s = [...req.entries].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const total = req.entries.reduce((x,e)=>x+e.days,0);
+  const log = AUDIT_BY_REQ[req.id] ?? [
+    { action:"created", by:req.user.name, time:fmtDK(req.createdAt), detail:`Ansøgning oprettet (${total} dag${total!==1?"e":""})` },
+  ];
+  const logIcon = a => a==="approved"?"check":a==="rejected"?"x":a==="reminder"?"alert":a==="cancelled"?"x":"plus";
+  const logColor = a => a==="approved"?"#10b981":a==="rejected"?"#ef4444":a==="reminder"?"#f59e0b":a==="cancelled"?"#94a3b8":"var(--c-primary)";
+
+  const tryApprove = () => {
+    // Mock capacity check: if 3+ days in summer → show warning
+    const month = s[0] ? new Date(s[0].date).getMonth()+1 : 0;
+    if (total >= 3 && (month === 7 || month === 6)) setShowCapacity(true);
+    else onApprove(req.id);
+  };
+
+  return (
+    <SlideOver open={open} onClose={onClose} title="Ansøgningsdetaljer" subtitle={req.user.name} width={520}>
+      <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
+          <Avatar name={req.user.name} size={48} gradient="linear-gradient(135deg,var(--c-primary),#7c3aed)" />
+          <div style={{ flex:1 }}>
+            <p style={{ fontSize:16, fontWeight:700, color:"var(--c-text)" }}>{req.user.name}</p>
+            <p style={{ fontSize:12, color:"var(--c-text-muted)" }}>{req.department.name}</p>
+          </div>
+          <StatusBadge status={req.status} />
+        </div>
+
+        {/* Summary */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, padding:14, background:"var(--c-bg)", borderRadius:"var(--r-lg)", border:"1px solid var(--c-border)" }}>
+          <div>
+            <p style={{ fontSize:11, color:"var(--c-text-subtle)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Periode</p>
+            <p style={{ fontSize:13, fontWeight:600, color:"var(--c-text)" }}>{s[0]?.date===s[s.length-1]?.date?fmtDK(s[0]?.date):`${fmtShort(s[0]?.date)} – ${fmtDK(s[s.length-1]?.date)}`}</p>
+          </div>
+          <div>
+            <p style={{ fontSize:11, color:"var(--c-text-subtle)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Dage</p>
+            <p style={{ fontSize:13, fontWeight:600, color:"var(--c-text)" }}>{total} dag{total!==1?"e":""}</p>
+          </div>
+          <div>
+            <p style={{ fontSize:11, color:"var(--c-text-subtle)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Oprettet</p>
+            <p style={{ fontSize:13, color:"var(--c-text-muted)" }}>{fmtDK(req.createdAt)}</p>
+          </div>
+          <div>
+            <p style={{ fontSize:11, color:"var(--c-text-subtle)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Type</p>
+            <p style={{ fontSize:13, color:"var(--c-text)", fontWeight:600 }}>Ferie</p>
+          </div>
+          <div style={{ gridColumn:"1 / -1", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8 }}>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:11, color:"var(--c-text-subtle)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Note</p>
+              <p style={{ fontSize:13, color:"var(--c-text)", fontStyle: req.note?"italic":"normal" }}>{req.note ? `"${req.note}"` : <span style={{ color:"var(--c-text-subtle)", fontStyle:"normal" }}>Ingen note</span>}</p>
+            </div>
+            <button onClick={()=>{setNoteDraft(req.note ?? ""); setShowEditNote(true);}} style={{ fontSize:12, color:"var(--c-primary)", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--font)", fontWeight:600 }}>Rediger</button>
+          </div>
+          {req.status==="REJECTED" && (
+            <div style={{ gridColumn:"1 / -1", padding:10, background:"var(--c-danger-bg)", borderRadius:"var(--r-md)", border:"1px solid rgba(220,38,38,.2)" }}>
+              <p style={{ fontSize:11, color:"var(--c-danger-text)", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:700, marginBottom:3 }}>Begrundelse for afvisning</p>
+              <p style={{ fontSize:13, color:"var(--c-danger-text)", fontStyle:"italic" }}>"Konflikt med planlagt projektafslutning"</p>
+            </div>
+          )}
+        </div>
+
+        {/* Entries */}
+        <div>
+          <SectionLabel label={`Datolinjer (${req.entries.length})`} />
+          <div style={{ display:"flex", flexDirection:"column", maxHeight:200, overflowY:"auto", border:"1px solid var(--c-border)", borderRadius:"var(--r-md)" }}>
+            {s.map((e,i)=>{
+              const abs = ABS_TYPES[0]; // simplified
+              return (
+                <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 14px", borderBottom:i<s.length-1?"1px solid var(--c-border)":"none" }}>
+                  <span style={{ fontSize:13, color:"var(--c-text)", fontWeight:500 }}>{fmtDK(e.date)}</span>
+                  <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                    <span style={{ fontSize:11, padding:"2px 8px", borderRadius:"var(--r-full)", background:abs.color+"22", color:abs.color, fontWeight:600 }}>{abs.label}</span>
+                    <span style={{ fontSize:11, color:"var(--c-text-subtle)" }}>{e.days===0.5?"½ dag":"Hel dag"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        {req.status==="PENDING" && (
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <Btn variant="success" icon="check" full onClick={tryApprove}>Godkend</Btn>
+            <Btn variant="danger" icon="x" full onClick={()=>setShowReject(true)}>Afvis</Btn>
+          </div>
+        )}
+        {["PENDING","APPROVED"].includes(req.status) && (
+          <Btn variant="secondary" full onClick={()=>onCancel(req.id)}>Annuller ansøgning</Btn>
+        )}
+
+        {/* Audit log */}
+        <div>
+          <SectionLabel label="Historik" />
+          <div style={{ display:"flex", flexDirection:"column", gap:0, position:"relative" }}>
+            {log.map((l,i)=>{
+              const col = logColor(l.action);
+              return (
+                <div key={i} style={{ display:"flex", gap:12, paddingBottom:i<log.length-1?14:0 }}>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 }}>
+                    <div style={{ width:26, height:26, borderRadius:"50%", background:col+"22", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <Icon name={logIcon(l.action)} size={13} color={col} sw={2.2} />
+                    </div>
+                    {i<log.length-1 && <div style={{ width:1.5, flex:1, background:"var(--c-border)", marginTop:2, minHeight:14 }} />}
+                  </div>
+                  <div style={{ paddingTop:2, paddingBottom:6 }}>
+                    <p style={{ fontSize:13, color:"var(--c-text)" }}>{l.detail}</p>
+                    <p style={{ fontSize:11.5, color:"var(--c-text-subtle)", marginTop:2 }}>{l.by} · {l.time}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Reject dialog */}
+      {showReject && (
+        <div onClick={()=>setShowReject(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"var(--c-surface)", borderRadius:"var(--r-lg)", padding:24, maxWidth:420, width:"100%", boxShadow:"var(--sh-lg)" }}>
+            <h3 style={{ fontSize:16, fontWeight:800, color:"var(--c-text)", marginBottom:6 }}>Afvis ansøgning</h3>
+            <p style={{ fontSize:13, color:"var(--c-text-muted)", marginBottom:14 }}>Giv {req.user.name} en kort begrundelse for afvisningen.</p>
+            <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} rows={3} maxLength={300} placeholder="F.eks. Vi er underbemandet den uge…"
+              style={{ width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", resize:"none", outline:"none", color:"var(--c-text)", background:"var(--c-surface)" }} />
+            <div style={{ fontSize:11, color:"var(--c-text-subtle)", textAlign:"right", marginTop:4 }}>{rejectReason.length}/300</div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:14 }}>
+              <Btn variant="secondary" onClick={()=>setShowReject(false)}>Annuller</Btn>
+              <Btn variant="danger" icon="x" disabled={!rejectReason.trim()} onClick={()=>{onReject(req.id, rejectReason); setShowReject(false);}}>Afvis ansøgning</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capacity warning dialog */}
+      {showCapacity && (
+        <div onClick={()=>setShowCapacity(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"var(--c-surface)", borderRadius:"var(--r-lg)", padding:24, maxWidth:420, width:"100%", boxShadow:"var(--sh-lg)" }}>
+            <div style={{ display:"flex", gap:14, marginBottom:14 }}>
+              <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(245,158,11,.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <Icon name="alert" size={22} color="#d97706" sw={2.2} />
+              </div>
+              <div>
+                <h3 style={{ fontSize:16, fontWeight:800, color:"var(--c-text)", marginBottom:4 }}>Kapacitetsadvarsel</h3>
+                <p style={{ fontSize:13, color:"var(--c-text-muted)", lineHeight:1.5 }}>2 medarbejdere fra {req.department.name} har allerede godkendt ferie i samme periode. Afdelingens grænse er <strong style={{ color:"var(--c-text)" }}>3 samtidige</strong>.</p>
+              </div>
+            </div>
+            <p style={{ fontSize:12.5, color:"var(--c-text-subtle)", padding:"10px 14px", background:"var(--c-bg)", borderRadius:"var(--r-md)", marginBottom:14 }}>Du kan godkende alligevel — dette er en blød grænse.</p>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <Btn variant="secondary" onClick={()=>setShowCapacity(false)}>Genovervej</Btn>
+              <Btn variant="success" icon="check" onClick={()=>{onApprove(req.id); setShowCapacity(false);}}>Godkend alligevel</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit note dialog */}
+      {showEditNote && (
+        <div onClick={()=>setShowEditNote(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"var(--c-surface)", borderRadius:"var(--r-lg)", padding:24, maxWidth:420, width:"100%", boxShadow:"var(--sh-lg)" }}>
+            <h3 style={{ fontSize:16, fontWeight:800, color:"var(--c-text)", marginBottom:14 }}>Rediger note</h3>
+            <textarea value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} rows={3} maxLength={500} placeholder="Tilføj en note…"
+              style={{ width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", resize:"none", outline:"none", color:"var(--c-text)", background:"var(--c-surface)" }} />
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:14 }}>
+              <Btn variant="secondary" onClick={()=>setShowEditNote(false)}>Annuller</Btn>
+              <Btn icon="check" onClick={()=>{onEditNote(req.id, noteDraft); setShowEditNote(false);}}>Gem note</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </SlideOver>
+  );
+}
+
+/* ── Manager Requests ─────────────────────────────────────────── */
+const MONTHS_DA = ["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"];
+function ManagerRequestsScreen({ setScreen }) {
+  const [status, setStatus] = useState("PENDING");
+  const [month, setMonth] = useState("all");
+  const [dept, setDept] = useState("all");
+  const [sts, setSts] = useState({});
+  const [notes, setNotes] = useState({});
+  const [detailId, setDetailId] = useState(null);
+
+  const resolve = (id,s) => { setSts(x=>({...x,[id]:s})); setDetailId(null); };
+  const editNoteFor = (id, n) => setNotes(x=>({...x,[id]:n}));
+  const cancelReq = id => { setSts(x=>({...x,[id]:"CANCELLED"})); setDetailId(null); };
+
+  const enriched = MGR_MOCK.map(r => ({ ...r, status: sts[r.id] ?? r.status, note: notes[r.id] ?? r.note }));
+  const pending = enriched.filter(r=>r.status==="PENDING").length;
+
+  const shown = enriched.filter(r => {
+    if (status!=="all" && r.status!==status) return false;
+    if (dept!=="all" && r.department.name!==dept) return false;
+    if (month!=="all") {
+      const m = parseInt(month);
+      if (!r.entries.some(e => new Date(e.date).getMonth()+1 === m)) return false;
+    }
+    return true;
+  });
+
+  const absentToday = [
+    { name:"Sofie Madsen",    type:"Ferie" },
+    { name:"Lone Frederiksen",type:"Sygdom" },
+  ];
+
+  const detailReq = enriched.find(r => r.id === detailId);
+
+  const TABS = [{v:"PENDING",label:"Afventer"},{v:"APPROVED",label:"Godkendt"},{v:"REJECTED",label:"Afvist"},{v:"all",label:"Alle"}];
+  const sel = { fontFamily:"var(--font)", fontSize:13, padding:"7px 12px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)", cursor:"pointer" };
+
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Ansøgninger" sub={`${pending} afventer godkendelse`}
+        actions={<Btn icon="briefcase" variant="secondary" onClick={()=>setScreen("onbehalf")}>Opret på vegne af</Btn>} />
+
+      <TodayWidget absentToday={absentToday} />
+
+      <div style={{ display:"flex", gap:10, marginBottom:18, alignItems:"center", flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:3, background:"var(--c-border)", padding:4, borderRadius:"var(--r-lg)" }}>
+          {TABS.map(tab=>{
+            const active=status===tab.v;
+            return (
+              <button key={tab.v} onClick={()=>setStatus(tab.v)}
+                style={{ padding:"6px 14px", border:"none", borderRadius:"var(--r-md)", fontSize:12.5, fontWeight:600, fontFamily:"var(--font)", cursor:"pointer", background:active?"var(--c-surface)":"transparent", color:active?"var(--c-text)":"var(--c-text-muted)", boxShadow:active?"var(--sh-xs)":"none", display:"flex", alignItems:"center", gap:6 }}>
+                {tab.label}
+                {tab.v==="PENDING"&&pending>0&&<span style={{ width:17, height:17, borderRadius:"50%", background:"#ef4444", color:"white", fontSize:10, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{pending}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <select value={month} onChange={e=>setMonth(e.target.value)} style={sel}>
+          <option value="all">Alle måneder</option>
+          {MONTHS_DA.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
+        </select>
+        <select value={dept} onChange={e=>setDept(e.target.value)} style={sel}>
+          <option value="all">Alle afdelinger</option>
+          {DEPT_DATA.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}
+        </select>
+        <span style={{ fontSize:12, color:"var(--c-text-subtle)", marginLeft:"auto" }}>{shown.length} viser</span>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {shown.length===0
+          ? <Card style={{ padding:40, textAlign:"center" }}><p style={{ color:"var(--c-text-muted)", fontSize:14 }}>Ingen ansøgninger</p></Card>
+          : shown.map(req=>{
+            const s=[...req.entries].sort((a,b)=>new Date(a.date)-new Date(b.date));
+            const f=s[0]?.date,l=s[s.length-1]?.date,d=req.entries.reduce((x,e)=>x+e.days,0);
+            return (
+              <Card key={req.id} hover style={{ padding:"16px 20px", cursor:"pointer" }} onClick={()=>setDetailId(req.id)}>
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                      <Avatar name={req.user.name} size={34} />
+                      <div><span style={{ fontSize:14, fontWeight:700, color:"var(--c-text)" }}>{req.user.name}</span>
+                        <span style={{ fontSize:12, color:"var(--c-text-muted)", marginLeft:8 }}>{req.department.name}</span></div>
+                      <StatusBadge status={req.status} />
+                    </div>
+                    <div style={{ marginLeft:44 }}>
+                      <p style={{ fontSize:13.5, color:"var(--c-text)", fontWeight:500 }}>{f===l?fmtDK(f):`${fmtShort(f)} – ${fmtDK(l)}`}<span style={{ color:"var(--c-text-muted)", fontWeight:400, marginLeft:8 }}>{d} dag{d!==1?"e":""}</span></p>
+                      {req.note&&<p style={{ fontSize:12, color:"var(--c-text-subtle)", fontStyle:"italic", marginTop:2 }}>"{req.note}"</p>}
+                    </div>
+                  </div>
+                  {req.status==="PENDING"&&<div onClick={e=>e.stopPropagation()} style={{ display:"flex", gap:8, flexShrink:0, paddingTop:2 }}>
+                    <Btn variant="success" size="sm" icon="check" onClick={()=>resolve(req.id,"APPROVED")}>Godkend</Btn>
+                    <Btn variant="danger" size="sm" icon="x" onClick={()=>resolve(req.id,"REJECTED")}>Afvis</Btn>
+                  </div>}
+                </div>
+              </Card>
+            );
+          })}
+      </div>
+
+      <RequestDetailPanel
+        req={detailReq}
+        open={!!detailId}
+        onClose={()=>setDetailId(null)}
+        onApprove={id=>resolve(id,"APPROVED")}
+        onReject={(id,reason)=>resolve(id,"REJECTED")}
+        onCancel={cancelReq}
+        onEditNote={editNoteFor}
+      />
+    </div>
+  );
+}
+
+/* ── On Behalf (Manager creates request for someone) ──────────── */
+function OnBehalfScreen({ setScreen }) {
+  const [target, setTarget] = useState(USERS_DATA[1]?.id ?? "");
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const [rangeType, setRangeType] = useState("VACATION");
+  const [entries, setEntries] = useState([
+    { date:"2026-08-03", type:"FULL_DAY", absenceType:"SICK" },
+  ]);
+  const [note, setNote] = useState("Sygemelding registreret bagud");
+  const [done, setDone] = useState(false);
+
+  const targetUser = USERS_DATA.find(u=>u.id===target);
+  const add = () => setEntries(p=>[...p,{date:new Date().toISOString().slice(0,10),type:"FULL_DAY",absenceType:"VACATION"}]);
+  const remove = i => setEntries(p=>p.filter((_,x)=>x!==i));
+  const update = (i,f,v) => setEntries(p=>p.map((e,x)=>x===i?{...e,[f]:v}:e));
+  const fillRange = () => {
+    if (!rangeFrom || !rangeTo) return;
+    const days = [];
+    const start = new Date(rangeFrom), end = new Date(rangeTo);
+    for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
+      const dow = d.getDay();
+      if (dow===0||dow===6) continue;
+      days.push({ date: d.toISOString().slice(0,10), type:"FULL_DAY", absenceType: rangeType });
+    }
+    if (days.length) setEntries(days);
+  };
+
+  if (done) return (
+    <div style={{ padding:"32px 36px", display:"flex", alignItems:"center", justifyContent:"center", minHeight:"75vh" }}>
+      <div style={{ textAlign:"center", maxWidth:380 }}>
+        <div style={{ width:64, height:64, borderRadius:"50%", background:"var(--c-success-bg)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
+          <Icon name="check" size={28} color="var(--c-success)" sw={2.5} />
+        </div>
+        <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:"-0.02em", marginBottom:8, color:"var(--c-text)" }}>Oprettet og godkendt</h2>
+        <p style={{ fontSize:14, color:"var(--c-text-muted)", marginBottom:24 }}>Ansøgningen er oprettet på vegne af {targetUser?.name} og direkte godkendt. Medarbejderen får en notifikation.</p>
+        <Btn onClick={()=>setScreen("manager")}>Tilbage til ansøgninger</Btn>
+      </div>
+    </div>
+  );
+
+  const sel = { width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)" };
+
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Opret på vegne af medarbejder" sub="Ansøgningen oprettes som direkte godkendt"
+        actions={<Btn variant="secondary" onClick={()=>setScreen("manager")}>Annuller</Btn>} />
+
+      <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+        <Card style={{ padding:"20px 24px" }}>
+          <SectionLabel label="Medarbejder" />
+          <select value={target} onChange={e=>setTarget(e.target.value)} style={sel}>
+            {USERS_DATA.filter(u=>u.active).map(u=>(
+              <option key={u.id} value={u.id}>{u.name} — {u.dept}</option>
+            ))}
+          </select>
+          <p style={{ fontSize:12, color:"var(--c-text-subtle)", marginTop:8 }}>Brug typisk til at registrere sygdom, barsel eller fravær med tilbagedatering.</p>
+        </Card>
+
+        <Card style={{ padding:"20px 24px", background:"var(--c-primary-light)", borderColor:"rgba(79,70,229,.2)" }}>
+          <SectionLabel label="Udfyld fra datointerval" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+            <input type="date" value={rangeFrom} onChange={e=>setRangeFrom(e.target.value)} style={sel} />
+            <input type="date" value={rangeTo}   onChange={e=>setRangeTo(e.target.value)}   style={sel} />
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <select value={rangeType} onChange={e=>setRangeType(e.target.value)} style={{ ...sel, flex:1 }}>
+              {ABS_TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <Btn onClick={fillRange}>Udfyld</Btn>
+          </div>
+        </Card>
+
+        <Card style={{ padding:"20px 24px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+            <SectionLabel label={`Datolinjer (${entries.length})`} />
+            <button onClick={add} style={{ fontSize:12.5, color:"var(--c-primary)", background:"none", border:"none", cursor:"pointer", fontFamily:"var(--font)", fontWeight:700 }}>+ Tilføj dag</button>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:260, overflowY:"auto" }}>
+            {entries.map((entry,i)=>{
+              const abs=ABS_TYPES.find(t=>t.value===entry.absenceType);
+              return (
+                <div key={i} style={{ display:"flex", gap:8, alignItems:"center", padding:"8px 12px", background:"var(--c-bg)", borderRadius:"var(--r-sm)", border:"1px solid var(--c-border)" }}>
+                  <div style={{ width:8, height:8, borderRadius:"50%", background:abs?.color??"#6b7280", flexShrink:0 }} />
+                  <input type="date" value={entry.date} onChange={e=>update(i,"date",e.target.value)} style={{ ...sel, padding:"5px 8px", fontSize:13, flexShrink:0, width:150 }} />
+                  <select value={entry.absenceType} onChange={e=>update(i,"absenceType",e.target.value)} style={{ ...sel, padding:"5px 8px", fontSize:13, flex:1 }}>
+                    {ABS_TYPES.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <select value={entry.type} onChange={e=>update(i,"type",e.target.value)} style={{ ...sel, padding:"5px 8px", fontSize:13, flexShrink:0, width:130 }}>
+                    <option value="FULL_DAY">Hel dag</option>
+                    <option value="HALF_DAY_AM">½ dag (fm)</option>
+                    <option value="HALF_DAY_PM">½ dag (em)</option>
+                  </select>
+                  <button onClick={()=>remove(i)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--c-text-subtle)", padding:4, display:"flex" }}>
+                    <Icon name="x" size={15} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card style={{ padding:"20px 24px" }}>
+          <SectionLabel label="Note (valgfri)" />
+          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} maxLength={500}
+            style={{ width:"100%", fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", resize:"none", outline:"none", color:"var(--c-text)", background:"var(--c-surface)" }} />
+        </Card>
+
+        <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+          <Btn variant="secondary" onClick={()=>setScreen("manager")}>Annuller</Btn>
+          <Btn icon="check" disabled={entries.length===0} onClick={()=>setDone(true)}>Opret og godkend</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Calendar ─────────────────────────────────────────────────── */
+function CalendarScreen() {
+  const [month, setMonth] = useState(6);
+  const [year, setYear] = useState(2026);
+  const MN = ["Januar","Februar","Marts","April","Maj","Juni","Juli","August","September","Oktober","November","December"];
+  const DS = ["M","T","O","T","F","L","S"];
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = Array.from({length:daysInMonth},(_,i)=>new Date(year,month-1,i+1));
+  const isWe = d => d.getDay()===0||d.getDay()===6;
+  const dow = d => { const x=d.getDay(); return x===0?6:x-1; };
+  const nav = delta => { let m=month+delta, y=year; if(m<1){m=12;y--;} if(m>12){m=1;y++;} setMonth(m); setYear(y); };
+  return (
+    <div style={{ padding:"32px 36px" }}>
+      <PageHeader title="Kalender"
+        actions={<>
+          <Btn variant="secondary" size="sm" icon="chevL" onClick={()=>nav(-1)}>Forrige</Btn>
+          <span style={{ fontSize:15, fontWeight:700, color:"var(--c-text)", minWidth:160, textAlign:"center" }}>{MN[month-1]} {year}</span>
+          <Btn variant="secondary" size="sm" onClick={()=>nav(1)}>Næste <Icon name="chevR" size={14} /></Btn>
+        </>} />
+      <div style={{ display:"flex", gap:14, marginBottom:16, flexWrap:"wrap" }}>
+        {CAL_DATA.map(d=>(
+          <div key={d.name} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--c-text-muted)" }}>
+            <div style={{ width:10, height:10, borderRadius:3, background:d.color }} />
+            {d.name}
+          </div>
+        ))}
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--c-text-muted)" }}><div style={{ width:10, height:10, borderRadius:3, background:"#fef3c7", border:"1px solid #fbbf24" }} />Afventer</div>
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"var(--c-text-muted)" }}><div style={{ width:10, height:10, borderRadius:3, background:"var(--c-border)" }} />Weekend</div>
+      </div>
+      <Card style={{ overflow:"auto" }}>
+        <table style={{ borderCollapse:"collapse", fontSize:12, minWidth:"max-content", width:"100%" }}>
+          <thead>
+            <tr>
+              <th style={{ position:"sticky", left:0, background:"var(--c-surface)", zIndex:10, padding:"8px 16px", textAlign:"left", fontSize:11.5, fontWeight:700, color:"var(--c-text-muted)", borderBottom:"2px solid var(--c-border)", whiteSpace:"nowrap", minWidth:160 }}>Medarbejder</th>
+              {days.map((d,i)=>{
+                const we=isWe(d);
+                return (
+                  <th key={i} style={{ minWidth:30, width:30, padding:"4px 0", textAlign:"center", borderBottom:"2px solid var(--c-border)", background:we?"var(--c-bg)":"var(--c-surface)", color:we?"var(--c-text-subtle)":"var(--c-text-muted)" }}>
+                    <div style={{ fontSize:11, fontWeight:600 }}>{d.getDate()}</div>
+                    <div style={{ fontSize:9, opacity:.7, textTransform:"uppercase" }}>{DS[dow(d)]}</div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {CAL_DATA.map((dept,di)=>(
+              <React.Fragment key={di}>
+                <tr>
+                  <td colSpan={daysInMonth+1} style={{ padding:"5px 16px", background:dept.color, color:"white", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" }}>{dept.name}</td>
+                </tr>
+                {dept.users.map((user,ui)=>(
+                  <tr key={ui} style={{ background:ui%2===0?"var(--c-surface)":"var(--c-bg)" }}>
+                    <td style={{ position:"sticky", left:0, background:ui%2===0?"var(--c-surface)":"var(--c-bg)", zIndex:5, padding:"5px 16px", fontWeight:600, color:"var(--c-text)", fontSize:12.5, borderBottom:"1px solid var(--c-border)", whiteSpace:"nowrap", minWidth:160 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <div style={{ width:6, height:6, borderRadius:"50%", background:dept.color, flexShrink:0 }} />
+                        {user.name}
+                      </div>
+                    </td>
+                    {days.map((d,di2)=>{
+                      const day=d.getDate(), we=isWe(d);
+                      const approved=user.approved.includes(day), pending=user.pending.includes(day);
+                      let bg="transparent", content=null;
+                      if (approved) { bg=dept.color+"28"; content=<span style={{ color:dept.color, fontWeight:800, fontSize:11 }}>✓</span>; }
+                      else if (pending) { bg="#fef3c7"; content=<span style={{ color:"#d97706", fontWeight:800, fontSize:11 }}>?</span>; }
+                      else if (we) bg="var(--c-bg)";
+                      return (
+                        <td key={di2} style={{ height:30, borderBottom:"1px solid var(--c-border)", textAlign:"center", background:bg, cursor:approved||pending?"pointer":"default" }}>
+                          {content}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Shifts (Vagtplan) ────────────────────────────────────────── */
+function ShiftsScreen() {
+  const [tab, setTab] = useState("plan");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [deptFilter, setDeptFilter] = useState("all");
+  const [assignModal, setAssignModal] = useState(null);
+  const [pickedTemplate, setPickedTemplate] = useState("st1");
+  const [assignNote, setAssignNote] = useState("");
+
+  const start = new Date(2026, 5, 15); // Mon 15 Jun 2026 baseline
+  start.setDate(start.getDate() + weekOffset * 7);
+  const days = Array.from({length:7}, (_,i) => { const d=new Date(start); d.setDate(start.getDate()+i); return d; });
+  const dayLabels = ["Man","Tir","Ons","Tor","Fre","Lør","Søn"];
+
+  const shiftDepts = DEPT_DATA.filter(d => d.shiftsEnabled);
+  const shiftDeptNames = new Set(shiftDepts.map(d => d.name));
+  // If current filter points at a dept where shifts are now disabled, fall back to "all"
+  useEffect(() => { if (deptFilter !== "all" && !shiftDeptNames.has(deptFilter)) setDeptFilter("all"); }, [deptFilter]);
+  const emps = USERS_DATA.filter(u => u.active && u.role!=="ADMIN" && shiftDeptNames.has(u.dept) && (deptFilter==="all"||u.dept===deptFilter));
+  const templates = SHIFT_TEMPLATES.filter(t => shiftDeptNames.has(t.department) && (deptFilter==="all"||t.department===deptFilter));
+
+  const fmtRange = `${days[0].getDate()}. ${days[0].toLocaleDateString("da-DK",{month:"short"})} – ${days[6].getDate()}. ${days[6].toLocaleDateString("da-DK",{month:"short", year:"numeric"})}`;
+  const sel = { fontFamily:"var(--font)", fontSize:13, padding:"7px 12px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)", cursor:"pointer" };
+
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:1280, margin:"0 auto" }}>
+      <PageHeader title="Vagtplan" sub="Planlæg og se medarbejdervagter"
+        actions={<>
+          <select value={deptFilter} onChange={e=>setDeptFilter(e.target.value)} style={sel}>
+            <option value="all">Alle afdelinger</option>
+            {shiftDepts.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}
+          </select>
+          <Btn variant="secondary" size="sm" icon="printer">Udskriv</Btn>
+        </>} />
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:3, marginBottom:18, background:"var(--c-border)", padding:4, borderRadius:"var(--r-lg)", width:"fit-content" }}>
+        {[{v:"plan",l:"Ugeplan"},{v:"templates",l:"Vagttyper"}].map(t => {
+          const active = tab===t.v;
+          return (
+            <button key={t.v} onClick={()=>setTab(t.v)}
+              style={{ padding:"7px 17px", border:"none", borderRadius:"var(--r-md)", fontSize:13, fontWeight:600, fontFamily:"var(--font)", cursor:"pointer", background:active?"var(--c-surface)":"transparent", color:active?"var(--c-text)":"var(--c-text-muted)", boxShadow:active?"var(--sh-xs)":"none" }}>
+              {t.l}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab==="plan" && (
+        <>
+          {/* Week nav */}
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+            <Btn variant="secondary" size="sm" icon="chevL" onClick={()=>setWeekOffset(o=>o-1)}>Forrige</Btn>
+            <span style={{ fontSize:14, fontWeight:700, color:"var(--c-text)", minWidth:220, textAlign:"center" }}>{fmtRange}</span>
+            <Btn variant="secondary" size="sm" onClick={()=>setWeekOffset(o=>o+1)}>Næste <Icon name="chevR" size={14} /></Btn>
+            <Btn variant="outline" size="sm" onClick={()=>setWeekOffset(0)}>I dag</Btn>
+            <div style={{ marginLeft:"auto", display:"flex", gap:12, flexWrap:"wrap" }}>
+              {templates.slice(0,4).map(t => (
+                <div key={t.id} style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:11.5, color:"var(--c-text-muted)" }}>
+                  <span style={{ width:10, height:10, borderRadius:3, background:t.color }} />
+                  {t.name} <span style={{ color:"var(--c-text-subtle)" }}>{t.startTime}–{t.endTime}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Card style={{ overflow:"hidden" }}>
+            {/* Header row */}
+            <div style={{ display:"grid", gridTemplateColumns:"190px repeat(7,1fr)", borderBottom:"2px solid var(--c-border)", background:"var(--c-bg)" }}>
+              <div style={{ padding:"10px 16px", fontSize:11, fontWeight:700, color:"var(--c-text-muted)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Medarbejder</div>
+              {days.map((d,i)=>{
+                const isWe = d.getDay()===0||d.getDay()===6;
+                const isToday = i===2; // Wed for demo
+                return (
+                  <div key={i} style={{ padding:"8px 6px", textAlign:"center", borderLeft:"1px solid var(--c-border)", background: isToday ? "var(--c-primary-light)" : "transparent" }}>
+                    <div style={{ fontSize:11, fontWeight:600, color: isToday ? "var(--c-primary)" : isWe ? "var(--c-text-subtle)" : "var(--c-text-muted)", textTransform:"uppercase" }}>{dayLabels[i]}</div>
+                    <div style={{ fontSize:15, fontWeight:800, color: isToday ? "var(--c-primary)" : "var(--c-text)", marginTop:2 }}>{d.getDate()}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Employee rows */}
+            {emps.map((emp,ei) => (
+              <div key={emp.id} style={{ display:"grid", gridTemplateColumns:"190px repeat(7,1fr)", borderBottom:ei<emps.length-1?"1px solid var(--c-border)":"none", minHeight:80 }}>
+                <div style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:10, background:"var(--c-bg)" }}>
+                  <Avatar name={emp.name} size={28} />
+                  <div style={{ minWidth:0 }}>
+                    <p style={{ fontSize:12.5, fontWeight:600, color:"var(--c-text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{emp.name}</p>
+                    <p style={{ fontSize:11, color:"var(--c-text-subtle)", marginTop:1 }}>{emp.dept}</p>
+                  </div>
+                </div>
+                {days.map((d,di) => {
+                  const isToday = di===2;
+                  const cellAssigns = SHIFT_ASSIGNMENTS.filter(a => a.day===di && a.user===emp.name && templates.find(t=>t.id===a.templateId));
+                  return (
+                    <div key={di} style={{ padding:6, borderLeft:"1px solid var(--c-border)", background: isToday ? "rgba(79,70,229,.04)" : "transparent", display:"flex", flexDirection:"column", gap:4 }}>
+                      {cellAssigns.map((a,ai) => {
+                        const t = templates.find(x=>x.id===a.templateId);
+                        if (!t) return null;
+                        return (
+                          <div key={ai} style={{ background:t.color, color:"white", borderRadius:"var(--r-sm)", padding:"5px 8px", fontSize:11, lineHeight:1.3, position:"relative", boxShadow:"0 1px 2px rgba(0,0,0,.1)" }}>
+                            <p style={{ fontWeight:700 }}>{t.name}</p>
+                            <p style={{ opacity:.88, fontSize:10 }}>{t.startTime}–{t.endTime}</p>
+                            {a.note && <p style={{ opacity:.85, fontSize:10, fontStyle:"italic", marginTop:1 }}>{a.note}</p>}
+                            {a.conflict && (
+                              <div style={{ position:"absolute", top:-5, right:-5, width:16, height:16, borderRadius:"50%", background:"#f59e0b", border:"2px solid var(--c-surface)", display:"flex", alignItems:"center", justifyContent:"center" }} title="Konflikt med godkendt fravær">
+                                <Icon name="alert" size={9} color="white" sw={2.5} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <button onClick={()=>{setAssignModal({user:emp.name, day:di, date:d}); setPickedTemplate(templates[0]?.id ?? ""); setAssignNote("");}}
+                        style={{ background:"none", border:"1px dashed var(--c-border)", borderRadius:"var(--r-sm)", padding:"3px 0", fontSize:10.5, color:"var(--c-text-subtle)", cursor:"pointer", fontFamily:"var(--font)", fontWeight:500, transition:"all .15s" }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--c-primary)"; e.currentTarget.style.color="var(--c-primary)"; e.currentTarget.style.background="var(--c-primary-light)";}}
+                        onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--c-border)"; e.currentTarget.style.color="var(--c-text-subtle)"; e.currentTarget.style.background="none";}}>
+                        + vagt
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {emps.length===0 && <div style={{ padding:40, textAlign:"center", color:"var(--c-text-subtle)", fontSize:13 }}>Ingen medarbejdere i den valgte afdeling</div>}
+          </Card>
+
+          <p style={{ fontSize:12, color:"var(--c-text-subtle)", marginTop:12, display:"inline-flex", alignItems:"center", gap:6 }}>
+            <Icon name="alert" size={12} color="#f59e0b" /> Markerede vagter har konflikt med godkendt fravær.
+          </p>
+        </>
+      )}
+
+      {tab==="templates" && (
+        <>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14, alignItems:"center" }}>
+            <p style={{ fontSize:13, color:"var(--c-text-muted)" }}>{templates.length} vagttyper{deptFilter!=="all"?` i ${deptFilter}`:""}</p>
+            <Btn icon="plus" size="sm">Ny vagttype</Btn>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:12 }}>
+            {templates.map(t => (
+              <Card key={t.id} hover style={{ padding:"16px 18px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+                  <div style={{ width:42, height:42, borderRadius:"var(--r-md)", background:t.color, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:`0 2px 8px ${t.color}44` }}>
+                    <Icon name="clock" size={20} color="white" sw={2} />
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:14.5, fontWeight:700, color:"var(--c-text)" }}>{t.name}</p>
+                    <p style={{ fontSize:12, color:"var(--c-text-muted)" }}>{t.startTime} – {t.endTime}</p>
+                  </div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:10, borderTop:"1px solid var(--c-border)" }}>
+                  <span style={{ fontSize:11, color:"var(--c-text-subtle)" }}>{t.department}</span>
+                  <div style={{ display:"flex", gap:4 }}>
+                    <Btn variant="ghost" size="sm" icon="edit">Rediger</Btn>
+                    <Btn variant="ghost" size="sm" icon="trash" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+            {templates.length===0 && (
+              <div style={{ gridColumn:"1 / -1", padding:40, textAlign:"center", color:"var(--c-text-subtle)", fontSize:13, background:"var(--c-surface)", borderRadius:"var(--r-lg)", border:"1px dashed var(--c-border)" }}>
+                Ingen vagttyper endnu. Opret den første.
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Assign modal */}
+      {assignModal && (
+        <div onClick={()=>setAssignModal(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:60, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"var(--c-surface)", borderRadius:"var(--r-lg)", padding:24, maxWidth:420, width:"100%", boxShadow:"var(--sh-lg)" }}>
+            <h3 style={{ fontSize:16, fontWeight:800, color:"var(--c-text)", marginBottom:4 }}>Tilføj vagt</h3>
+            <p style={{ fontSize:12.5, color:"var(--c-text-muted)", marginBottom:16 }}>{assignModal.user} · {assignModal.date.toLocaleDateString("da-DK",{weekday:"long", day:"numeric", month:"long"})}</p>
+            <SectionLabel label="Vagttype" />
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+              {templates.map(t => (
+                <label key={t.id} onClick={()=>setPickedTemplate(t.id)}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", border:`1.5px solid ${pickedTemplate===t.id?"var(--c-primary)":"var(--c-border)"}`, borderRadius:"var(--r-md)", cursor:"pointer", background:pickedTemplate===t.id?"var(--c-primary-light)":"var(--c-surface)" }}>
+                  <div style={{ width:16, height:16, borderRadius:"50%", border:`2px solid ${pickedTemplate===t.id?"var(--c-primary)":"var(--c-border)"}`, background:pickedTemplate===t.id?"var(--c-primary)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {pickedTemplate===t.id&&<div style={{ width:5, height:5, borderRadius:"50%", background:"white" }} />}
+                  </div>
+                  <div style={{ width:10, height:10, borderRadius:3, background:t.color, flexShrink:0 }} />
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>{t.name}</p>
+                    <p style={{ fontSize:11.5, color:"var(--c-text-muted)" }}>{t.startTime}–{t.endTime}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <SectionLabel label="Note (valgfri)" />
+            <input value={assignNote} onChange={e=>setAssignNote(e.target.value)} placeholder="Fx overtid, kørsel…"
+              style={{ width:"100%", fontFamily:"var(--font)", fontSize:13, padding:"9px 12px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", color:"var(--c-text)", background:"var(--c-surface)", marginBottom:14 }} />
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <Btn variant="secondary" onClick={()=>setAssignModal(null)}>Annuller</Btn>
+              <Btn icon="check" onClick={()=>setAssignModal(null)}>Tilføj vagt</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Users ────────────────────────────────────────────────────── */
+/* ── SlideOver panel ─────────────────────────────────────────── */
+function SlideOver({ open, onClose, title, subtitle, children, width = 500 }) {
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    if (open) document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+  return (
+    <>
+      <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:50, backdropFilter:"blur(3px)", opacity:open?1:0, pointerEvents:open?"all":"none", transition:"opacity .25s" }} />
+      <div style={{ position:"fixed", top:0, right:0, bottom:0, width, background:"var(--c-surface)", zIndex:51, transform:open?"translateX(0)":"translateX(100%)", transition:"transform .28s cubic-bezier(.4,0,.2,1)", display:"flex", flexDirection:"column", boxShadow:"-8px 0 40px rgba(0,0,0,.18)" }}>
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", padding:"22px 24px 18px", borderBottom:"1px solid var(--c-border)", flexShrink:0 }}>
+          <div>
+            <h2 style={{ fontSize:17, fontWeight:800, color:"var(--c-text)", letterSpacing:"-0.02em" }}>{title}</h2>
+            {subtitle && <p style={{ fontSize:12.5, color:"var(--c-text-muted)", marginTop:3 }}>{subtitle}</p>}
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:"var(--r-md)", border:"1.5px solid var(--c-border)", background:"var(--c-bg)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"var(--c-text-muted)", flexShrink:0, marginLeft:12 }}>
+            <Icon name="x" size={16} />
+          </button>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"24px" }}>{children}</div>
+      </div>
+    </>
+  );
+}
+
+/* ── Edit User Panel ──────────────────────────────────────────── */
+const ROLES_META = [
+  { v:"EMPLOYEE", label:"Medarbejder",  desc:"Kan oprette og se egne ansøgninger" },
+  { v:"MANAGER",  label:"Leder",         desc:"Kan godkende ansøgninger i sin afdeling" },
+  { v:"ADMIN",    label:"Administrator", desc:"Fuld adgang til alle indstillinger" },
+];
+function EditUserPanel({ user, open, onClose }) {
+  const [name, setName]     = useState("");
+  const [email, setEmail]   = useState("");
+  const [dept, setDept]     = useState("");
+  const [role, setRole]     = useState("EMPLOYEE");
+  const [active, setActive] = useState(true);
+  useEffect(() => {
+    if (user) { setName(user.name); setEmail(user.email); setDept(user.dept); setRole(user.role); setActive(user.active); }
+    else { setName(""); setEmail(""); setDept(DEPT_DATA[0]?.name ?? ""); setRole("EMPLOYEE"); setActive(true); }
+  }, [user, open]);
+  const sel = { fontFamily:"var(--font)", fontSize:13.5, padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)", width:"100%", cursor:"pointer" };
+  return (
+    <SlideOver open={open} onClose={onClose} title={user ? "Rediger bruger" : "Opret bruger"} subtitle={user?.name}>
+      <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14, padding:"16px", background:"var(--c-bg)", borderRadius:"var(--r-lg)", border:"1px solid var(--c-border)" }}>
+          <Avatar name={name||"?"} size={52} gradient="linear-gradient(135deg,var(--c-primary),#7c3aed)" />
+          <div>
+            <p style={{ fontSize:15, fontWeight:700, color:"var(--c-text)" }}>{name||"Ny bruger"}</p>
+            <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:2 }}>{email||"—"} · {dept||"—"}</p>
+          </div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <SectionLabel label="Stamoplysninger" />
+          <FieldInput id="eu-name"  label="Fulde navn" value={name}  onChange={e=>setName(e.target.value)} />
+          <FieldInput id="eu-email" label="Email"      value={email} onChange={e=>setEmail(e.target.value)} type="email" />
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          <SectionLabel label="Afdeling" />
+          <select value={dept} onChange={e=>setDept(e.target.value)} style={sel}>
+            {DEPT_DATA.map(d=><option key={d.id} value={d.name}>{d.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <SectionLabel label="Rolle" />
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {ROLES_META.map(r=>(
+              <label key={r.v} onClick={()=>setRole(r.v)}
+                style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", border:`1.5px solid ${role===r.v?"var(--c-primary)":"var(--c-border)"}`, borderRadius:"var(--r-md)", cursor:"pointer", background:role===r.v?"var(--c-primary-light)":"var(--c-surface)", transition:"all .15s" }}>
+                <div style={{ width:18, height:18, borderRadius:"50%", border:`2px solid ${role===r.v?"var(--c-primary)":"var(--c-border)"}`, background:role===r.v?"var(--c-primary)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {role===r.v&&<div style={{ width:6, height:6, borderRadius:"50%", background:"white" }} />}
+                </div>
+                <div>
+                  <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>{r.label}</p>
+                  <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:1 }}>{r.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px", background:"var(--c-bg)", borderRadius:"var(--r-md)", border:"1px solid var(--c-border)" }}>
+          <div>
+            <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>Aktiv konto</p>
+            <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:2 }}>Inaktive brugere kan ikke logge ind</p>
+          </div>
+          <button onClick={()=>setActive(a=>!a)} style={{ width:44, height:24, borderRadius:"var(--r-full)", background:active?"var(--c-primary)":"var(--c-border)", border:"none", cursor:"pointer", position:"relative", transition:"background .2s", flexShrink:0 }}>
+            <div style={{ position:"absolute", top:3, left:active?22:3, width:18, height:18, borderRadius:"50%", background:"white", boxShadow:"var(--sh-sm)", transition:"left .2s" }} />
+          </button>
+        </div>
+        <div style={{ display:"flex", gap:10, borderTop:"1px solid var(--c-border)", paddingTop:16 }}>
+          <Btn variant="secondary" full onClick={onClose}>Annuller</Btn>
+          <Btn icon="check" full onClick={onClose}>Gem ændringer</Btn>
+        </div>
+      </div>
+    </SlideOver>
+  );
+}
+
+/* ── Edit Department Panel ────────────────────────────────────── */
+const DEPT_COLORS_PALETTE = ["#4f46e5","#7c3aed","#0d9488","#d97706","#dc2626","#0369a1","#059669","#9333ea"];
+function EditDeptPanel({ dept, open, onClose }) {
+  const [name, setName]       = useState("");
+  const [color, setColor]     = useState(DEPT_COLORS_PALETTE[0]);
+  const [max, setMax]         = useState(2);
+  const [shifts, setShifts]   = useState(false);
+  const [members, setMembers] = useState([]);
+  const [q, setQ]             = useState("");
+  useEffect(() => {
+    if (dept) { setName(dept.name); setColor(dept.color); setMax(dept.max); setShifts(!!dept.shiftsEnabled); setMembers([...dept.users]); }
+    else { setName(""); setColor(DEPT_COLORS_PALETTE[0]); setMax(2); setShifts(false); setMembers([]); }
+    setQ("");
+  }, [dept, open]);
+  const avail = USERS_DATA.filter(u=>!members.includes(u.name)&&u.name.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <SlideOver open={open} onClose={onClose} title={dept ? "Rediger afdeling" : "Ny afdeling"} subtitle={dept?.name}>
+      <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+        <FieldInput id="ed-name" label="Afdelingsnavn" value={name} onChange={e=>setName(e.target.value)} placeholder="F.eks. Marketing" />
+        <div>
+          <SectionLabel label="Farve" />
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+            {DEPT_COLORS_PALETTE.map(c=>(
+              <button key={c} onClick={()=>setColor(c)}
+                style={{ width:34, height:34, borderRadius:"var(--r-md)", background:c, border:`3px solid ${color===c?"var(--c-text)":"transparent"}`, cursor:"pointer", transition:"border .15s, transform .15s", transform:color===c?"scale(1.18)":"scale(1)", boxShadow:color===c?"0 0 0 2px var(--c-surface),0 0 0 4px "+c:"none" }} />
+            ))}
+          </div>
+          <div style={{ height:5, borderRadius:"var(--r-full)", background:color, opacity:.3 }} />
+        </div>
+        <div>
+          <SectionLabel label="Maks. samtidige feriedage" />
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <button onClick={()=>setMax(m=>Math.max(1,m-1))} style={{ width:38, height:38, border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", background:"var(--c-surface)", cursor:"pointer", fontSize:20, color:"var(--c-text)", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+            <span style={{ fontSize:26, fontWeight:800, color, minWidth:48, textAlign:"center" }}>{max}</span>
+            <button onClick={()=>setMax(m=>m+1)} style={{ width:38, height:38, border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", background:"var(--c-surface)", cursor:"pointer", fontSize:20, color:"var(--c-text)", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+            <span style={{ fontSize:13, color:"var(--c-text-muted)" }}>medarbejdere på én gang</span>
+          </div>
+        </div>
+
+        <div>
+          <SectionLabel label="Funktioner" />
+          <label onClick={()=>setShifts(s=>!s)} style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, padding:"14px", border:`1.5px solid ${shifts?"var(--c-primary)":"var(--c-border)"}`, borderRadius:"var(--r-md)", cursor:"pointer", background:shifts?"var(--c-primary-light)":"var(--c-surface)" }}>
+            <div style={{ display:"flex", gap:12, flex:1, minWidth:0 }}>
+              <div style={{ width:38, height:38, borderRadius:"var(--r-md)", background:shifts?color+"22":"var(--c-bg)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <Icon name="clock" size={18} color={shifts?color:"var(--c-text-subtle)"} />
+              </div>
+              <div>
+                <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>Vagtplan</p>
+                <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:2, lineHeight:1.45 }}>Tillad ledere i denne afdeling at planlægge vagter for deres medarbejdere.</p>
+                {!shifts && <p style={{ fontSize:11, color:"var(--c-text-subtle)", marginTop:6, fontStyle:"italic" }}>Slået fra — vagtplan-menuen skjules og siden er utilgængelig for denne afdeling.</p>}
+              </div>
+            </div>
+            <button type="button" onClick={e=>{e.stopPropagation(); setShifts(s=>!s);}} style={{ width:44, height:24, borderRadius:"var(--r-full)", background:shifts?"var(--c-primary)":"var(--c-border)", border:"none", cursor:"pointer", position:"relative", transition:"background .2s", flexShrink:0 }}>
+              <div style={{ position:"absolute", top:3, left:shifts?22:3, width:18, height:18, borderRadius:"50%", background:"white", boxShadow:"var(--sh-sm)", transition:"left .2s" }} />
+            </button>
+          </label>
+        </div>
+        <div>
+          <SectionLabel label={`Medarbejdere (${members.length})`} />
+          {members.length>0&&(
+            <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
+              {members.map((m,i)=>(
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"var(--c-bg)", borderRadius:"var(--r-md)", border:"1px solid var(--c-border)" }}>
+                  <Avatar name={m} size={26} />
+                  <span style={{ flex:1, fontSize:13, fontWeight:500, color:"var(--c-text)" }}>{m}</span>
+                  <button onClick={()=>setMembers(ms=>ms.filter((_,x)=>x!==i))}
+                    style={{ background:"none", border:"none", cursor:"pointer", color:"var(--c-text-subtle)", padding:4, display:"flex", borderRadius:4 }}
+                    onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="var(--c-text-subtle)"}>
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ position:"relative" }}>
+            <div style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)" }}><Icon name="search" size={14} color="var(--c-text-subtle)" /></div>
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Søg og tilføj medarbejder…"
+              style={{ width:"100%", padding:"9px 12px 9px 32px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", fontSize:13, fontFamily:"var(--font)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)" }} />
+          </div>
+          {q&&avail.length>0&&(
+            <div style={{ border:"1px solid var(--c-border)", borderRadius:"var(--r-md)", overflow:"hidden", marginTop:4 }}>
+              {avail.slice(0,5).map((u,i)=>(
+                <button key={u.id} onClick={()=>{ setMembers(ms=>[...ms,u.name]); setQ(""); }}
+                  style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", width:"100%", border:"none", borderBottom:i<Math.min(avail.length,5)-1?"1px solid var(--c-border)":"none", background:"var(--c-surface)", cursor:"pointer", fontFamily:"var(--font)", textAlign:"left" }}
+                  onMouseEnter={e=>e.currentTarget.style.background="var(--c-bg)"} onMouseLeave={e=>e.currentTarget.style.background="var(--c-surface)"}>
+                  <Avatar name={u.name} size={26} />
+                  <span style={{ fontSize:13, fontWeight:500, color:"var(--c-text)", flex:1 }}>{u.name}</span>
+                  <span style={{ fontSize:11, color:"var(--c-text-subtle)" }}>{u.dept}</span>
+                  <Icon name="plus" size={14} color="var(--c-primary)" sw={2.2} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ display:"flex", gap:10, borderTop:"1px solid var(--c-border)", paddingTop:16 }}>
+          <Btn variant="secondary" full onClick={onClose}>Annuller</Btn>
+          <Btn icon="check" full onClick={onClose}>Gem afdeling</Btn>
+        </div>
+      </div>
+    </SlideOver>
+  );
+}
+
+const ROLE_BADGE = {
+  ADMIN:    {label:"Administrator", bg:"rgba(124,58,237,.12)", color:"#7c3aed"},
+  MANAGER:  {label:"Leder",         bg:"rgba(79,70,229,.12)",  color:"var(--c-primary)"},
+  EMPLOYEE: {label:"Medarbejder",   bg:"var(--c-bg)",          color:"var(--c-text-muted)"},
+};
+function UsersScreen() {
+  const [q, setQ] = useState("");
+  const [editUser, setEditUser] = useState(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const shown = USERS_DATA.filter(u=>u.name.toLowerCase().includes(q.toLowerCase())||u.email.toLowerCase().includes(q.toLowerCase()));
+  const openEdit = user => { setEditUser(user); setPanelOpen(true); };
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Brugere" sub={`${USERS_DATA.length} brugere · ${USERS_DATA.filter(u=>u.active).length} aktive`}
+        actions={<Btn icon="plus" onClick={()=>{ setEditUser(null); setPanelOpen(true); }}>Opret bruger</Btn>} />
+      <div style={{ position:"relative", marginBottom:20, maxWidth:340 }}>
+        <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}><Icon name="search" size={15} color="var(--c-text-subtle)" /></div>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Søg på navn eller email…"
+          style={{ width:"100%", padding:"9px 14px 9px 36px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", fontSize:13.5, fontFamily:"var(--font)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)" }} />
+      </div>
+      <Card>
+        {shown.map((user,i)=>{
+          const rb=ROLE_BADGE[user.role];
+          return (
+            <div key={user.id} style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 20px", borderBottom:i<shown.length-1?"1px solid var(--c-border)":"none" }}>
+              <Avatar name={user.name} size={38} gradient={user.active?"linear-gradient(135deg,var(--c-primary),#7c3aed)":"linear-gradient(135deg,#94a3b8,#64748b)"} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:14, fontWeight:700, color:"var(--c-text)" }}>{user.name}</span>
+                  {!user.active&&<span style={{ fontSize:11, color:"var(--c-text-subtle)", background:"var(--c-bg)", padding:"1px 7px", borderRadius:"var(--r-full)", border:"1px solid var(--c-border)" }}>Inaktiv</span>}
+                </div>
+                <div style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:1 }}>{user.email} · {user.dept}</div>
+              </div>
+              <span style={{ fontSize:12, fontWeight:600, padding:"4px 11px", borderRadius:"var(--r-full)", background:rb.bg, color:rb.color, whiteSpace:"nowrap" }}>{rb.label}</span>
+              <Btn variant="ghost" size="sm" icon="edit" onClick={()=>openEdit(user)}>Rediger</Btn>
+            </div>
+          );
+        })}
+      </Card>
+      <EditUserPanel user={editUser} open={panelOpen} onClose={()=>setPanelOpen(false)} />
+    </div>
+  );
+}
+
+/* ── Departments ──────────────────────────────────────────────── */
+function DepartmentsScreen() {
+  const [editDept, setEditDept] = useState(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const openEdit = dept => { setEditDept(dept); setPanelOpen(true); };
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Afdelinger" sub={`${DEPT_DATA.length} afdelinger`}
+        actions={<Btn icon="plus" onClick={()=>{ setEditDept(null); setPanelOpen(true); }}>Ny afdeling</Btn>} />
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:16 }}>
+        {DEPT_DATA.map(dept=>(
+          <Card key={dept.id} hover style={{ padding:"20px 24px" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:10, background:dept.color+"22", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Icon name="building" size={20} color={dept.color} />
+                </div>
+                <div><p style={{ fontSize:15, fontWeight:700, color:"var(--c-text)" }}>{dept.name}</p>
+                  <p style={{ fontSize:12, color:"var(--c-text-muted)" }}>{dept.users.length} medarbejdere</p></div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:"var(--r-full)", background: dept.shiftsEnabled?"rgba(5,150,105,.12)":"var(--c-bg)", color: dept.shiftsEnabled?"#059669":"var(--c-text-subtle)", border: dept.shiftsEnabled?"none":"1px solid var(--c-border)" }} title={dept.shiftsEnabled?"Vagtplan aktiv for denne afdeling":"Vagtplan slået fra"}>
+                  <Icon name="clock" size={11} sw={2.2} />
+                  {dept.shiftsEnabled?"Vagtplan":"Ingen vagtplan"}
+                </span>
+                <Btn variant="ghost" size="sm" icon="edit" onClick={()=>openEdit(dept)}>Rediger</Btn>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:16, paddingTop:14, borderTop:"1px solid var(--c-border)" }}>
+              <div><p style={{ fontSize:11, color:"var(--c-text-subtle)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>Max. samtidige</p>
+                <p style={{ fontSize:20, fontWeight:800, color:dept.color }}>{dept.max}</p></div>
+              <div style={{ width:1, background:"var(--c-border)" }} />
+              <div><p style={{ fontSize:11, color:"var(--c-text-subtle)", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>Medarbejdere</p>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {dept.users.slice(0,4).map((u,i)=>(
+                    <span key={i} style={{ fontSize:12, background:"var(--c-bg)", color:"var(--c-text-muted)", padding:"3px 9px", borderRadius:"var(--r-full)", border:"1px solid var(--c-border)" }}>{u}</span>
+                  ))}
+                  {dept.users.length>4&&<span style={{ fontSize:12, color:"var(--c-text-subtle)" }}>+{dept.users.length-4} mere</span>}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <EditDeptPanel dept={editDept} open={panelOpen} onClose={()=>setPanelOpen(false)} />
+    </div>
+  );
+}
+
+/* ── Holidays ─────────────────────────────────────────────────── */
+function HolidaysScreen() {
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Helligdage" sub="Nationale og lokale fridage for 2026" actions={<Btn icon="plus">Tilføj fridag</Btn>} />
+      <Card>
+        {HOLIDAYS_DATA.sort((a,b)=>new Date(a.date)-new Date(b.date)).map((h,i)=>(
+          <div key={h.id} style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 20px", borderBottom:i<HOLIDAYS_DATA.length-1?"1px solid var(--c-border)":"none" }}>
+            <div style={{ width:44, height:44, borderRadius:"var(--r-md)", background:h.national?"rgba(79,70,229,.1)":"rgba(217,119,6,.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Icon name="flag" size={20} color={h.national?"var(--c-primary)":"#d97706"} />
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>{h.name}</p>
+              <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:2 }}>{fmtDK(h.date)}</p>
+            </div>
+            <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:"var(--r-full)", background:h.national?"rgba(79,70,229,.1)":"rgba(217,119,6,.1)", color:h.national?"var(--c-primary)":"#d97706" }}>
+              {h.national?"National":"Lokal"}
+            </span>
+            <Btn variant="ghost" size="sm" icon="trash" />
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+/* ── Reports ──────────────────────────────────────────────────── */
+const REPORT_USERS_DATA = [
+  { name:"Maria Hansen",     dept:"Salg",    months:[0,0,0,0,2,5,0,3,0,0,0,0], total:10 },
+  { name:"Sofie Madsen",     dept:"Salg",    months:[0,0,0,0,0,0,5,0,2,0,0,8], total:15 },
+  { name:"Peter Nielsen",    dept:"IT",      months:[0,0,0,0,1,3,2,2,1,0,0,3], total:12 },
+  { name:"Lone Frederiksen", dept:"IT",      months:[0,0,2,0,0,3,0,0,0,0,0,0], total:5  },
+  { name:"Lars Christensen", dept:"Support", months:[0,0,0,3,0,2,0,2,0,1,0,0], total:8  },
+  { name:"Anna Sørensen",    dept:"Support", months:[0,0,0,0,0,2,3,0,0,0,0,1], total:6  },
+];
+const REPORT_DEPTS = [
+  { name:"Salg",    months:[0,0,0,0,2,5,5,3,2,0,0,8],  total:25, peak:"Jul", approved:9, pending:3, rejected:1 },
+  { name:"IT",      months:[0,0,2,0,1,6,2,2,1,0,0,3],  total:17, peak:"Jun", approved:6, pending:1, rejected:0 },
+  { name:"Support", months:[0,0,0,3,0,4,3,2,0,1,0,1],  total:14, peak:"Jun", approved:5, pending:2, rejected:2 },
+  { name:"Ledelse", months:[0,0,0,0,0,0,2,3,0,0,0,0],  total:5,  peak:"Aug", approved:2, pending:0, rejected:0 },
+];
+const ABS_BREAKDOWN = [
+  { type:"VACATION",       label:"Ferie",            days:48, color:"#4f46e5" },
+  { type:"VACATION_FREE",  label:"Feriefri",         days:9,  color:"#7c3aed" },
+  { type:"SICK",           label:"Sygdom",           days:14, color:"#ef4444" },
+  { type:"CHILD_SICK_DAY", label:"Barns 1. sygedag", days:5,  color:"#f59e0b" },
+  { type:"MATERNITY",      label:"Barsel",           days:5,  color:"#ec4899" },
+];
+const BUSY_WEEKS = [
+  { week:"2026-W26", days:18 },
+  { week:"2026-W27", days:16 },
+  { week:"2026-W28", days:14 },
+  { week:"2026-W29", days:12 },
+  { week:"2026-W15", days:9  },
+  { week:"2026-W42", days:7  },
+];
+const SICK_BY_USER = [
+  { name:"Lars Christensen", dept:"Support", days:6 },
+  { name:"Peter Nielsen",    dept:"IT",      days:4 },
+  { name:"Maria Hansen",     dept:"Salg",    days:3 },
+  { name:"Anna Sørensen",    dept:"Support", days:1 },
+];
+
+function ReportsScreen() {
+  const [tab, setTab] = useState("absence");
+  const MN = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+  const TABS = [{v:"absence",l:"Fraværsrapport",ic:"user"},{v:"department",l:"Afdelingsrapport",ic:"building"},{v:"patterns",l:"Fraværsmønstre",ic:"chart"},{v:"export",l:"CSV-eksport",ic:"download"}];
+  const sel = { fontFamily:"var(--font)", fontSize:13, padding:"7px 12px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", outline:"none", background:"var(--c-surface)", color:"var(--c-text)", cursor:"pointer" };
+
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:1100, margin:"0 auto" }}>
+      <PageHeader title="Rapporter" sub="Overblik over fravær og feriestatistik" />
+      <div style={{ display:"flex", gap:3, marginBottom:22, background:"var(--c-border)", padding:4, borderRadius:"var(--r-lg)", width:"fit-content", flexWrap:"wrap" }}>
+        {TABS.map(t=>{
+          const active=tab===t.v;
+          return (
+            <button key={t.v} onClick={()=>setTab(t.v)}
+              style={{ padding:"7px 14px", border:"none", borderRadius:"var(--r-md)", fontSize:13, fontWeight:600, fontFamily:"var(--font)", cursor:"pointer", background:active?"var(--c-surface)":"transparent", color:active?"var(--c-text)":"var(--c-text-muted)", boxShadow:active?"var(--sh-xs)":"none", display:"inline-flex", alignItems:"center", gap:7 }}>
+              <Icon name={t.ic} size={13} /> {t.l}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab==="absence" && (
+        <>
+          <Card style={{ padding:14, marginBottom:14, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+            <select style={sel} defaultValue="2026"><option>2026</option><option>2025</option></select>
+            <select style={sel} defaultValue="all"><option value="all">Hele året</option>{MN.map((m,i)=><option key={i} value={i}>{m}</option>)}</select>
+            <select style={sel} defaultValue="all"><option value="all">Alle afdelinger</option>{DEPT_DATA.map(d=><option key={d.id}>{d.name}</option>)}</select>
+            <Btn icon="download" size="sm" style={{ marginLeft:"auto" }}>Eksporter CSV</Btn>
+          </Card>
+          <Card style={{ overflow:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12.5 }}>
+              <thead>
+                <tr style={{ background:"var(--c-bg)" }}>
+                  <th style={{ padding:"10px 16px", textAlign:"left", fontSize:11, fontWeight:700, color:"var(--c-text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", position:"sticky", left:0, background:"var(--c-bg)", borderBottom:"2px solid var(--c-border)" }}>Medarbejder</th>
+                  <th style={{ padding:"10px 12px", textAlign:"left", fontSize:11, fontWeight:700, color:"var(--c-text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", borderBottom:"2px solid var(--c-border)" }}>Afdeling</th>
+                  {MN.map((m,i)=><th key={i} style={{ padding:"10px 4px", textAlign:"center", fontSize:11, fontWeight:700, color:"var(--c-text-muted)", borderBottom:"2px solid var(--c-border)", minWidth:38 }}>{m}</th>)}
+                  <th style={{ padding:"10px 14px", textAlign:"center", fontSize:11, fontWeight:700, color:"var(--c-text)", borderBottom:"2px solid var(--c-border)" }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {REPORT_USERS_DATA.map((u,i)=>(
+                  <tr key={i} style={{ borderBottom:"1px solid var(--c-border)" }}>
+                    <td style={{ padding:"10px 16px", fontSize:13, fontWeight:600, color:"var(--c-text)", position:"sticky", left:0, background:"var(--c-surface)", borderRight:"1px solid var(--c-border)" }}>{u.name}</td>
+                    <td style={{ padding:"10px 12px", fontSize:11.5, color:"var(--c-text-muted)" }}>{u.dept}</td>
+                    {u.months.map((d,mi)=>(
+                      <td key={mi} style={{ padding:"10px 4px", textAlign:"center", fontSize:12, color: d>0?"var(--c-primary)":"var(--c-text-subtle)", fontWeight: d>0?700:400 }}>{d>0?d:"·"}</td>
+                    ))}
+                    <td style={{ padding:"10px 14px", textAlign:"center", fontSize:14, fontWeight:800, color:"var(--c-text)" }}>{u.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{ background:"var(--c-bg)" }}>
+                  <td style={{ padding:"10px 16px", fontSize:11, fontWeight:700, color:"var(--c-text-muted)", textTransform:"uppercase", letterSpacing:"0.06em", position:"sticky", left:0, background:"var(--c-bg)" }}>I alt</td>
+                  <td />
+                  {MN.map((_,mi)=>{
+                    const s = REPORT_USERS_DATA.reduce((a,u)=>a+u.months[mi],0);
+                    return <td key={mi} style={{ padding:"10px 4px", textAlign:"center", fontSize:11.5, fontWeight:700, color:"var(--c-text-muted)" }}>{s||""}</td>;
+                  })}
+                  <td style={{ padding:"10px 14px", textAlign:"center", fontSize:14, fontWeight:800, color:"var(--c-text)" }}>{REPORT_USERS_DATA.reduce((a,u)=>a+u.total,0)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </Card>
+        </>
+      )}
+
+      {tab==="department" && (
+        <>
+          <Card style={{ padding:14, marginBottom:14, display:"flex", gap:10, alignItems:"center" }}>
+            <select style={sel} defaultValue="2026"><option>2026</option><option>2025</option></select>
+            <Btn icon="download" size="sm" style={{ marginLeft:"auto" }}>Eksporter CSV</Btn>
+          </Card>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:14 }}>
+            {REPORT_DEPTS.map((d,i) => {
+              const max = Math.max(...d.months,1);
+              return (
+                <Card key={i} style={{ padding:"18px 20px" }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
+                    <p style={{ fontSize:14.5, fontWeight:700, color:"var(--c-text)" }}>{d.name}</p>
+                    <span style={{ fontSize:24, fontWeight:800, color:"var(--c-primary)", letterSpacing:"-0.02em" }}>{d.total}</span>
+                  </div>
+                  <p style={{ fontSize:11.5, color:"var(--c-text-muted)", marginBottom:12 }}>godkendte feriedage</p>
+                  <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:38, marginBottom:6 }}>
+                    {d.months.map((v,mi)=>(
+                      <div key={mi} style={{ flex:1, height: v===0 ? 3 : `${Math.max(20,(v/max)*100)}%`, background: v===0?"var(--c-border)":"var(--c-primary)", borderRadius:"2px 2px 0 0", opacity: v===d.months[d.months.indexOf(max)] && v>0 ? 1 : 0.55 }} title={`${MN[mi]}: ${v} dage`} />
+                    ))}
+                  </div>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"var(--c-text-subtle)", marginBottom:14 }}>
+                    <span>Jan</span><span>Jun</span><span>Dec</span>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6, fontSize:11.5, textAlign:"center" }}>
+                    <div style={{ padding:"6px 4px", background:"rgba(5,150,105,.1)", borderRadius:"var(--r-sm)" }}><p style={{ fontWeight:800, color:"#059669" }}>{d.approved}</p><p style={{ color:"var(--c-text-subtle)", fontSize:10 }}>Godkendt</p></div>
+                    <div style={{ padding:"6px 4px", background:"rgba(217,119,6,.1)", borderRadius:"var(--r-sm)" }}><p style={{ fontWeight:800, color:"#d97706" }}>{d.pending}</p><p style={{ color:"var(--c-text-subtle)", fontSize:10 }}>Afventer</p></div>
+                    <div style={{ padding:"6px 4px", background:"rgba(220,38,38,.1)", borderRadius:"var(--r-sm)" }}><p style={{ fontWeight:800, color:"#dc2626" }}>{d.rejected}</p><p style={{ color:"var(--c-text-subtle)", fontSize:10 }}>Afvist</p></div>
+                  </div>
+                  {d.total>0 && <p style={{ fontSize:11, color:"var(--c-text-subtle)", marginTop:10 }}>Travlest: {d.peak}</p>}
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {tab==="patterns" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+          <Card style={{ padding:"22px 24px" }}>
+            <SectionLabel label="Fordeling af fraværstyper" />
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {(() => {
+                const total = ABS_BREAKDOWN.reduce((a,b)=>a+b.days,0);
+                return ABS_BREAKDOWN.map((a,i)=>{
+                  const pct = Math.round((a.days/total)*100);
+                  return (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:14 }}>
+                      <div style={{ width:120, fontSize:12.5, color:"var(--c-text)", textAlign:"right", fontWeight:500 }}>{a.label}</div>
+                      <div style={{ flex:1, height:18, background:"var(--c-bg)", borderRadius:"var(--r-full)", overflow:"hidden" }}>
+                        <div style={{ width:`${pct}%`, height:"100%", background:a.color, borderRadius:"var(--r-full)", transition:"width .6s" }} />
+                      </div>
+                      <div style={{ width:120, fontSize:11.5, color:"var(--c-text-muted)" }}>{a.days} dage ({pct}%)</div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </Card>
+
+          <Card style={{ padding:"22px 24px" }}>
+            <SectionLabel label="Mest belastede uger (top 6)" />
+            <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+              {BUSY_WEEKS.map((w,i)=>{
+                const max = BUSY_WEEKS[0].days;
+                const pct = (w.days/max)*100;
+                return (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:14 }}>
+                    <div style={{ width:90, fontSize:12, fontFamily:"monospace", color:"var(--c-text)" }}>{w.week}</div>
+                    <div style={{ flex:1, height:8, background:"var(--c-bg)", borderRadius:"var(--r-full)" }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background: i===0?"#ef4444":"var(--c-primary)", borderRadius:"var(--r-full)" }} />
+                    </div>
+                    <div style={{ width:80, fontSize:12, color:"var(--c-text-muted)", fontWeight:600 }}>{w.days} dage {i===0&&<span style={{ fontSize:10, color:"#ef4444", marginLeft:4 }}>Højest</span>}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card style={{ padding:"22px 24px" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <SectionLabel label="Sygedage pr. medarbejder" />
+              <select style={{ ...sel, padding:"5px 10px", fontSize:12 }}><option>Alle afdelinger</option>{DEPT_DATA.map(d=><option key={d.id}>{d.name}</option>)}</select>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {SICK_BY_USER.map((u,i)=>{
+                const max = SICK_BY_USER[0].days;
+                const pct = (u.days/max)*100;
+                return (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:14, paddingBottom:8, borderBottom:i<SICK_BY_USER.length-1?"1px solid var(--c-border)":"none" }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <span style={{ fontSize:13, fontWeight:600, color:"var(--c-text)" }}>{u.name}</span>
+                      <span style={{ fontSize:11.5, color:"var(--c-text-subtle)", marginLeft:8 }}>{u.dept}</span>
+                    </div>
+                    <div style={{ width:120, height:6, background:"var(--c-bg)", borderRadius:"var(--r-full)" }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background:"#ef4444", borderRadius:"var(--r-full)" }} />
+                    </div>
+                    <div style={{ width:60, fontSize:12, color:"var(--c-text-muted)", fontWeight:600, textAlign:"right" }}>{u.days} dag{u.days!==1?"e":""}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab==="export" && (
+        <>
+          <Card style={{ padding:18, marginBottom:14, display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+            <select style={sel} defaultValue="APPROVED">
+              <option value="">Alle statusser</option>
+              <option value="APPROVED">Godkendt</option>
+              <option value="PENDING">Afventer</option>
+              <option value="REJECTED">Afvist</option>
+              <option value="CANCELLED">Annulleret</option>
+            </select>
+            <select style={sel} defaultValue="all"><option value="all">Alle afdelinger</option>{DEPT_DATA.map(d=><option key={d.id}>{d.name}</option>)}</select>
+            <select style={sel} defaultValue="2026"><option>2026</option><option>2025</option><option>Alle år</option></select>
+            <span style={{ marginLeft:"auto", fontSize:12.5, color:"var(--c-text-subtle)" }}>{MGR_MOCK.length} ansøgninger matcher</span>
+          </Card>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+            <Card style={{ padding:"22px 24px" }}>
+              <div style={{ width:42, height:42, borderRadius:"var(--r-md)", background:"var(--c-primary-light)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}>
+                <Icon name="list" size={20} color="var(--c-primary)" />
+              </div>
+              <h3 style={{ fontSize:15, fontWeight:700, color:"var(--c-text)", marginBottom:6 }}>Ansøgningsoversigt</h3>
+              <p style={{ fontSize:13, color:"var(--c-text-muted)", marginBottom:18, lineHeight:1.55 }}>Én linje per ansøgning med totale feriedage, datointerval og status.</p>
+              <Btn icon="download" full>Download oversigt (24 rækker)</Btn>
+            </Card>
+            <Card style={{ padding:"22px 24px" }}>
+              <div style={{ width:42, height:42, borderRadius:"var(--r-md)", background:"rgba(124,58,237,.12)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}>
+                <Icon name="grid" size={20} color="#7c3aed" />
+              </div>
+              <h3 style={{ fontSize:15, fontWeight:700, color:"var(--c-text)", marginBottom:6 }}>Detaljeret eksport</h3>
+              <p style={{ fontSize:13, color:"var(--c-text-muted)", marginBottom:18, lineHeight:1.55 }}>Én linje per dato — egnet til lønsystemer og detaljeret bogføring.</p>
+              <Btn icon="download" variant="secondary" full>Download detaljeret (87 rækker)</Btn>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Settings ─────────────────────────────────────────────────── */
+function SettingsScreen() {
+  const [vis, setVis] = useState("ALL_EMPLOYEES");
+  const [reminderDays, setReminderDays] = useState(3);
+  const [saved, setSaved] = useState(false);
+  const save = () => { setSaved(true); setTimeout(()=>setSaved(false), 2200); };
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Indstillinger" sub="Systemændringer der påvirker alle brugere" />
+      <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+        <Card style={{ padding:"22px 24px" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:18 }}>
+            <div style={{ width:42, height:42, borderRadius:"var(--r-md)", background:"var(--c-primary-light)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Icon name="eye" size={20} color="var(--c-primary)" />
+            </div>
+            <div>
+              <p style={{ fontSize:15, fontWeight:700, color:"var(--c-text)" }}>Kalendersynlighed</p>
+              <p style={{ fontSize:12.5, color:"var(--c-text-muted)", marginTop:2 }}>Hvem må se den fælles kalender med alle medarbejderes ferier.</p>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {[{v:"ALL_EMPLOYEES",l:"Alle medarbejdere",d:"Alle med en konto kan se kalenderen"},{v:"MANAGEMENT_ONLY",l:"Kun ledelse",d:"Kun ledere og administratorer"}].map(opt=>(
+              <label key={opt.v} onClick={()=>setVis(opt.v)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", border:`1.5px solid ${vis===opt.v?"var(--c-primary)":"var(--c-border)"}`, borderRadius:"var(--r-md)", cursor:"pointer", background:vis===opt.v?"var(--c-primary-light)":"var(--c-surface)" }}>
+                <div style={{ width:18, height:18, borderRadius:"50%", border:`2px solid ${vis===opt.v?"var(--c-primary)":"var(--c-border)"}`, background:vis===opt.v?"var(--c-primary)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {vis===opt.v&&<div style={{ width:6, height:6, borderRadius:"50%", background:"white" }} />}
+                </div>
+                <div>
+                  <p style={{ fontSize:13.5, fontWeight:600, color:"var(--c-text)" }}>{opt.l}</p>
+                  <p style={{ fontSize:12, color:"var(--c-text-muted)", marginTop:1 }}>{opt.d}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Card>
+
+        <Card style={{ padding:"22px 24px" }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:14, marginBottom:14 }}>
+            <div style={{ width:42, height:42, borderRadius:"var(--r-md)", background:"rgba(245,158,11,.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Icon name="alert" size={20} color="#d97706" />
+            </div>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:15, fontWeight:700, color:"var(--c-text)" }}>Påmindelsestærskel til leder</p>
+              <p style={{ fontSize:12.5, color:"var(--c-text-muted)", marginTop:2 }}>Ledere får en notifikation hvis en afventende ansøgning er ældre end X dage. Sæt til 0 for at deaktivere.</p>
+            </div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginLeft:56 }}>
+            <button onClick={()=>setReminderDays(d=>Math.max(0,d-1))} style={{ width:36, height:36, border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", background:"var(--c-surface)", cursor:"pointer", fontSize:18, color:"var(--c-text)", display:"flex", alignItems:"center", justifyContent:"center" }}>−</button>
+            <span style={{ fontSize:24, fontWeight:800, color:"var(--c-text)", minWidth:42, textAlign:"center" }}>{reminderDays}</span>
+            <button onClick={()=>setReminderDays(d=>Math.min(30,d+1))} style={{ width:36, height:36, border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", background:"var(--c-surface)", cursor:"pointer", fontSize:18, color:"var(--c-text)", display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+            <span style={{ fontSize:13, color:"var(--c-text-muted)" }}>dage</span>
+            {reminderDays===0 && <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:"var(--r-full)", background:"rgba(217,119,6,.12)", color:"#d97706", marginLeft:8 }}>Deaktiveret</span>}
+          </div>
+          <p style={{ fontSize:11.5, color:"var(--c-text-subtle)", marginTop:12, marginLeft:56 }}>Tjekkes automatisk hver dag kl. 08:00.</p>
+        </Card>
+
+        <div style={{ display:"flex", justifyContent:"flex-end", gap:10, alignItems:"center" }}>
+          {saved && <span style={{ fontSize:12.5, color:"#059669", fontWeight:600, display:"inline-flex", alignItems:"center", gap:4 }}><Icon name="check" size={14} color="#059669" sw={2.5} /> Gemt</span>}
+          <Btn icon="check" onClick={save}>Gem indstillinger</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Profile ──────────────────────────────────────────────────── */
+function ProfileScreen({ userName }) {
+  const ACTIVITY = [
+    {icon:"check", text:"Sommerferie godkendt af leder", time:"15. apr.", color:"#10b981"},
+    {icon:"plus",  text:"Ny ansøgning indsendt (2 dage)", time:"10. maj", color:"var(--c-primary)"},
+    {icon:"x",     text:"Ansøgning annulleret", time:"2. mar.", color:"#ef4444"},
+  ];
+  return (
+    <div style={{ padding:"32px 36px", maxWidth:860, margin:"0 auto" }}>
+      <PageHeader title="Min profil" />
+      <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+        <Card style={{ padding:"28px 28px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:24 }}>
+            <div style={{ position:"relative" }}>
+              <Avatar name={userName} size={72} gradient="linear-gradient(135deg,var(--c-primary),#7c3aed)" />
+              <button style={{ position:"absolute", bottom:0, right:0, width:24, height:24, borderRadius:"50%", background:"var(--c-primary)", border:"2px solid var(--c-surface)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+                <Icon name="edit" size={11} color="white" sw={2} />
+              </button>
+            </div>
+            <div>
+              <p style={{ fontSize:20, fontWeight:800, color:"var(--c-text)", letterSpacing:"-0.02em" }}>{userName}</p>
+              <p style={{ fontSize:13, color:"var(--c-text-muted)", marginTop:3 }}>Administrator · Ledelsen</p>
+              <p style={{ fontSize:12, color:"var(--c-text-subtle)", marginTop:2 }}>anders@firma.dk</p>
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, paddingTop:20, borderTop:"1px solid var(--c-border)" }}>
+            <FieldInput id="pf-name"  label="Fulde navn"    value={userName} onChange={()=>{}} />
+            <FieldInput id="pf-email" label="Email"         value="anders@firma.dk" onChange={()=>{}} type="email" />
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <label style={{ fontSize:13, fontWeight:600, color:"var(--c-text)" }}>Afdeling</label>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", border:"1.5px solid var(--c-border)", borderRadius:"var(--r-md)", background:"var(--c-bg)", color:"var(--c-text-muted)", fontSize:14 }}>
+                <span style={{ color:"var(--c-text)", fontWeight:500 }}>Ledelsen</span>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <Icon name="shield" size={13} color="var(--c-text-subtle)" />
+                  <span style={{ fontSize:11, color:"var(--c-text-subtle)", fontWeight:600 }}>Kun admin</span>
+                </div>
+              </div>
+              <span style={{ fontSize:11.5, color:"var(--c-text-subtle)" }}>Afdeling ændres af administrator under <strong style={{ color:"var(--c-text-muted)" }}>Brugere</strong>.</span>
+            </div>
+            <FieldInput id="pf-phone" label="Telefon"       value="" placeholder="+45 " onChange={()=>{}} />
+          </div>
+          <div style={{ marginTop:14, display:"flex", justifyContent:"flex-end" }}>
+            <Btn icon="check">Gem ændringer</Btn>
+          </div>
+        </Card>
+        <Card style={{ padding:"22px 28px" }}>
+          <SectionLabel label="Skift adgangskode" />
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <FieldInput id="pf-pw1" label="Nuværende adgangskode" type="password" value="" onChange={()=>{}} />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <FieldInput id="pf-pw2" label="Ny adgangskode"         type="password" value="" onChange={()=>{}} />
+              <FieldInput id="pf-pw3" label="Bekræft ny adgangskode" type="password" value="" onChange={()=>{}} />
+            </div>
+          </div>
+          <div style={{ marginTop:14, display:"flex", justifyContent:"flex-end" }}>
+            <Btn icon="key" variant="secondary">Opdater adgangskode</Btn>
+          </div>
+        </Card>
+        <Card style={{ padding:"22px 28px" }}>
+          <SectionLabel label="Seneste aktivitet" />
+          <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+            {ACTIVITY.map((a,i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 0", borderBottom:i<ACTIVITY.length-1?"1px solid var(--c-border)":"none" }}>
+                <div style={{ width:30, height:30, borderRadius:8, background:a.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <Icon name={a.icon} size={14} color={a.color} sw={2} />
+                </div>
+                <span style={{ flex:1, fontSize:13, color:"var(--c-text)" }}>{a.text}</span>
+                <span style={{ fontSize:12, color:"var(--c-text-subtle)" }}>{a.time}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ══ APP ════════════════════════════════════════════════════════ */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "sidebarStyle": "gradient",
+  "primaryColor": "#2454ff",
+  "role": "ADMIN",
+  "darkMode": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userName] = useState("Anders Andersen");
+  const [screen, setScreen] = useState("dashboard");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", t.darkMode);
+  }, [t.darkMode]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--c-primary", t.primaryColor);
+    document.documentElement.style.setProperty("--c-primary-hover", shadeColor(t.primaryColor, -15));
+  }, [t.primaryColor]);
+
+  function shadeColor(hex, pct) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = Math.max(0, Math.min(255, ((n>>16)&0xff) + pct));
+    const g = Math.max(0, Math.min(255, ((n>>8)&0xff) + pct));
+    const b = Math.max(0, Math.min(255, (n&0xff) + pct));
+    return "#" + [r,g,b].map(x => x.toString(16).padStart(2,"0")).join("");
+  }
+
+  if (!loggedIn) return (
+    <>
+      <LoginScreen onLogin={() => setLoggedIn(true)} />
+      <TweaksPanel>
+        <TweakSection label="Primærfarve" />
+        <TweakColor label="Farve" value={t.primaryColor} options={["#4f46e5","#2454ff","#0d9488","#dc2626","#d97706","#7c3aed"]} onChange={v => setTweak("primaryColor", v)} />
+        <TweakSection label="Udseende" />
+        <TweakToggle label="Mørk tilstand" value={t.darkMode} onChange={v => setTweak("darkMode", v)} />
+      </TweaksPanel>
+    </>
+  );
+
+  function renderScreen() {
+    switch (screen) {
+      case "dashboard":   return <DashboardScreen setScreen={setScreen} userName={userName} />;
+      case "new":         return <NewRequestScreen setScreen={setScreen} />;
+      case "manager":     return <ManagerRequestsScreen setScreen={setScreen} />;
+      case "onbehalf":    return <OnBehalfScreen setScreen={setScreen} />;
+      case "shifts":      return <ShiftsScreen />;
+      case "calendar":    return <CalendarScreen />;
+      case "users":       return <UsersScreen />;
+      case "departments": return <DepartmentsScreen />;
+      case "holidays":    return <HolidaysScreen />;
+      case "reports":     return <ReportsScreen />;
+      case "settings":    return <SettingsScreen />;
+      case "profile":     return <ProfileScreen userName={userName} />;
+      default:            return null;
+    }
+  }
+
+  return (
+    <div style={{ display:"flex", height:"100vh", overflow:"hidden" }}>
+      <Sidebar screen={screen} setScreen={setScreen} role={t.role} userName={userName} onLogout={() => setLoggedIn(false)} sidebarStyle={t.sidebarStyle} darkMode={t.darkMode} />
+      <main style={{ flex:1, overflowY:"auto", background:"var(--c-bg)", display:"flex", flexDirection:"column" }}>
+        <TopBar darkMode={t.darkMode} onToggleDark={() => setTweak("darkMode", !t.darkMode)} />
+        <div style={{ flex:1 }}>{renderScreen()}</div>
+      </main>
+      <TweaksPanel>
+        <TweakSection label="Primærfarve" />
+        <TweakColor label="Farve" value={t.primaryColor} options={["#4f46e5","#2454ff","#0d9488","#dc2626","#d97706","#7c3aed"]} onChange={v => setTweak("primaryColor", v)} />
+        <TweakSection label="Udseende" />
+        <TweakToggle label="Mørk tilstand" value={t.darkMode} onChange={v => setTweak("darkMode", v)} />
+        <TweakSection label="Sidebar" />
+        <TweakRadio label="Stil" value={t.sidebarStyle} options={["dark","light","gradient"]} onChange={v => setTweak("sidebarStyle", v)} />
+        <TweakSection label="Demo-rolle" />
+        <TweakSelect label="Rolle" value={t.role} options={["EMPLOYEE","MANAGER","ADMIN"]} onChange={v => setTweak("role", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
