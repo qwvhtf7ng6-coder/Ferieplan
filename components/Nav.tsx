@@ -98,11 +98,6 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
           })}
         </nav>
 
-        {/* Notification bell in sidebar */}
-        <div className="px-3 pt-1">
-          <NotificationBell variant="sidebar" />
-        </div>
-
         {/* Footer */}
         <div className="border-t border-white/[0.07] px-3 py-3 space-y-0.5">
           <Link
