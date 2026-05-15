@@ -10,6 +10,7 @@ import {
   Home, Plus, ClipboardList, Calendar, Users, Building2, Flag,
   BarChart3, Settings, User, LogOut, Menu, X, CalendarDays,
 } from "lucide-react";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
 
 interface NavProps {
   role: string;
@@ -97,6 +98,11 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
           })}
         </nav>
 
+        {/* Notification bell in sidebar */}
+        <div className="px-3 pt-1">
+          <NotificationBell variant="sidebar" />
+        </div>
+
         {/* Footer */}
         <div className="border-t border-white/[0.07] px-3 py-3 space-y-0.5">
           <Link
@@ -117,13 +123,16 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
               <p className="text-white/40 text-[11px] truncate capitalize">{role.toLowerCase()}</p>
             </div>
           </Link>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center gap-3 px-3 py-[9px] rounded-md text-[13px] text-white/50 hover:text-white hover:bg-white/[0.07] transition-colors"
-          >
-            <LogOut size={16} />
-            <span>Log ud</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex-1 flex items-center gap-3 px-3 py-[9px] rounded-md text-[13px] text-white/50 hover:text-white hover:bg-white/[0.07] transition-colors"
+            >
+              <LogOut size={16} />
+              <span>Log ud</span>
+            </button>
+            <DarkModeToggle variant="sidebar" />
+          </div>
         </div>
       </aside>
 
@@ -137,7 +146,8 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
           </div>
           <span className="font-extrabold text-text text-[14px]">WorkPlan</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <DarkModeToggle className="text-text-muted hover:text-text hover:bg-bg" />
           <NotificationBell variant="topbar" />
           <button
             onClick={() => setMenuOpen(!menuOpen)}
