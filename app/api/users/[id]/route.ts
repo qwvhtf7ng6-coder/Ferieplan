@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { isValidRole } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -44,10 +45,12 @@ export async function PATCH(
   const existing = await prisma.user.findFirst({ where: { email, NOT: { id } } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
+  const safeRole = isValidRole(role) ? role : "EMPLOYEE";
+
   const data: any = {
     name: name.trim(),
-    email: email.trim(),
-    role: role || "EMPLOYEE",
+    email: email.trim().toLowerCase(),
+    role: safeRole,
     departmentId: departmentId || null,
   };
 

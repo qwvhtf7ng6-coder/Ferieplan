@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager, isAdmin } from "@/lib/permissions";
+import { isValidTime, isValidHexColor } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -36,6 +37,10 @@ export async function POST(req: NextRequest) {
   if (!name || !startTime || !endTime || !departmentId) {
     return NextResponse.json({ error: "Navn, starttid, sluttid og afdeling er påkrævet" }, { status: 400 });
   }
+  if (!isValidTime(startTime) || !isValidTime(endTime)) {
+    return NextResponse.json({ error: "Ugyldigt tidsformat — brug HH:MM (fx 08:00)" }, { status: 400 });
+  }
+  const safeColor = isValidHexColor(color) ? color : "#3b82f6";
 
   // Non-admin managers can only create for their own department
   if (!isAdmin(user.role) && departmentId !== user.departmentId) {
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       startTime,
       endTime,
-      color: color || "#3b82f6",
+      color: safeColor,
       departmentId,
       dayTimeRules: dayTimeRules ? JSON.stringify(dayTimeRules) : null,
     },

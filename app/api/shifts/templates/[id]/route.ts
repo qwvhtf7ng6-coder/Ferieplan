@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager, isAdmin } from "@/lib/permissions";
+import { isValidTime, isValidHexColor } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -18,6 +19,10 @@ export async function PATCH(
   if (!name || !startTime || !endTime) {
     return NextResponse.json({ error: "Navn, starttid og sluttid er påkrævet" }, { status: 400 });
   }
+  if (!isValidTime(startTime) || !isValidTime(endTime)) {
+    return NextResponse.json({ error: "Ugyldigt tidsformat — brug HH:MM (fx 08:00)" }, { status: 400 });
+  }
+  const safeColor = isValidHexColor(color) ? color : "#3b82f6";
 
   const existing = await prisma.shiftTemplate.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
@@ -32,7 +37,7 @@ export async function PATCH(
       name: name.trim(),
       startTime,
       endTime,
-      color: color || "#3b82f6",
+      color: safeColor,
       dayTimeRules: dayTimeRules ? JSON.stringify(dayTimeRules) : null,
     },
   });

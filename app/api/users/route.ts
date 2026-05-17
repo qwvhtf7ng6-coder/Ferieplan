@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/permissions";
+import { isValidRole } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -22,16 +23,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Adgangskode skal være mindst 8 tegn" }, { status: 400 });
   }
 
+  const safeRole = isValidRole(role) ? role : "EMPLOYEE";
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
   const hashed = await bcrypt.hash(password, 10);
   const newUser = await prisma.user.create({
     data: {
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
       password: hashed,
-      role: role || "EMPLOYEE",
+      role: safeRole,
       departmentId: departmentId || null,
     },
   });

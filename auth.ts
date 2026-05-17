@@ -9,7 +9,7 @@ const LOCKOUT_MINUTES = 15;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 }, // 8 timers session
   pages: {
     signIn: "/login",
   },
@@ -77,9 +77,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Første login: gem fra user-objektet
         token.id = user.id;
         token.role = (user as any).role;
         token.departmentId = (user as any).departmentId;
+      } else if (token.id) {
+        // Efterfølgende requests: hent altid frisk fra DB
+        // så ændringer i rolle/afdeling træder i kraft øjeblikkeligt
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, departmentId: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.departmentId = dbUser.departmentId;
+        } else {
+          // Bruger slettet — invalider token
+          return null as any;
+        }
       }
       return token;
     },

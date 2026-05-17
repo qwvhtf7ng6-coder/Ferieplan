@@ -30,13 +30,15 @@ export async function POST(req: NextRequest) {
   if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { year } = await req.json();
-  if (!year || isNaN(parseInt(year))) {
-    return NextResponse.json({ error: "Ugyldigt år" }, { status: 400 });
+  const parsedYear = parseInt(year, 10);
+
+  if (!parsedYear || isNaN(parsedYear) || parsedYear < 2000 || parsedYear > 2100) {
+    return NextResponse.json({ error: "Ugyldigt år — skal være mellem 2000 og 2100" }, { status: 400 });
   }
 
-  // Hent fra Nager.Date
+  // Hent fra Nager.Date — brug kun det saniterede heltal, aldrig rå user-input
   const res = await fetch(
-    `https://date.nager.at/api/v3/PublicHolidays/${year}/DK`,
+    `https://date.nager.at/api/v3/PublicHolidays/${parsedYear}/DK`,
     { headers: { Accept: "application/json" }, next: { revalidate: 86400 } }
   );
 
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    year: parseInt(year),
+    year: parsedYear,
     inserted,
     skipped,
     total: filtered.length,
