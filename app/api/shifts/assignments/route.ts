@@ -88,11 +88,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Medarbejder, vagt og dato er påkrævet" }, { status: 400 });
   }
 
+  // Validér dato
+  if (isNaN(Date.parse(date))) {
+    return NextResponse.json({ error: "Ugyldig dato" }, { status: 400 });
+  }
+
   // Verify template belongs to manager's department
   const template = await prisma.shiftTemplate.findUnique({ where: { id: templateId } });
   if (!template) return NextResponse.json({ error: "Vagtskabelon ikke fundet" }, { status: 404 });
   if (!isAdmin(user.role) && template.departmentId !== user.departmentId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Verify userId tilhører manager's afdeling
+  if (!isAdmin(user.role)) {
+    const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
+    if (!targetUser || targetUser.departmentId !== user.departmentId) {
+      return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
+    }
   }
 
   // Check if user has approved absence on this date

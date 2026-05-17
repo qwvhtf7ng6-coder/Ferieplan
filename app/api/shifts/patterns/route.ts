@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isManager, isAdmin } from "@/lib/permissions";
+import { isValidRecurrenceType, isValidIntervalWeeks, isValidDateString } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { generateAssignmentsFromPattern } from "@/lib/shift-patterns";
 
@@ -40,18 +41,47 @@ export async function POST(req: NextRequest) {
   if (!name || !departmentId || !templateId || !userId || !startDate || !endDate || !weekdayRules) {
     return NextResponse.json({ error: "Manglende påkrævede felter" }, { status: 400 });
   }
+
+  // Scope: manager kan kun oprette i egen afdeling
   if (!isAdmin(user.role) && departmentId !== user.departmentId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Validér at userId tilhører departmentId
+  if (!isAdmin(user.role)) {
+    const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
+    if (!targetUser || targetUser.departmentId !== user.departmentId) {
+      return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
+    }
+  }
+
+  // Validér recurrenceType
+  const safeRecurrenceType = isValidRecurrenceType(recurrenceType) ? recurrenceType : "weekly";
+
+  // Validér intervalWeeks
+  const safeIntervalWeeks = isValidIntervalWeeks(intervalWeeks) ? intervalWeeks : 1;
+
+  // Validér datoer
+  if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+    return NextResponse.json({ error: "Ugyldig dato" }, { status: 400 });
+  }
+  if (new Date(startDate) > new Date(endDate)) {
+    return NextResponse.json({ error: "Startdato skal være før slutdato" }, { status: 400 });
+  }
+
   const pattern = await prisma.shiftPattern.create({
     data: {
-      name: name.trim(), departmentId, templateId, userId,
-      startDate: new Date(startDate), endDate: new Date(endDate),
-      recurrenceType: recurrenceType || "weekly",
-      intervalWeeks: intervalWeeks || 1,
+      name: name.trim(),
+      departmentId,
+      templateId,
+      userId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      recurrenceType: safeRecurrenceType,
+      intervalWeeks: safeIntervalWeeks,
       weekdayRules: typeof weekdayRules === "string" ? weekdayRules : JSON.stringify(weekdayRules),
-      note: note || null, active: true,
+      note: note ? String(note).slice(0, 500) : null,
+      active: true,
     },
     include: {
       template: { select: { id: true, name: true, color: true, startTime: true, endTime: true } },

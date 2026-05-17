@@ -3,6 +3,18 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// ⚠️  VIGTIGT: seed.ts bruges KUN til lokal udvikling og test.
+// Kør ALDRIG seed mod en produktionsdatabase.
+// Skift adgangskoderne i SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD
+// miljøvariabler, eller skift dem manuelt efter seeding.
+const ADMIN_PW = process.env.SEED_ADMIN_PASSWORD ?? "admin123";
+const USER_PW  = process.env.SEED_USER_PASSWORD  ?? "user123";
+
+if (process.env.NODE_ENV === "production") {
+  console.error("⛔ seed.ts må ikke køres i produktion. Afbryder.");
+  process.exit(1);
+}
+
 async function main() {
   // Departments
   const devDept = await prisma.department.upsert({
@@ -17,8 +29,8 @@ async function main() {
   });
 
   // Users
-  const adminPw = await bcrypt.hash("admin123", 10);
-  const userPw = await bcrypt.hash("user123", 10);
+  const adminPw = await bcrypt.hash(ADMIN_PW, 10);
+  const userPw = await bcrypt.hash(USER_PW, 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@firma.dk" },

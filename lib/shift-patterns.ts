@@ -9,8 +9,16 @@ export async function generateAssignmentsFromPattern(pattern: {
   intervalWeeks: number;
   weekdayRules: string;
   note: string | null;
-}) {
-  const rules = JSON.parse(pattern.weekdayRules);
+}): Promise<number> {
+  let rules: unknown;
+  try {
+    rules = JSON.parse(pattern.weekdayRules);
+  } catch {
+    // Korrupt weekdayRules — generer ingen vagter frem for at crashe
+    console.error(`[shift-patterns] Ugyldig weekdayRules JSON for pattern (userId=${pattern.userId})`);
+    return 0;
+  }
+
   const dates: Date[] = [];
 
   const start = new Date(pattern.startDate);
@@ -19,8 +27,8 @@ export async function generateAssignmentsFromPattern(pattern: {
   end.setHours(23, 59, 59, 999);
 
   if (pattern.recurrenceType === "weekly") {
-    // rules: number[] — ugedagsnumre (0=søn, 1=man ... 6=lør)
-    const weekdays: number[] = rules;
+    const weekdays = rules as number[];
+    if (!Array.isArray(weekdays)) return 0;
     const cur = new Date(start);
     while (cur <= end) {
       if (weekdays.includes(cur.getDay())) dates.push(new Date(cur));
@@ -28,25 +36,22 @@ export async function generateAssignmentsFromPattern(pattern: {
     }
 
   } else if (pattern.recurrenceType === "nth_weekday") {
-    // rules: { weekday: number, every: number, firstOccurrence: string }
-    // firstOccurrence er det brugervalgte anker — cyklus 0 starter her.
-    // Alle forekomster af ugedagen i perioden der falder på
-    // firstOccurrence + N*7 dage (for heltal N >= 0) inkluderes.
     const { weekday, every, firstOccurrence } =
       rules as { weekday: number; every: number; firstOccurrence: string };
+    if (
+      typeof weekday !== "number" ||
+      typeof every !== "number" || every < 1 ||
+      typeof firstOccurrence !== "string"
+    ) return 0;
 
-    // Anker: middagstid for at undgå sommertid-problemer
     const anchor = new Date(firstOccurrence + "T12:00:00");
     anchor.setHours(0, 0, 0, 0);
-
     const intervalMs = every * 7 * 24 * 60 * 60 * 1000;
 
     const cur = new Date(start);
     while (cur <= end) {
       if (cur.getDay() === weekday) {
-        // Er denne dag et gyldigt trin fra ankeret?
         const diffMs = cur.getTime() - anchor.getTime();
-        // diffMs skal være ikke-negativt og præcist deleligt med intervalMs
         if (diffMs >= 0 && diffMs % intervalMs === 0) {
           dates.push(new Date(cur));
         }
@@ -55,8 +60,10 @@ export async function generateAssignmentsFromPattern(pattern: {
     }
 
   } else if (pattern.recurrenceType === "interval") {
-    // rules: { weekIndex: number, weekdays: number[] }[]
-    const cycleLength = pattern.intervalWeeks;
+    const ruleArr = rules as { weekIndex: number; weekdays: number[] }[];
+    if (!Array.isArray(ruleArr)) return 0;
+
+    const cycleLength = Math.max(1, Math.min(8, pattern.intervalWeeks));
     const cycleAnchor = new Date(start);
     const dow = cycleAnchor.getDay();
     const daysFromMon = dow === 0 ? 6 : dow - 1;
@@ -67,10 +74,10 @@ export async function generateAssignmentsFromPattern(pattern: {
     while (cur <= end) {
       const diffDays = Math.floor((cur.getTime() - cycleAnchor.getTime()) / 86400000);
       const weekIndex = Math.floor(diffDays / 7) % cycleLength;
-      const rule = (rules as { weekIndex: number; weekdays: number[] }[]).find(
-        (r) => r.weekIndex === weekIndex
-      );
-      if (rule && rule.weekdays.includes(cur.getDay())) dates.push(new Date(cur));
+      const rule = ruleArr.find((r) => r.weekIndex === weekIndex);
+      if (rule && Array.isArray(rule.weekdays) && rule.weekdays.includes(cur.getDay())) {
+        dates.push(new Date(cur));
+      }
       cur.setDate(cur.getDate() + 1);
     }
   }
