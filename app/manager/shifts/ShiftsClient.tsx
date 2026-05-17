@@ -141,8 +141,9 @@ interface PatternFormData {
   intervalWeeks: number;
   weeklyDays: number[];
   intervalRules: { weekIndex: number; weekdays: number[] }[];
-  nthWeekday: number;   // ugedag (0=søn...6=lør)
-  nthEvery: number;     // hver N'te forekomst
+  nthWeekday: number;      // ugedag (0=søn...6=lør)
+  nthEvery: number;        // hver N'te forekomst
+  nthFirstOccurrence: string; // dato for første ønskede forekomst (YYYY-MM-DD)
   rangeMode: "month" | "months" | "custom";
   monthsCount: number;
   startDate: string; endDate: string; note: string;
@@ -155,8 +156,9 @@ function defaultPatternForm(): PatternFormData {
     recurrenceType: "weekly", intervalWeeks: 2,
     weeklyDays: [1],
     intervalRules: [{ weekIndex: 0, weekdays: [1] }, { weekIndex: 1, weekdays: [3] }],
-    nthWeekday: 5,   // fredag som standard
-    nthEvery: 2,     // hver 2. som standard
+    nthWeekday: 5,
+    nthEvery: 2,
+    nthFirstOccurrence: "",  // sættes af brugeren
     rangeMode: "month", monthsCount: 1,
     startDate: format(startOfMonth(today), "yyyy-MM-dd"),
     endDate: format(endOfMonth(today), "yyyy-MM-dd"),
@@ -292,7 +294,8 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
               <label className="block text-xs font-semibold text-text-muted mb-2">Ugedag</label>
               <div className="flex gap-1.5 flex-wrap">
                 {WEEKDAYS.map(({ label, value: dow }) => (
-                  <button key={dow} type="button" onClick={() => set({ nthWeekday: dow })}
+                  <button key={dow} type="button"
+                    onClick={() => set({ nthWeekday: dow, nthFirstOccurrence: "" })}
                     className={cn("w-12 py-2 rounded-[10px] text-[12px] font-bold border transition-colors",
                       form.nthWeekday === dow ? "bg-primary text-white border-primary" : "bg-surface text-text-muted border-border hover:border-primary")}>
                     {label}
@@ -300,6 +303,7 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
                 ))}
               </div>
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-text-muted mb-2">
                 Hver <span className="text-primary">{form.nthEvery}.</span> {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()}
@@ -312,9 +316,40 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
                   className="w-8 h-8 rounded-md border border-border bg-surface text-text-muted hover:text-text flex items-center justify-center text-sm font-bold">+</button>
                 <span className="text-[13px] text-text-muted ml-1">uger imellem</span>
               </div>
-              <p className="text-[12px] text-text-subtle mt-2">
-                Eksempel: hver {form.nthEvery}. {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()} i perioden
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-text-muted mb-1">
+                Første {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()} der tælles fra
+              </label>
+              <p className="text-[12px] text-text-subtle mb-2">
+                Vælg den konkrete dato for den første vagt i cyklussen. Kun {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()}e er gyldige.
               </p>
+              <input
+                type="date"
+                value={form.nthFirstOccurrence}
+                onChange={(e) => {
+                  const d = e.target.value;
+                  // Validér at datoen matcher den valgte ugedag
+                  if (d) {
+                    const dow = new Date(d + "T12:00:00").getDay();
+                    if (dow !== form.nthWeekday) return; // ignorer ugyldige datoer
+                  }
+                  set({ nthFirstOccurrence: d });
+                }}
+                className="border border-border rounded-[10px] px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary w-48"
+              />
+              {form.nthFirstOccurrence && (
+                <p className="mt-1.5 text-[12px] text-primary font-semibold">
+                  ✓ Cyklus starter fra{" "}
+                  {format(parseISO(form.nthFirstOccurrence), "EEEE d. MMMM yyyy", { locale: da })}
+                </p>
+              )}
+              {!form.nthFirstOccurrence && (
+                <p className="mt-1.5 text-[12px] text-warning-text">
+                  Vælg en dato — kun {WEEKDAY_NAMES[form.nthWeekday].toLowerCase()}e kan vælges
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -416,7 +451,7 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
 
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onSubmit}
-          disabled={loading || !form.name || !form.userId || !form.templateId}
+          disabled={loading || !form.name || !form.userId || !form.templateId || (form.recurrenceType === "nth_weekday" && !form.nthFirstOccurrence)}
           className="flex-1 bg-primary text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 transition-colors">
           {loading ? "Gemmer og genererer vagter…" : submitLabel}
         </button>
@@ -560,7 +595,12 @@ export default function ShiftsClient({
     if (patternForm.recurrenceType === "weekly") {
       weekdayRules = patternForm.weeklyDays;
     } else if (patternForm.recurrenceType === "nth_weekday") {
-      weekdayRules = { weekday: patternForm.nthWeekday, every: patternForm.nthEvery };
+      if (!patternForm.nthFirstOccurrence) {
+        setPatternError(`Vælg den første ${WEEKDAY_NAMES[patternForm.nthWeekday].toLowerCase()} cyklussen skal starte fra.`);
+        setPatternLoading(false);
+        return;
+      }
+      weekdayRules = { weekday: patternForm.nthWeekday, every: patternForm.nthEvery, firstOccurrence: patternForm.nthFirstOccurrence };
     } else {
       weekdayRules = patternForm.intervalRules;
     }
@@ -606,8 +646,11 @@ export default function ShiftsClient({
           .map((d: number) => WEEKDAYS.find((w) => w.value === d)?.label ?? d).join(", ");
         return `Hver uge: ${days}`;
       } else if (p.recurrenceType === "nth_weekday") {
-        const { weekday, every } = rules as { weekday: number; every: number };
-        return `Hver ${every}. ${WEEKDAY_NAMES[weekday].toLowerCase()}`;
+        const { weekday, every, firstOccurrence } = rules as { weekday: number; every: number; firstOccurrence: string };
+        const anchorStr = firstOccurrence
+          ? ` fra ${format(parseISO(firstOccurrence), "d. MMM yyyy", { locale: da })}`
+          : "";
+        return `Hver ${every}. ${WEEKDAY_NAMES[weekday].toLowerCase()}${anchorStr}`;
       } else {
         return (rules as { weekIndex: number; weekdays: number[] }[]).map((r) => {
           const days = r.weekdays.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b))

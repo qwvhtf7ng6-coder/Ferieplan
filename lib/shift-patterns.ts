@@ -28,22 +28,31 @@ export async function generateAssignmentsFromPattern(pattern: {
     }
 
   } else if (pattern.recurrenceType === "nth_weekday") {
-    // rules: { weekday: number, every: number }
-    // Eksempel: { weekday: 5, every: 4 } = hver 4. fredag
-    const { weekday, every } = rules as { weekday: number; every: number };
+    // rules: { weekday: number, every: number, firstOccurrence: string }
+    // firstOccurrence er det brugervalgte anker — cyklus 0 starter her.
+    // Alle forekomster af ugedagen i perioden der falder på
+    // firstOccurrence + N*7 dage (for heltal N >= 0) inkluderes.
+    const { weekday, every, firstOccurrence } =
+      rules as { weekday: number; every: number; firstOccurrence: string };
 
-    // Saml alle forekomster af ugedagen i perioden
-    const occurrences: Date[] = [];
+    // Anker: middagstid for at undgå sommertid-problemer
+    const anchor = new Date(firstOccurrence + "T12:00:00");
+    anchor.setHours(0, 0, 0, 0);
+
+    const intervalMs = every * 7 * 24 * 60 * 60 * 1000;
+
     const cur = new Date(start);
     while (cur <= end) {
-      if (cur.getDay() === weekday) occurrences.push(new Date(cur));
+      if (cur.getDay() === weekday) {
+        // Er denne dag et gyldigt trin fra ankeret?
+        const diffMs = cur.getTime() - anchor.getTime();
+        // diffMs skal være ikke-negativt og præcist deleligt med intervalMs
+        if (diffMs >= 0 && diffMs % intervalMs === 0) {
+          dates.push(new Date(cur));
+        }
+      }
       cur.setDate(cur.getDate() + 1);
     }
-
-    // Vælg hver N'te forekomst (0-indekseret: indeks 0, N, 2N, ...)
-    occurrences.forEach((d, i) => {
-      if (i % every === 0) dates.push(d);
-    });
 
   } else if (pattern.recurrenceType === "interval") {
     // rules: { weekIndex: number, weekdays: number[] }[]
