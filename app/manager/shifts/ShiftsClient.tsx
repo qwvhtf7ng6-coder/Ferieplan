@@ -243,7 +243,13 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
         <SectionLabel>Gentagelsestype</SectionLabel>
         <div className="flex gap-2 mt-2 flex-wrap">
           {(["weekly", "nth_weekday", "interval"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => set({ recurrenceType: t })}
+            <button key={t} type="button" onClick={() => {
+              set({ recurrenceType: t });
+              // nth_weekday kræver præcis periodestyring — skift automatisk til custom
+              if (t === "nth_weekday" && form.rangeMode !== "custom") {
+                set({ recurrenceType: t, rangeMode: "custom" });
+              }
+            }}
               className={cn("px-4 py-2 rounded-[10px] text-[13px] font-semibold border transition-colors",
                 form.recurrenceType === t ? "bg-primary text-white border-primary" : "bg-surface text-text-muted border-border hover:border-primary hover:text-text")}>
               {t === "weekly" ? "Fast ugedag" : t === "nth_weekday" ? "Hver N. ugedag" : "Interval (skiftehold)"}
@@ -501,8 +507,11 @@ export default function ShiftsClient({
   const [patternForm, setPatternForm] = useState<PatternFormData>(defaultPatternForm());
   const [patternLoading, setPatternLoading] = useState(false);
   const [patternError, setPatternError] = useState("");
+  const [patternSuccess, setPatternSuccess] = useState<string | null>(null); // fx "7 vagter genereret"
+  const [editPatternId, setEditPatternId] = useState<string | null>(null);
   const [deletePatternTarget, setDeletePatternTarget] = useState<{ id: string; name: string } | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [regenerateSuccess, setRegenerateSuccess] = useState<Record<string, number>>({}); // patternId → antal
 
   const deptEmployees = employees.filter((e) => !selectedDeptId || e.departmentId === selectedDeptId);
   const deptTemplates = templates.filter((t) => !selectedDeptId || t.departmentId === selectedDeptId);
@@ -590,13 +599,22 @@ export default function ShiftsClient({
   }
 
   async function createPattern() {
-    setPatternLoading(true); setPatternError("");
+    setPatternLoading(true); setPatternError(""); setPatternSuccess(null);
     let weekdayRules: unknown;
     if (patternForm.recurrenceType === "weekly") {
       weekdayRules = patternForm.weeklyDays;
     } else if (patternForm.recurrenceType === "nth_weekday") {
       if (!patternForm.nthFirstOccurrence) {
         setPatternError(`Vælg den første ${WEEKDAY_NAMES[patternForm.nthWeekday].toLowerCase()} cyklussen skal starte fra.`);
+        setPatternLoading(false);
+        return;
+      }
+      // Validér at firstOccurrence er inden for perioden
+      const anchor = parseISO(patternForm.nthFirstOccurrence);
+      const start = parseISO(patternForm.startDate);
+      const end = parseISO(patternForm.endDate);
+      if (anchor < start || anchor > end) {
+        setPatternError(`Den første ${WEEKDAY_NAMES[patternForm.nthWeekday].toLowerCase()} (${format(anchor, "d. MMM yyyy", { locale: da })}) skal ligge inden for perioden (${format(start, "d. MMM", { locale: da })} – ${format(end, "d. MMM yyyy", { locale: da })}).`);
         setPatternLoading(false);
         return;
       }
@@ -614,7 +632,12 @@ export default function ShiftsClient({
       }),
     });
     if (res.ok) {
-      setShowPatternForm(false); setPatternForm(defaultPatternForm()); loadPatterns(); loadAssignments();
+      const data = await res.json();
+      setShowPatternForm(false);
+      setEditPatternId(null);
+      setPatternForm(defaultPatternForm());
+      setPatternSuccess(`✓ Mønster oprettet — ${data.generated ?? 0} vagt${(data.generated ?? 0) !== 1 ? "er" : ""} genereret`);
+      loadPatterns(); loadAssignments();
     } else {
       const d = await res.json(); setPatternError(d.error || "Fejl ved oprettelse");
     }
@@ -634,11 +657,97 @@ export default function ShiftsClient({
 
   async function regeneratePattern(p: ShiftPattern) {
     setRegeneratingId(p.id);
-    await fetch(`/api/shifts/patterns/${p.id}`, { method: "POST" });
+    const res = await fetch(`/api/shifts/patterns/${p.id}`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setRegenerateSuccess((prev) => ({ ...prev, [p.id]: data.generated ?? 0 }));
+      setTimeout(() => setRegenerateSuccess((prev) => { const n = { ...prev }; delete n[p.id]; return n; }), 4000);
+    }
     setRegeneratingId(null); loadAssignments();
   }
 
-  function describePattern(p: ShiftPattern) {
+  function startEditPattern(p: ShiftPattern) {
+    const rules = JSON.parse(p.weekdayRules);
+    let form: PatternFormData = {
+      ...defaultPatternForm(),
+      name: p.name,
+      userId: p.userId,
+      templateId: p.templateId,
+      recurrenceType: p.recurrenceType as PatternFormData["recurrenceType"],
+      intervalWeeks: p.intervalWeeks,
+      note: p.note || "",
+      rangeMode: "custom",
+      startDate: format(parseISO(p.startDate), "yyyy-MM-dd"),
+      endDate: format(parseISO(p.endDate), "yyyy-MM-dd"),
+    };
+    if (p.recurrenceType === "weekly") {
+      form.weeklyDays = rules as number[];
+    } else if (p.recurrenceType === "nth_weekday") {
+      form.nthWeekday = rules.weekday;
+      form.nthEvery = rules.every;
+      form.nthFirstOccurrence = rules.firstOccurrence || "";
+    } else if (p.recurrenceType === "interval") {
+      form.intervalRules = rules;
+      form.intervalWeeks = p.intervalWeeks;
+    }
+    setPatternForm(form);
+    setEditPatternId(p.id);
+    setPatternError("");
+    setPatternSuccess(null);
+    setShowPatternForm(true);
+    // Scroll til formularen
+    setTimeout(() => document.getElementById("pattern-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  async function updatePattern() {
+    if (!editPatternId) return;
+    setPatternLoading(true); setPatternError(""); setPatternSuccess(null);
+    let weekdayRules: unknown;
+    if (patternForm.recurrenceType === "weekly") {
+      weekdayRules = patternForm.weeklyDays;
+    } else if (patternForm.recurrenceType === "nth_weekday") {
+      if (!patternForm.nthFirstOccurrence) {
+        setPatternError(`Vælg den første ${WEEKDAY_NAMES[patternForm.nthWeekday].toLowerCase()} cyklussen skal starte fra.`);
+        setPatternLoading(false); return;
+      }
+      const anchor = parseISO(patternForm.nthFirstOccurrence);
+      const start = parseISO(patternForm.startDate);
+      const end = parseISO(patternForm.endDate);
+      if (anchor < start || anchor > end) {
+        setPatternError(`Den første ${WEEKDAY_NAMES[patternForm.nthWeekday].toLowerCase()} skal ligge inden for perioden.`);
+        setPatternLoading(false); return;
+      }
+      weekdayRules = { weekday: patternForm.nthWeekday, every: patternForm.nthEvery, firstOccurrence: patternForm.nthFirstOccurrence };
+    } else {
+      weekdayRules = patternForm.intervalRules;
+    }
+    // Opdater mønster og regenerer vagter
+    const patchRes = await fetch(`/api/shifts/patterns/${editPatternId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: patternForm.name,
+        note: patternForm.note || null,
+        startDate: patternForm.startDate,
+        endDate: patternForm.endDate,
+        recurrenceType: patternForm.recurrenceType,
+        intervalWeeks: patternForm.intervalWeeks,
+        weekdayRules,
+      }),
+    });
+    if (!patchRes.ok) {
+      const d = await patchRes.json(); setPatternError(d.error || "Fejl ved opdatering");
+      setPatternLoading(false); return;
+    }
+    // Regenerer vagter
+    const regenRes = await fetch(`/api/shifts/patterns/${editPatternId}`, { method: "POST" });
+    const regenData = regenRes.ok ? await regenRes.json() : { generated: 0 };
+    setShowPatternForm(false);
+    setEditPatternId(null);
+    setPatternForm(defaultPatternForm());
+    setPatternSuccess(`✓ Mønster opdateret — ${regenData.generated ?? 0} vagt${(regenData.generated ?? 0) !== 1 ? "er" : ""} regenereret`);
+    loadPatterns(); loadAssignments();
+    setPatternLoading(false);
+  }
     try {
       const rules = JSON.parse(p.weekdayRules);
       if (p.recurrenceType === "weekly") {
@@ -986,12 +1095,22 @@ export default function ShiftsClient({
             </div>
 
             {showPatternForm && (
-              <div className="bg-bg border border-border rounded-xl p-5 mb-5">
-                <h3 className="text-[14px] font-bold text-text mb-4">Nyt gentagelsesmønster</h3>
+              <div id="pattern-form" className="bg-bg border border-border rounded-xl p-5 mb-5">
+                <h3 className="text-[14px] font-bold text-text mb-4">
+                  {editPatternId ? "Rediger gentagelsesmønster" : "Nyt gentagelsesmønster"}
+                </h3>
                 <PatternForm form={patternForm} onChange={setPatternForm} employees={deptEmployees} templates={deptTemplates}
-                  loading={patternLoading} error={patternError} onSubmit={createPattern}
-                  onCancel={() => { setShowPatternForm(false); setPatternError(""); }}
-                  submitLabel="Opret mønster og generer vagter" />
+                  loading={patternLoading} error={patternError}
+                  onSubmit={editPatternId ? updatePattern : createPattern}
+                  onCancel={() => { setShowPatternForm(false); setPatternError(""); setEditPatternId(null); }}
+                  submitLabel={editPatternId ? "Gem ændringer og regenerer vagter" : "Opret mønster og generer vagter"} />
+              </div>
+            )}
+
+            {patternSuccess && !showPatternForm && (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-success-bg border border-[rgba(5,150,105,.2)] text-success-text text-[13px] font-semibold mb-3">
+                {patternSuccess}
+                <button onClick={() => setPatternSuccess(null)} className="ml-auto text-success-text hover:opacity-70">×</button>
               </div>
             )}
 
@@ -1024,7 +1143,15 @@ export default function ShiftsClient({
                         title="Regenerer vagter fra mønster"
                         className="text-xs text-text-muted hover:text-primary hover:bg-primary-light px-2 py-1.5 rounded transition-colors flex items-center gap-1">
                         <RefreshCw size={12} className={regeneratingId === p.id ? "animate-spin" : ""} />
-                        <span className="hidden sm:inline">Regenerer</span>
+                        <span className="hidden sm:inline">
+                          {regenerateSuccess[p.id] !== undefined
+                            ? `✓ ${regenerateSuccess[p.id]} vagt${regenerateSuccess[p.id] !== 1 ? "er" : ""}`
+                            : "Regenerer"}
+                        </span>
+                      </button>
+                      <button onClick={() => startEditPattern(p)}
+                        className="text-xs text-primary hover:bg-primary-light px-2 py-1.5 rounded transition-colors">
+                        Rediger
                       </button>
                       <button onClick={() => togglePatternActive(p)}
                         className="text-xs text-text-muted hover:text-text hover:bg-bg px-2 py-1.5 rounded transition-colors">

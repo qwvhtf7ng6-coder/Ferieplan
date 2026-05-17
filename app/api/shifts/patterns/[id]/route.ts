@@ -17,13 +17,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { active, name, note } = await req.json();
+  const { active, name, note, startDate, endDate, recurrenceType, intervalWeeks, weekdayRules } = await req.json();
   const updated = await prisma.shiftPattern.update({
     where: { id },
     data: {
       ...(name !== undefined ? { name: name.trim() } : {}),
       ...(note !== undefined ? { note: note || null } : {}),
       ...(active !== undefined ? { active } : {}),
+      ...(startDate !== undefined ? { startDate: new Date(startDate) } : {}),
+      ...(endDate !== undefined ? { endDate: new Date(endDate) } : {}),
+      ...(recurrenceType !== undefined ? { recurrenceType } : {}),
+      ...(intervalWeeks !== undefined ? { intervalWeeks } : {}),
+      ...(weekdayRules !== undefined ? { weekdayRules: typeof weekdayRules === "string" ? weekdayRules : JSON.stringify(weekdayRules) } : {}),
     },
     include: {
       template: { select: { id: true, name: true, color: true, startTime: true, endTime: true } },

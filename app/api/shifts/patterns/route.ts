@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await generateAssignmentsFromPattern(pattern);
+  const generated = await generateAssignmentsFromPattern(pattern);
 
-  return NextResponse.json(pattern, { status: 201 });
+  return NextResponse.json({ ...pattern, generated }, { status: 201 });
 }
