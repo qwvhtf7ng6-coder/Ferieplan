@@ -129,6 +129,11 @@ model VacationRequest {
   department     Department            @relation(fields: [departmentId], references: [id])
   entries        VacationRequestEntry[]
   auditLogs      AuditLog[]
+
+  // Indekser til hurtig filtrering og sortering
+  @@index([userId, createdAt])
+  @@index([departmentId, status])
+  @@index([status, createdAt])
 }
 
 model VacationRequestEntry {
@@ -165,6 +170,11 @@ model AuditLog {
   createdAt DateTime @default(now())
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   request   VacationRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  // Indekser til pagination og filtrering
+  @@index([requestId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 model Notification {

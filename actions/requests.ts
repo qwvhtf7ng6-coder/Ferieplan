@@ -3,7 +3,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
-import { isManager } from "@/lib/permissions";
 import { entryTypeToDays } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import {
@@ -117,18 +116,4 @@ export async function getMyRequests(): Promise<ActionResult<VacationRequestRow[]
   return { ok: true, data: requests as unknown as VacationRequestRow[] };
 }
 
-export async function getRequestAuditLog(
-  requestId: string
-): Promise<ActionResult<{ id: string; action: string; details: string | null; createdAt: Date; user: { name: string } }[]>> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
-  if (!isManager(user.role)) return { ok: false, error: "Ingen adgang" };
 
-  const logs = await prisma.auditLog.findMany({
-    where: { requestId },
-    include: { user: { select: { name: true } } },
-    orderBy: { createdAt: "asc" },
-  });
-
-  return { ok: true, data: logs };
-}
