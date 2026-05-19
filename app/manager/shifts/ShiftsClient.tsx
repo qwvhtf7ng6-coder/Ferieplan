@@ -748,6 +748,9 @@ export default function ShiftsClient({
     loadPatterns(); loadAssignments();
     setPatternLoading(false);
   }
+
+  // Beskriv et gentagelsesmønster i menneskeligt sprog (bruges i mønster-listen)
+  function describePattern(p: ShiftPattern): string {
     try {
       const rules = JSON.parse(p.weekdayRules);
       if (p.recurrenceType === "weekly") {
@@ -769,6 +772,7 @@ export default function ShiftsClient({
       }
     } catch { return ""; }
   }
+
 
   return (
     <div>
