@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
+import { canManageDepartment } from "@/lib/permissions";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
 
@@ -37,7 +38,18 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   });
 
   if (!request) notFound();
-  if (user.role === "EMPLOYEE" && request.userId !== user.id) redirect("/dashboard");
+
+  // Adgangskontrol:
+  //  - EMPLOYEE: må kun se egne ansøgninger
+  //  - MANAGER:  må kun se ansøgninger i egen afdeling
+  //  - ADMIN:    må se alle
+  // (canManageDepartment dækker MANAGER+egen afdeling og ADMIN+alt)
+  const isOwnRequest = request.userId === user.id;
+  const canView =
+    isOwnRequest ||
+    canManageDepartment(user.role, user.departmentId, request.departmentId);
+
+  if (!canView) redirect("/dashboard");
 
   const totalDays = totalDaysFromEntries(request.entries.map((e: { days: number }) => ({ days: e.days })));
 

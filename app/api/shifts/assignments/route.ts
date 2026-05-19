@@ -100,12 +100,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Verify userId tilhører manager's afdeling
-  if (!isAdmin(user.role)) {
-    const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
-    if (!targetUser || targetUser.departmentId !== user.departmentId) {
-      return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
-    }
+  // Verify userId tilhører samme afdeling som template
+  // (gælder også admin — en bruger fra dept B må ikke tildeles dept A's template)
+  const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
+  if (!targetUser) {
+    return NextResponse.json({ error: "Medarbejder ikke fundet" }, { status: 404 });
+  }
+  if (targetUser.departmentId !== template.departmentId) {
+    return NextResponse.json({ error: "Medarbejder tilhører ikke skabelonens afdeling" }, { status: 403 });
+  }
+  if (!isAdmin(user.role) && targetUser.departmentId !== user.departmentId) {
+    return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
   }
 
   // Check if user has approved absence on this date

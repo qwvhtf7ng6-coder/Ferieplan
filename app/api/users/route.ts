@@ -25,14 +25,17 @@ export async function POST(req: NextRequest) {
 
   const safeRole = isValidRole(role) ? role : "EMPLOYEE";
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Normalisér email til lowercase før både lookup og storage
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
   const hashed = await bcrypt.hash(password, 10);
   const newUser = await prisma.user.create({
     data: {
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password: hashed,
       role: safeRole,
       departmentId: departmentId || null,

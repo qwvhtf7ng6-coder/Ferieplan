@@ -42,14 +42,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Ugyldig email-adresse" }, { status: 400 });
   }
 
-  const existing = await prisma.user.findFirst({ where: { email, NOT: { id } } });
+  // Normalisér email til lowercase før både lookup og storage
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existing = await prisma.user.findFirst({ where: { email: normalizedEmail, NOT: { id } } });
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
   const safeRole = isValidRole(role) ? role : "EMPLOYEE";
 
   const data: any = {
     name: name.trim(),
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     role: safeRole,
     departmentId: departmentId || null,
     canManageShifts: canManageShifts === true,
@@ -60,6 +63,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Adgangskode skal være mindst 8 tegn" }, { status: 400 });
     }
     data.password = await bcrypt.hash(newPassword, 10);
+    // Når admin nulstiller adgangskode, nulstil også login-attempts og lockout
+    // så brugeren straks kan logge ind med den nye adgangskode
+    data.loginAttempts = 0;
+    data.lockedUntil = null;
   }
 
   const updated = await prisma.user.update({ where: { id }, data });

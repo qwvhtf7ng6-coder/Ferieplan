@@ -28,15 +28,19 @@ export async function updateProfile(input: {
     return { ok: false, error: "Ugyldig email-adresse" };
   }
 
+  // Normalisér email til lowercase før både lookup og storage,
+  // så case-forskelle ikke kan skabe duplikater eller fejle unique-check
+  const normalizedEmail = email.trim().toLowerCase();
+
   // Check email not taken by another user
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing && existing.id !== user.id) {
     return { ok: false, error: "Email er allerede i brug" };
   }
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { name: name.trim(), email: email.trim().toLowerCase() },
+    data: { name: name.trim(), email: normalizedEmail },
   });
 
   revalidatePath("/profile");

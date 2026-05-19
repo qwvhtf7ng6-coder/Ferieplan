@@ -47,12 +47,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Validér at userId tilhører departmentId
-  if (!isAdmin(user.role)) {
-    const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
-    if (!targetUser || targetUser.departmentId !== user.departmentId) {
-      return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
-    }
+  // Validér at templateId tilhører den angivne afdeling
+  // (forhindrer manager i at bruge en skabelon fra anden afdeling
+  //  ved at gætte template-IDs)
+  const template = await prisma.shiftTemplate.findUnique({
+    where: { id: templateId },
+    select: { departmentId: true },
+  });
+  if (!template) {
+    return NextResponse.json({ error: "Vagtskabelon ikke fundet" }, { status: 404 });
+  }
+  if (template.departmentId !== departmentId) {
+    return NextResponse.json({ error: "Vagtskabelon tilhører ikke den angivne afdeling" }, { status: 403 });
+  }
+
+  // Validér at userId tilhører departmentId (gælder også admin for at undgå
+  // inkonsistente patterns hvor en bruger fra dept B tildeles dept A's template)
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { departmentId: true },
+  });
+  if (!targetUser) {
+    return NextResponse.json({ error: "Medarbejder ikke fundet" }, { status: 404 });
+  }
+  if (targetUser.departmentId !== departmentId) {
+    return NextResponse.json({ error: "Medarbejder tilhører ikke den angivne afdeling" }, { status: 403 });
   }
 
   // Validér recurrenceType
