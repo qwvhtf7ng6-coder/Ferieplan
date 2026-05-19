@@ -6,11 +6,11 @@ import { createNotification } from "@/lib/notifications";
 // Schedule: every day at 08:00 UTC
 
 export async function GET(request: Request) {
-  // Protect: require CRON_SECRET env var if set
+  // Protect: CRON_SECRET is required — endpoint is blocked if not configured
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
