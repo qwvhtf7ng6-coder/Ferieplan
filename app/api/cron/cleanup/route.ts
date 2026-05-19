@@ -5,10 +5,15 @@ import { prisma } from "@/lib/prisma";
 // Schedule: hver nat kl. 02:00 UTC
 //
 // Hvad der ryddes op:
-//  1. Notifikationer ældre end 90 dage (allerede læste) eller 180 dage (uanset)
-//  2. AuditLogs ældre end 365 dage
-//  3. ShiftAssignments mere end 6 måneder tilbage i tid
-//  4. Læste notifikationer ældre end 30 dage
+//  1. Læste notifikationer ældre end 30 dage
+//  2. Alle notifikationer ældre end 180 dage (uanset læst-status)
+//  3. AuditLogs ældre end 365 dage HVOR den tilknyttede ansøgning enten:
+//     - er i terminal status (APPROVED/REJECTED/CANCELLED), eller
+//     - allerede er slettet (requestId = null efter onDelete: SetNull)
+//     PENDING-ansøgningers logs bevares (de skal kunne ses i tidslinjen).
+//  4. ShiftAssignments mere end 12 måneder tilbage i tid
+//     (12 mdr så manager-kalenderens "forrige måned"-navigation stadig viser
+//      historiske vagter i mindst et år tilbage)
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -22,51 +27,61 @@ export async function GET(request: Request) {
 
   // Grænseværdier
   const notificationReadCutoff = new Date(now);
-  notificationReadCutoff.setDate(notificationReadCutoff.getDate() - 30); // læste: 30 dage
+  notificationReadCutoff.setDate(notificationReadCutoff.getDate() - 30);
 
   const notificationAllCutoff = new Date(now);
-  notificationAllCutoff.setDate(notificationAllCutoff.getDate() - 180); // alle: 180 dage
+  notificationAllCutoff.setDate(notificationAllCutoff.getDate() - 180);
 
   const auditLogCutoff = new Date(now);
-  auditLogCutoff.setFullYear(auditLogCutoff.getFullYear() - 1); // 365 dage
+  auditLogCutoff.setFullYear(auditLogCutoff.getFullYear() - 1);
 
   const shiftAssignmentCutoff = new Date(now);
-  shiftAssignmentCutoff.setMonth(shiftAssignmentCutoff.getMonth() - 6); // 6 måneder
+  shiftAssignmentCutoff.setMonth(shiftAssignmentCutoff.getMonth() - 12);
 
-  const [deletedReadNotifs, deletedOldNotifs, deletedAuditLogs, deletedShifts] =
-    await Promise.all([
-      // Slet læste notifikationer ældre end 30 dage
-      prisma.notification.deleteMany({
-        where: {
-          readAt: { not: null, lte: notificationReadCutoff },
-        },
-      }),
-      // Slet alle notifikationer ældre end 180 dage (uanset læst-status)
-      prisma.notification.deleteMany({
-        where: {
-          createdAt: { lte: notificationAllCutoff },
-        },
-      }),
-      // Slet auditlogs ældre end 365 dage
-      // Bevar logs tilknyttet aktive ansøgninger (requestId = null eller request findes)
-      prisma.auditLog.deleteMany({
-        where: {
-          createdAt: { lte: auditLogCutoff },
-          requestId: null, // kun orphaned logs — request-tilknyttede bevares
-        },
-      }),
-      // Slet ShiftAssignments ældre end 6 måneder
-      prisma.shiftAssignment.deleteMany({
-        where: {
-          date: { lte: shiftAssignmentCutoff },
-        },
-      }),
-    ]);
+  const [
+    deletedReadNotifs,
+    deletedOldNotifs,
+    deletedAuditLogs,
+    deletedShifts,
+  ] = await Promise.all([
+    // 1. Slet læste notifikationer ældre end 30 dage
+    prisma.notification.deleteMany({
+      where: {
+        readAt: { not: null, lte: notificationReadCutoff },
+      },
+    }),
+    // 2. Slet alle notifikationer ældre end 180 dage
+    prisma.notification.deleteMany({
+      where: {
+        createdAt: { lte: notificationAllCutoff },
+      },
+    }),
+    // 3. Slet auditlogs >365 dage hvor request er afsluttet eller slettet
+    prisma.auditLog.deleteMany({
+      where: {
+        createdAt: { lte: auditLogCutoff },
+        OR: [
+          { requestId: null }, // request er slettet (onDelete: SetNull)
+          {
+            request: {
+              status: { in: ["APPROVED", "REJECTED", "CANCELLED"] },
+            },
+          },
+        ],
+      },
+    }),
+    // 4. Slet ShiftAssignments ældre end 12 måneder
+    prisma.shiftAssignment.deleteMany({
+      where: {
+        date: { lte: shiftAssignmentCutoff },
+      },
+    }),
+  ]);
 
   const summary = {
     deletedReadNotifications: deletedReadNotifs.count,
     deletedOldNotifications: deletedOldNotifs.count,
-    deletedOrphanedAuditLogs: deletedAuditLogs.count,
+    deletedAuditLogs: deletedAuditLogs.count,
     deletedOldShiftAssignments: deletedShifts.count,
     runAt: now.toISOString(),
   };
