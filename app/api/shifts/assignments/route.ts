@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
 import { NextRequest, NextResponse } from "next/server";
 import { startOfWeek, endOfWeek, addDays } from "date-fns";
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId, templateId, date, note } = await req.json();
 

@@ -19,7 +19,7 @@ export default async function CalendarPage({
 
   const [visibility, shiftsVisible] = await Promise.all([
     getCalendarVisibility(),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
   if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
     redirect("/dashboard");

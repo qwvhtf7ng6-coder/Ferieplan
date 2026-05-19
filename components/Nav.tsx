@@ -40,7 +40,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
     { href: "/dashboard",         label: "Mine ansøgninger",  icon: <Home size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/requests/new",      label: "Ny ansøgning",      icon: <Plus size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/manager/requests",  label: "Ansøgninger",       icon: <ClipboardList size={16} />, roles: ["MANAGER", "ADMIN"] },
-    ...(shiftsVisible ? [{ href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />, roles: ["MANAGER", "ADMIN"] }] : []),
+    ...(shiftsVisible ? [{ href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />, roles: ["EMPLOYEE", "MANAGER", "ADMIN"] }] : []),
     { href: "/manager/calendar",  label: "Kalender",          icon: <Calendar size={16} />,    roles: ["MANAGER", "ADMIN"] },
     ...(calendarVisible && role === "EMPLOYEE"
       ? [{ href: "/manager/calendar", label: "Kalender", icon: <Calendar size={16} />, roles: ["EMPLOYEE"] }]

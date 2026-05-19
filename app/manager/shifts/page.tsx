@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { isAdmin, canEditShifts } from "@/lib/permissions";
 import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
 import ShiftsClient from "./ShiftsClient";
 import type { SessionUser } from "@/types";
@@ -12,11 +12,13 @@ export default async function ManagerShiftsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (!isManager(user.role)) redirect("/dashboard");
 
-  // Redirect non-admin managers if their department has shiftsEnabled=false
-  const shiftsVisible = await canSeeShifts(user.role, user.departmentId);
+  // Tjek om brugeren overhovedet må se vagtplan
+  const shiftsVisible = await canSeeShifts(user.role, user.departmentId, user.canManageShifts);
   if (!shiftsVisible) redirect("/dashboard");
+
+  // Employees og canManageShifts-brugere uden manager-rolle får read-only visning
+  const readOnly = !canEditShifts(user.role, user.canManageShifts);
 
   const [calendarVisible, departments, employees] = await Promise.all([
     canSeeCalendar(user.role),
@@ -50,6 +52,7 @@ export default async function ManagerShiftsPage() {
           employees={employees}
           isAdmin={isAdmin(user.role)}
           managerDepartmentId={user.departmentId ?? null}
+          readOnly={readOnly}
         />
       </main>
     </AppShell>

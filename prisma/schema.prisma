@@ -68,9 +68,10 @@ model User {
   role           Role              @default(EMPLOYEE)
   departmentId   String?
   department     Department?       @relation(fields: [departmentId], references: [id])
-  loginAttempts  Int               @default(0)
-  lockedUntil    DateTime?
-  createdAt      DateTime          @default(now())
+  loginAttempts    Int               @default(0)
+  lockedUntil      DateTime?
+  canManageShifts  Boolean           @default(false)
+  createdAt        DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   requests       VacationRequest[]
   auditLogs      AuditLog[]

@@ -20,7 +20,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const [{ id }, calendarVisible, shiftsVisible] = await Promise.all([
     params,
     canSeeCalendar(user.role),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
 
   const request = await prisma.vacationRequest.findUnique({

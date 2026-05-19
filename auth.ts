@@ -70,6 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.role,
           departmentId: user.departmentId,
+          canManageShifts: user.canManageShifts,
         };
       },
     }),
@@ -81,16 +82,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = (user as any).role;
         token.departmentId = (user as any).departmentId;
+        token.canManageShifts = (user as any).canManageShifts;
       } else if (token.id) {
         // Efterfølgende requests: hent altid frisk fra DB
         // så ændringer i rolle/afdeling træder i kraft øjeblikkeligt
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, departmentId: true },
+          select: { role: true, departmentId: true, canManageShifts: true },
         });
         if (dbUser) {
           token.role = dbUser.role;
           token.departmentId = dbUser.departmentId;
+          token.canManageShifts = dbUser.canManageShifts;
         } else {
           // Bruger slettet — invalider token
           return null as any;
@@ -103,6 +106,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         (session.user as any).role = token.role;
         (session.user as any).departmentId = token.departmentId;
+        (session.user as any).canManageShifts = token.canManageShifts;
       }
       return session;
     },

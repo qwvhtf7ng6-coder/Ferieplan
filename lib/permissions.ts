@@ -31,6 +31,12 @@ export function canViewCalendar(
   return visibility === "ALL_EMPLOYEES";
 }
 
+/** Vagtplan-redigering: ledere/admins + brugere med canManageShifts-tilladelse */
+export function canEditShifts(role: UserRole, canManageShifts?: boolean): boolean {
+  if (isManager(role)) return true;
+  return canManageShifts === true;
+}
+
 export function canCancelOwnRequest(status: string): boolean {
   return status === "PENDING";
 }

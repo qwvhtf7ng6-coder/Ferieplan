@@ -473,9 +473,9 @@ function PatternForm({ form, onChange, employees, templates, loading, error, onS
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ShiftsClient({
-  departments, employees, isAdmin, managerDepartmentId,
+  departments, employees, isAdmin, managerDepartmentId, readOnly = false,
 }: {
-  departments: Department[]; employees: Employee[]; isAdmin: boolean; managerDepartmentId: string | null;
+  departments: Department[]; employees: Employee[]; isAdmin: boolean; managerDepartmentId: string | null; readOnly?: boolean;
 }) {
   const [tab, setTab] = useState<"plan" | "templates" | "patterns">("plan");
   const [selectedDeptId, setSelectedDeptId] = useState(isAdmin ? (departments[0]?.id ?? "") : (managerDepartmentId ?? ""));
@@ -882,12 +882,12 @@ export default function ShiftsClient({
                                 <div className="opacity-80">{resolved.startTime}–{resolved.endTime}</div>
                                 {a.note && <div className="opacity-70 italic mt-0.5 truncate">{a.note}</div>}
                                 <button onClick={() => deleteAssignment(a.id)}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-[10px] items-center justify-center hidden group-hover:flex"
+                                  className={cn("absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-[10px] items-center justify-center hidden group-hover:flex", readOnly && "!hidden")}
                                   title="Fjern vagt">×</button>
                               </div>
                             );
                           })}
-                          {deptTemplates.length > 0 && (
+                          {deptTemplates.length > 0 && !readOnly && (
                             <button
                               onClick={() => { setAssignModal({ date: day, userId: emp.id }); setAssignTemplateId(deptTemplates[0]?.id ?? ""); setAssignNote(""); setAssignError(""); setAssignConflict(false); }}
                               className="w-full text-[11px] text-text-subtle hover:text-primary hover:bg-primary-muted rounded-sm py-0.5 transition-colors mt-0.5 border border-dashed border-border"
@@ -926,7 +926,7 @@ export default function ShiftsClient({
                                 <span key={a.id} className="inline-flex items-center gap-1 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: a.template.color }}>
                                   {a.hasAbsenceConflict && <span title="Godkendt fravær">⚠️</span>}
                                   {a.template.name} {resolved.startTime}–{resolved.endTime}
-                                  <button onClick={() => deleteAssignment(a.id)} className="hover:opacity-70">×</button>
+                                  {!readOnly && <button onClick={() => deleteAssignment(a.id)} className="hover:opacity-70">×</button>}
                                 </span>
                               );
                             })}
@@ -961,7 +961,7 @@ export default function ShiftsClient({
                 Vagttyper{selectedDeptId && departments.find((d) => d.id === selectedDeptId) ? ` — ${departments.find((d) => d.id === selectedDeptId)?.name}` : ""}
               </h2>
               <button onClick={() => { setEditTplId(null); setTplForm({ name: "", startTime: "08:00", endTime: "16:00", color: "#3b82f6", dayTimeRules: {} }); setShowDayTimeRules(false); setShowTemplateForm(true); }}
-                className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
+                className={cn("bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors", readOnly && "hidden")}>
                 + Ny vagttype
               </button>
             </div>
@@ -1089,7 +1089,7 @@ export default function ShiftsClient({
                 <p className="text-[12px] text-text-subtle mt-0.5">Planlæg automatiske vagter over en periode</p>
               </div>
               <button onClick={() => { setPatternForm({ ...defaultPatternForm(), userId: deptEmployees[0]?.id ?? "", templateId: deptTemplates[0]?.id ?? "" }); setPatternError(""); setShowPatternForm(true); }}
-                className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors">
+                className={cn("bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover transition-colors", readOnly && "hidden")}>
                 + Nyt mønster
               </button>
             </div>

@@ -15,7 +15,7 @@ export default async function ProfilePage() {
 
   const [visibility, shiftsVisible] = await Promise.all([
     getCalendarVisibility(),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
   const calendarVisible = isManager(user.role) || visibility === "ALL_EMPLOYEES";
 

@@ -18,7 +18,7 @@ export default async function NewRequestPage() {
 
   const [calendarVisible, shiftsVisible] = await Promise.all([
     canSeeCalendar(user.role),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
 
   if (!user.departmentId) {

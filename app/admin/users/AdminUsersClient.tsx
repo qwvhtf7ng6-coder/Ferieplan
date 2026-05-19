@@ -16,6 +16,7 @@ import { Plus, Search, Pencil, Trash2, Key, User, Shield, Users } from "lucide-r
 interface UserRow {
   id: string; name: string; email: string; role: string;
   departmentId: string | null; department: { name: string } | null;
+  canManageShifts: boolean;
 }
 interface Department { id: string; name: string; }
 
@@ -38,7 +39,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
   const [createLoading, setCreateLoading] = useState(false);
 
   const [editUser, setEditUser] = useState<UserRow | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", email: "", role: "EMPLOYEE", departmentId: "", newPassword: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "EMPLOYEE", departmentId: "", newPassword: "", canManageShifts: false });
   const [showPwField, setShowPwField] = useState(false);
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
@@ -63,7 +64,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
 
   function openEdit(u: UserRow) {
     setEditUser(u);
-    setEditForm({ name: u.name, email: u.email, role: u.role, departmentId: u.departmentId ?? "", newPassword: "" });
+    setEditForm({ name: u.name, email: u.email, role: u.role, departmentId: u.departmentId ?? "", newPassword: "", canManageShifts: u.canManageShifts });
     setEditError(""); setShowPwField(false);
   }
 
@@ -72,7 +73,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditLoading(true); setEditError("");
     const res = await fetch(`/api/users/${editUser.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editForm.name, email: editForm.email, role: editForm.role, departmentId: editForm.departmentId || null, newPassword: editForm.newPassword || undefined }),
+      body: JSON.stringify({ name: editForm.name, email: editForm.email, role: editForm.role, departmentId: editForm.departmentId || null, newPassword: editForm.newPassword || undefined, canManageShifts: editForm.canManageShifts }),
     });
     if (res.ok) { setEditUser(null); router.refresh(); }
     else { const d = await res.json(); setEditError(d.error || "Fejl ved opdatering"); }
@@ -219,6 +220,19 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
                 </label>
               ))}
             </div>
+          </div>
+          <div>
+            <SectionLabel>Tilladelser</SectionLabel>
+            <label className={cn("flex items-center gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
+              editForm.canManageShifts ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
+              <input type="checkbox" checked={editForm.canManageShifts}
+                onChange={(e) => setEditForm({ ...editForm, canManageShifts: e.target.checked })}
+                className="accent-primary w-4 h-4" />
+              <div>
+                <p className="text-[13px] font-semibold text-text">Vagtplan ansvarlig</p>
+                <p className="text-[12px] text-text-muted">Kan oprette, redigere og slette vagter uanset rolle</p>
+              </div>
+            </label>
           </div>
           <div>
             <SectionLabel>Adgangskode</SectionLabel>

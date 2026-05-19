@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
@@ -10,7 +10,7 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 

@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   const [result, visibility, shiftsVisible] = await Promise.all([
     getMyRequests(),
     getCalendarVisibility(),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
 
   const requests = result.ok ? result.data ?? [] : [];

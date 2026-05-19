@@ -10,6 +10,7 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   departmentId: string | null;
+  canManageShifts?: boolean;
 }
 
 export interface EntryInput {

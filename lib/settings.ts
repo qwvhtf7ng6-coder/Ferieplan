@@ -16,10 +16,11 @@ export async function canSeeCalendar(role: UserRole): Promise<boolean> {
 
 /** Single source of truth for whether a user can see the shifts link.
  *  ADMINs always can. MANAGERs only if their department has shiftsEnabled.
- *  EMPLOYEEs never see the shifts nav link. */
-export async function canSeeShifts(role: UserRole, departmentId: string | null | undefined): Promise<boolean> {
+ *  EMPLOYEEs can see shifts (read-only) if their department has shiftsEnabled.
+ *  Users with canManageShifts can always see shifts. */
+export async function canSeeShifts(role: UserRole, departmentId: string | null | undefined, canManageShifts?: boolean): Promise<boolean> {
   if (isAdmin(role)) return true;
-  if (!isManager(role)) return false;
+  if (canManageShifts) return true;
   if (!departmentId) return false;
   const dept = await prisma.department.findUnique({
     where: { id: departmentId },

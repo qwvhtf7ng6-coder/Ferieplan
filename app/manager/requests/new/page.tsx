@@ -19,7 +19,7 @@ export default async function NewRequestOnBehalfPage() {
 
   const [calendarVisible, shiftsVisible] = await Promise.all([
     canSeeCalendar(user.role),
-    canSeeShifts(user.role, user.departmentId),
+    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
 
   const employees = await prisma.user.findMany({

@@ -33,7 +33,7 @@ export async function PATCH(
   if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const { name, email, role, departmentId, newPassword } = await req.json();
+  const { name, email, role, departmentId, newPassword, canManageShifts } = await req.json();
 
   if (!name || !email) {
     return NextResponse.json({ error: "Navn og email er påkrævet" }, { status: 400 });
@@ -52,6 +52,7 @@ export async function PATCH(
     email: email.trim().toLowerCase(),
     role: safeRole,
     departmentId: departmentId || null,
+    canManageShifts: canManageShifts === true,
   };
 
   if (newPassword) {

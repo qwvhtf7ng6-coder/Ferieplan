@@ -26,7 +26,7 @@ export default async function ManagerRequestsPage({
   const user = session.user as SessionUser;
   if (!isManager(user.role)) redirect("/dashboard");
 
-  const shiftsVisible = await canSeeShifts(user.role, user.departmentId);
+  const shiftsVisible = await canSeeShifts(user.role, user.departmentId, user.canManageShifts);
 
   const sp = await searchParams;
 

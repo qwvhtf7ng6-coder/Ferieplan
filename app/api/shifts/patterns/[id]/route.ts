@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
 import { isValidRecurrenceType, isValidIntervalWeeks, isValidDateString } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { generateAssignmentsFromPattern } from "@/lib/shift-patterns";
@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const existing = await prisma.shiftPattern.findUnique({ where: { id } });
@@ -57,7 +57,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const existing = await prisma.shiftPattern.findUnique({ where: { id } });
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isManager(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const pattern = await prisma.shiftPattern.findUnique({ where: { id } });
