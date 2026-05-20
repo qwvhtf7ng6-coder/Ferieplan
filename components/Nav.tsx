@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import {
   Home, Plus, ClipboardList, Calendar, Users, Building2, Flag,
-  BarChart3, Settings, User, LogOut, Menu, X, CalendarDays,
+  BarChart3, Settings, User, LogOut, Menu, X, CalendarDays, Wallet,
 } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 
@@ -48,6 +48,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
     { href: "/admin/users",       label: "Brugere",           icon: <Users size={16} />,       roles: ["ADMIN"] },
     { href: "/admin/departments",  label: "Afdelinger",       icon: <Building2 size={16} />,   roles: ["ADMIN"] },
     { href: "/admin/holidays",    label: "Helligdage",        icon: <Flag size={16} />,        roles: ["ADMIN"] },
+    { href: "/admin/vacation-balance", label: "Feriesaldo",   icon: <Wallet size={16} />,      roles: ["ADMIN"] },
     { href: "/admin/reports",     label: "Rapporter",         icon: <BarChart3 size={16} />,   roles: ["ADMIN"] },
     { href: "/admin/settings",    label: "Indstillinger",     icon: <Settings size={16} />,    roles: ["ADMIN"] },
     { href: "/profile",           label: "Min profil",        icon: <User size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },

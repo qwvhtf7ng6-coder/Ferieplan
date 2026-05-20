@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { Plus, Clock, CheckCircle, CalendarDays, TrendingUp } from "lucide-react";
+import { getMyVacationBalance } from "@/actions/vacation-balance";
 import type { SessionUser } from "@/types";
 
 export default async function DashboardPage() {
@@ -18,10 +19,11 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [result, visibility, shiftsVisible] = await Promise.all([
+  const [result, visibility, shiftsVisible, balanceResult] = await Promise.all([
     getMyRequests(),
     getCalendarVisibility(),
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
+    getMyVacationBalance(),
   ]);
 
   const requests = result.ok ? result.data ?? [] : [];
@@ -34,6 +36,7 @@ export default async function DashboardPage() {
   );
 
   const calendarVisible = isManager(user.role) || visibility === "ALL_EMPLOYEES";
+  const balance = balanceResult.ok ? balanceResult.data : null;
 
   const stats = [
     { label: "I alt",           value: totalCount,    icon: <CalendarDays size={18} />, color: "#4f46e5", bg: "rgba(79,70,229,.1)" },
@@ -73,6 +76,54 @@ export default async function DashboardPage() {
             </Card>
           ))}
         </div>
+
+        {/* Vacation balance widget */}
+        {balance && (
+          <Card className="p-4 mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-widest mb-1">
+                  Feriesaldo {balance.year}
+                </p>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-[28px] font-extrabold tracking-[-0.03em] leading-none"
+                    style={{ color: balance.remainingDays < 0 ? "var(--c-danger)" : balance.remainingDays <= 5 ? "var(--c-warning)" : "var(--c-success)" }}>
+                    {balance.remainingDays}
+                  </span>
+                  <span className="text-[13px] text-text-muted font-medium">dage tilbage</span>
+                </div>
+                {balance.note && (
+                  <p className="text-[11px] text-text-subtle mt-1 italic">{balance.note}</p>
+                )}
+              </div>
+              <div className="flex gap-5 shrink-0">
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Tildelt</p>
+                  <p className="text-[18px] font-extrabold text-text">{balance.allottedDays}</p>
+                  {balance.carryOverDays > 0 && (
+                    <p className="text-[10px] text-text-subtle">inkl. {balance.carryOverDays} overførte</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Brugt</p>
+                  <p className="text-[18px] font-extrabold text-text">{balance.usedDays}</p>
+                </div>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="mt-3">
+              <div className="h-2 rounded-full bg-border overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${balance.allottedDays > 0 ? Math.min(100, (balance.usedDays / balance.allottedDays) * 100) : 0}%`,
+                    background: balance.remainingDays < 0 ? "var(--c-danger)" : balance.remainingDays <= 5 ? "var(--c-warning)" : "var(--c-success)",
+                  }}
+                />
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Request list */}
         <div className="flex items-center justify-between mb-3">
