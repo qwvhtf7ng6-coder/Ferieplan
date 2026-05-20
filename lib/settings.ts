@@ -19,6 +19,7 @@ export async function isVacationBalanceEnabled(): Promise<boolean> {
   return settings?.vacationBalanceEnabled ?? false;
 }
 
+/** Single source of truth for whether a user can see the shifts link.
  *  ADMINs always can. MANAGERs only if their department has shiftsEnabled.
  *  EMPLOYEEs can see shifts (read-only) if their department has shiftsEnabled.
  *  Users with canManageShifts can always see shifts. */
