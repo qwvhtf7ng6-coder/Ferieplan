@@ -492,112 +492,123 @@ function PatternsReport({ requests, users, departments, currentYear }: Props) {
   };
 
   return (
-    <div className="space-y-8">
-      <p className="text-sm text-text-muted">Statistik baseret på godkendte ansøgninger i {currentYear}.</p>
+    <div className="space-y-4">
+      <p className="text-[13px] text-text-muted">Statistik baseret på godkendte ansøgninger i {currentYear}.</p>
 
-      {/* Absence type breakdown */}
-      <div>
-        <h3 className="text-sm font-semibold text-text mb-3">Fordeling af fraværstyper</h3>
-        <div className="space-y-2">
-          {typeBreakdown.map(({ type, days, pct }) => (
-            <div key={type} className="flex items-center gap-3">
-              <div className="w-28 text-xs text-text-muted text-right shrink-0">
-                {ABSENCE_LABELS[type] ?? type}
-              </div>
-              <div className="flex-1 bg-bg rounded-full h-5 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${pct}%`, backgroundColor: TYPE_COLORS[type] ?? "#6b7280" }}
-                />
-              </div>
-              <div className="w-20 text-xs text-text-muted shrink-0">
-                {days} dag{days !== 1 ? "e" : ""} ({pct}%)
-              </div>
-            </div>
-          ))}
-          {typeBreakdown.length === 0 && (
-            <p className="text-sm text-text-subtle italic">Ingen data</p>
-          )}
-        </div>
-      </div>
-
-      {/* Busiest weeks */}
-      <div>
-        <h3 className="text-sm font-semibold text-text mb-3">Mest belastede uger (top 10)</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Uge</th>
-                <th className="text-left py-2 pr-4 text-xs font-semibold text-text-muted uppercase">Fraværsdage</th>
-                <th className="text-left py-2 text-xs font-semibold text-text-muted uppercase">Belastning</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daysByWeek.map(([week, days], i) => {
-                const maxDays = daysByWeek[0]?.[1] ?? 1;
-                const pct = Math.round((days / maxDays) * 100);
-                return (
-                  <tr key={week} className="border-b border-border">
-                    <td className="py-2 pr-4 font-mono text-text">{week}</td>
-                    <td className="py-2 pr-4 text-text-muted">{days}</td>
-                    <td className="py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-bg rounded-full h-2">
-                          <div
-                            className="h-full rounded-full bg-primary-light0"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        {i === 0 && <span className="text-xs text-red-500 font-medium">Højest</span>}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {daysByWeek.length === 0 && (
-                <tr><td colSpan={3} className="py-4 text-center text-sm text-text-subtle italic">Ingen data</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Sick days per employee */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-text">Sygedage pr. medarbejder</h3>
-          <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}
-            className="border border-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
-            <option value="">Alle afdelinger</option>
-            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </div>
-        {topSickUsers.length === 0 ? (
-          <p className="text-sm text-text-subtle italic">Ingen sygedage registreret.</p>
+      {/* ── Fordeling af fraværstyper ─────────────────────────────────────── */}
+      <div className="rounded-[14px] border border-border bg-surface shadow-xs p-5">
+        <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-[0.08em] mb-4">Fordeling af fraværstyper</p>
+        {typeBreakdown.length === 0 ? (
+          <p className="text-[13px] text-text-subtle italic text-center py-6 border-2 border-dashed border-border rounded-[10px]">Ingen data</p>
         ) : (
-          <div className="space-y-1">
-            {topSickUsers.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 py-1.5 border-b border-border">
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-text">{u.name}</span>
-                  {u.department && (
-                    <span className="text-xs text-text-subtle ml-2">{u.department.name}</span>
-                  )}
+          <div className="space-y-3">
+            {typeBreakdown.map(({ type, days, pct }) => (
+              <div key={type} className="grid items-center gap-3" style={{ gridTemplateColumns: "120px 1fr 80px" }}>
+                <span className="text-[13px] text-text-muted text-right truncate">{ABSENCE_LABELS[type] ?? type}</span>
+                <div className="h-2 bg-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%`, backgroundColor: TYPE_COLORS[type] ?? "#6b7280" }}
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 bg-bg rounded-full h-2">
-                    <div
-                      className="h-full rounded-full bg-red-400"
-                      style={{ width: `${Math.min(100, (u.sickDays / (topSickUsers[0]?.sickDays ?? 1)) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-text-muted w-16 text-right">{u.sickDays} dag{u.sickDays !== 1 ? "e" : ""}</span>
-                </div>
+                <span className="text-[12px] font-semibold text-text-muted">
+                  {days} dag{days !== 1 ? "e" : ""} <span className="text-text-subtle font-normal">({pct}%)</span>
+                </span>
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* ── Mest belastede uger + Sygedage — side om side ────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Mest belastede uger */}
+        <div className="rounded-[14px] border border-border bg-surface shadow-xs p-5">
+          <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-[0.08em] mb-4">Mest belastede uger (top 10)</p>
+          {daysByWeek.length === 0 ? (
+            <p className="text-[13px] text-text-subtle italic text-center py-6 border-2 border-dashed border-border rounded-[10px]">Ingen data</p>
+          ) : (
+            <div className="space-y-0">
+              <div className="grid text-[11px] font-semibold text-text-subtle uppercase tracking-[0.06em] pb-2 border-b border-border" style={{ gridTemplateColumns: "72px 1fr 56px" }}>
+                <span>Uge</span>
+                <span>Belastning</span>
+                <span className="text-right">Dage</span>
+              </div>
+              {daysByWeek.map(([week, days], i) => {
+                const maxDays = daysByWeek[0]?.[1] ?? 1;
+                const pct = Math.round((days / maxDays) * 100);
+                const isTop = i === 0;
+                return (
+                  <div key={week} className="grid items-center py-2.5 border-b border-border last:border-0" style={{ gridTemplateColumns: "72px 1fr 56px" }}>
+                    <span className={cn("text-[13px] font-mono", isTop ? "font-bold text-text" : "text-text-muted")}>{week}</span>
+                    <div className="pr-4 flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-bg rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{ width: `${pct}%`, backgroundColor: isTop ? "var(--c-danger)" : "var(--c-primary)" }}
+                        />
+                      </div>
+                      {isTop && (
+                        <span className="text-[11px] font-semibold shrink-0" style={{ color: "var(--c-danger)" }}>Højest</span>
+                      )}
+                    </div>
+                    <span className={cn("text-[13px] text-right", isTop ? "font-bold text-text" : "text-text-muted")}>{days}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Sygedage pr. medarbejder */}
+        <div className="rounded-[14px] border border-border bg-surface shadow-xs p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-[0.08em]">Sygedage pr. medarbejder</p>
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className="text-[12px] font-medium text-text border border-border bg-surface rounded-[8px] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Alle afdelinger</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          {topSickUsers.length === 0 ? (
+            <p className="text-[13px] text-text-subtle italic text-center py-6 border-2 border-dashed border-border rounded-[10px]">Ingen sygedage registreret.</p>
+          ) : (
+            <div className="space-y-0">
+              <div className="grid text-[11px] font-semibold text-text-subtle uppercase tracking-[0.06em] pb-2 border-b border-border" style={{ gridTemplateColumns: "1fr 80px 56px" }}>
+                <span>Navn</span>
+                <span>Fordeling</span>
+                <span className="text-right">Dage</span>
+              </div>
+              {topSickUsers.map((u) => {
+                const pct = Math.min(100, (u.sickDays / (topSickUsers[0]?.sickDays ?? 1)) * 100);
+                return (
+                  <div key={u.id} className="grid items-center py-2.5 border-b border-border last:border-0" style={{ gridTemplateColumns: "1fr 80px 56px" }}>
+                    <div className="min-w-0">
+                      <span className="text-[13px] font-medium text-text truncate block">{u.name}</span>
+                      {u.department && (
+                        <span className="text-[11px] text-text-subtle">{u.department.name}</span>
+                      )}
+                    </div>
+                    <div className="px-2">
+                      <div className="h-1.5 bg-bg rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-red-400 transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-[13px] text-text-muted text-right">{u.sickDays} dag{u.sickDays !== 1 ? "e" : ""}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
