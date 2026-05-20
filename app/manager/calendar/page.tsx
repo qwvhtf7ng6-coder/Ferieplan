@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import CalendarGrid from "@/components/CalendarGrid";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
@@ -16,6 +16,7 @@ export default async function CalendarPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
+  const subject = buildSubject(user);
 
   const [visibility, shiftsVisible] = await Promise.all([
     getCalendarVisibility(),
@@ -24,8 +25,12 @@ export default async function CalendarPage({
 
   // Medarbejdere kan altid se kalenderen.
   // MANAGEMENT_ONLY betyder kun at de kun ser egne data — ikke andres.
-  const isManagerOrAdmin = isManager(user.role);
-  const canSeeAll = isManagerOrAdmin || visibility === "ALL_EMPLOYEES";
+  // "Ledelse" = brugere der må godkende ansøgninger (kerne-rettigheden for managers).
+  // PENDING-ansøgninger vises også til brugere med calendar.view_extended.
+  const hasApprovalRole = can(subject, "approval.decide");
+  const hasExtendedCalendar = can(subject, "calendar.view_extended");
+  const isManagerOrAdmin = hasApprovalRole;
+  const canSeeAll = hasApprovalRole || hasExtendedCalendar || visibility === "ALL_EMPLOYEES";
 
   const sp = await searchParams;
   const now = new Date();

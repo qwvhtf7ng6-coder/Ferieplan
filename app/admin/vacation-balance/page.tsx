@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isVacationBalanceEnabled } from "@/lib/settings";
 import { getAllVacationBalances } from "@/actions/vacation-balance";
 import VacationBalanceClient from "./VacationBalanceClient";
@@ -15,7 +15,7 @@ export default async function VacationBalancePage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as any;
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!can(buildSubject(user), "balance.view_others")) redirect("/dashboard");
 
   const balanceEnabled = await isVacationBalanceEnabled();
   if (!balanceEnabled) redirect("/admin/settings");

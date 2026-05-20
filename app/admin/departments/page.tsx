@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import DepartmentsClient from "./DepartmentsClient";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isVacationBalanceEnabled } from "@/lib/settings";
 
 export default async function DepartmentsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as any;
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!can(buildSubject(user), "departments.edit")) redirect("/dashboard");
 
   const [departments, balanceEnabled] = await Promise.all([
     prisma.department.findMany({

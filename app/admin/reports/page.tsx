@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isVacationBalanceEnabled } from "@/lib/settings";
 import ReportsClient from "./ReportsClient";
 import type { SessionUser } from "@/types";
@@ -12,7 +12,7 @@ export default async function ReportsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!can(buildSubject(user), "report.absence")) redirect("/dashboard");
 
   const currentYear = new Date().getFullYear();
 

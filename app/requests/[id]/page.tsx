@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
 import { canSeeShifts } from "@/lib/settings";
-import { canManageDepartment } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
 
@@ -17,6 +17,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
+  const subject = buildSubject(user);
 
   const [{ id }, shiftsVisible] = await Promise.all([
     params,
@@ -39,14 +40,14 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   if (!request) notFound();
 
   // Adgangskontrol:
-  //  - EMPLOYEE: må kun se egne ansøgninger
-  //  - MANAGER:  må kun se ansøgninger i egen afdeling
-  //  - ADMIN:    må se alle
-  // (canManageDepartment dækker MANAGER+egen afdeling og ADMIN+alt)
+  //  - Egne ansøgninger må altid ses
+  //  - Andres ansøgninger kræver application.view_others-scope der dækker afdelingen
   const isOwnRequest = request.userId === user.id;
   const canView =
     isOwnRequest ||
-    canManageDepartment(user.role, user.departmentId, request.departmentId);
+    can(subject, "application.view_others", {
+      targetDepartmentId: request.departmentId,
+    });
 
   if (!canView) redirect("/dashboard");
 

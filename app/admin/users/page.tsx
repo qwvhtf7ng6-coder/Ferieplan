@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import AdminUsersClient from "./AdminUsersClient";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isVacationBalanceEnabled } from "@/lib/settings";
 
 export default async function AdminUsersPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as any;
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!can(buildSubject(user), "user.view")) redirect("/dashboard");
 
   const [users, departments, balanceEnabled] = await Promise.all([
     prisma.user.findMany({

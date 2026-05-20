@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { isManager } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { getCalendarVisibility } from "@/lib/settings";
 import PrintCalendarClient from "./PrintCalendarClient";
 import type { SessionUser } from "@/types";
@@ -18,9 +18,19 @@ export default async function PrintCalendarPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
+  const subject = buildSubject(user);
 
   const visibility = await getCalendarVisibility();
-  if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
+  const hasApprovalRole = can(subject, "approval.decide");
+  const hasExtendedCalendar = can(subject, "calendar.view_extended");
+  const canSeeOthers = hasApprovalRole || hasExtendedCalendar || visibility === "ALL_EMPLOYEES";
+
+  // Hvis MANAGEMENT_ONLY og brugeren ikke har udvidede rettigheder — afvis
+  if (!canSeeOthers) {
+    redirect("/dashboard");
+  }
+
+  if (!can(subject, "calendar.print")) {
     redirect("/dashboard");
   }
 
@@ -33,7 +43,7 @@ export default async function PrintCalendarPage({
   const start = new Date(year, month - 1, 1);
   const end   = new Date(year, month, 0, 23, 59, 59);
 
-  const isManagerOrAdmin = isManager(user.role);
+  const isManagerOrAdmin = hasApprovalRole;
 
   const [departments, requests, holidays] = await Promise.all([
     prisma.department.findMany({

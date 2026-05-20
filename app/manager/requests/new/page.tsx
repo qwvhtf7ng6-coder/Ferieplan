@@ -5,7 +5,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { OnBehalfForm } from "./OnBehalfForm";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { can, buildSubject, scopeOf } from "@/lib/can";
 import { canSeeShifts } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
@@ -15,12 +15,17 @@ export default async function NewRequestOnBehalfPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (!isManager(user.role)) redirect("/dashboard");
+  const subject = buildSubject(user);
+  if (!can(subject, "application.create_on_behalf")) redirect("/dashboard");
+
+  // ALL-scope = se medarbejdere på tværs. OWN_DEPARTMENT = kun egen afdeling.
+  const scope = scopeOf(subject, "application.create_on_behalf");
+  const seeAllDepartments = scope === "ALL";
 
   const [shiftsVisible, employees] = await Promise.all([
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
     prisma.user.findMany({
-      where: isAdmin(user.role)
+      where: seeAllDepartments
         ? { departmentId: { not: null } }
         : { departmentId: user.departmentId ?? "" },
       select: {

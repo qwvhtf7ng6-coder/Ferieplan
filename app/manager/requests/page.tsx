@@ -7,7 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { RequestFilters } from "@/components/manager/RequestFilters";
 import { ManagerRequestsClient } from "./ManagerRequestsClient";
 import { getManagerRequests } from "@/actions/manager";
-import { isManager, isAdmin } from "@/lib/permissions";
+import { can, buildSubject, scopeOf } from "@/lib/can";
 import { canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
@@ -24,9 +24,17 @@ export default async function ManagerRequestsPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (!isManager(user.role)) redirect("/dashboard");
+  const subject = buildSubject(user);
+  if (!can(subject, "application.view_others")) redirect("/dashboard");
 
   const shiftsVisible = await canSeeShifts(user.role, user.departmentId, user.canManageShifts);
+
+  // ALL-scope = se på tværs af afdelinger. OWN_DEPARTMENT = kun egen.
+  const viewScope = scopeOf(subject, "application.view_others");
+  const seeAllDepartments = viewScope === "ALL";
+
+  // Må brugeren oprette ansøgning på vegne af andre? (skjul knappen ellers)
+  const canCreateOnBehalf = can(subject, "application.create_on_behalf");
 
   const sp = await searchParams;
 
@@ -36,7 +44,7 @@ export default async function ManagerRequestsPage({
   todayEnd.setHours(23, 59, 59, 999);
 
   const [departments, result, todayAbsences, totalInDept] = await Promise.all([
-    isAdmin(user.role)
+    seeAllDepartments
       ? prisma.department.findMany({ orderBy: { name: "asc" } })
       : [],
     getManagerRequests({
@@ -49,7 +57,7 @@ export default async function ManagerRequestsPage({
     prisma.vacationRequest.findMany({
       where: {
         status: "APPROVED",
-        ...(isAdmin(user.role) ? {} : { departmentId: user.departmentId ?? "" }),
+        ...(seeAllDepartments ? {} : { departmentId: user.departmentId ?? "" }),
         entries: { some: { date: { gte: today, lte: todayEnd } } },
       },
       include: {
@@ -60,7 +68,7 @@ export default async function ManagerRequestsPage({
     }),
     // Total employees in dept
     prisma.user.count({
-      where: isAdmin(user.role)
+      where: seeAllDepartments
         ? { departmentId: { not: null } }
         : { departmentId: user.departmentId ?? "" },
     }),
@@ -107,7 +115,7 @@ export default async function ManagerRequestsPage({
                 return (
                   <div key={req.id} className="flex items-center gap-1.5 bg-warning-bg border border-[rgba(217,119,6,.2)] rounded-md px-2.5 py-1 text-[12px]">
                     <span className="font-semibold text-text">{req.user.name}</span>
-                    {isAdmin(user.role) && <span className="text-text-subtle">· {req.department.name}</span>}
+                    {seeAllDepartments && <span className="text-text-subtle">· {req.department.name}</span>}
                     <span className="text-warning-text font-medium">{label}</span>
                   </div>
                 );
@@ -127,17 +135,19 @@ export default async function ManagerRequestsPage({
               )}
             </p>
           </div>
-          <Link
-            href="/manager/requests/new"
-            className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-md text-[13px] font-semibold bg-primary text-white hover:bg-primary-hover transition-colors shadow-[0_1px_4px_rgba(79,70,229,.35)] shrink-0"
-          >
-            + Opret på vegne af
-          </Link>
+          {canCreateOnBehalf && (
+            <Link
+              href="/manager/requests/new"
+              className="inline-flex items-center gap-1.5 h-[38px] px-4 rounded-md text-[13px] font-semibold bg-primary text-white hover:bg-primary-hover transition-colors shadow-[0_1px_4px_rgba(79,70,229,.35)] shrink-0"
+            >
+              + Opret på vegne af
+            </Link>
+          )}
         </div>
 
         <RequestFilters
           departments={departments}
-          showDeptFilter={isAdmin(user.role)}
+          showDeptFilter={seeAllDepartments}
         />
 
         <ManagerRequestsClient requests={requests} />

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import SettingsClient from "./SettingsClient";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isVacationBalanceEnabled } from "@/lib/settings";
 
 interface Settings {
@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as any;
-  if (!isAdmin(user.role)) redirect("/dashboard");
+  if (!can(buildSubject(user), "settings.edit")) redirect("/dashboard");
 
   const [settings, balanceEnabled] = await Promise.all([
     prisma.appSettings.findFirst(),
