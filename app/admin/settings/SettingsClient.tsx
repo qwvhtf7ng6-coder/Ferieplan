@@ -176,14 +176,14 @@ export default function SettingsClient({ settings }: { settings: Settings | null
               aria-checked={vacationBalanceEnabled}
               onClick={() => setVacationBalanceEnabled((v) => !v)}
               className={cn(
-                "relative w-11 h-6 rounded-full transition-colors duration-150 shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                "relative w-[44px] h-[24px] rounded-full transition-colors duration-150 shrink-0 self-start mt-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                 vacationBalanceEnabled ? "bg-success" : "bg-border"
               )}
             >
               <span
                 className={cn(
-                  "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-150",
-                  vacationBalanceEnabled ? "translate-x-5" : "translate-x-0.5"
+                  "absolute top-[2px] w-[20px] h-[20px] rounded-full bg-white shadow-sm transition-all duration-150",
+                  vacationBalanceEnabled ? "left-[22px]" : "left-[2px]"
                 )}
               />
             </button>
