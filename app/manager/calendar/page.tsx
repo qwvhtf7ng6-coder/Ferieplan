@@ -81,13 +81,20 @@ export default async function CalendarPage({
   type HolRow  = typeof holidays[0];
   type ShiftRow = typeof shiftAssignments[0];
 
-  const serializedDepts = departments.map((d: DeptRow) => ({
-    id: d.id,
-    name: d.name,
-    maxConcurrent: d.maxConcurrent,
-    shiftsEnabled: d.shiftsEnabled,
-    users: d.users,
-  }));
+  // Når medarbejder kun må se egne data: vis kun egen afdeling med kun sig selv
+  const visibleDepts = departments
+    .filter((d: DeptRow) => canSeeAll || d.id === user.departmentId)
+    .map((d: DeptRow) => ({
+      id: d.id,
+      name: d.name,
+      maxConcurrent: d.maxConcurrent,
+      shiftsEnabled: d.shiftsEnabled,
+      users: canSeeAll
+        ? d.users
+        : d.users.filter((u: { id: string }) => u.id === user.id),
+    }));
+
+  const serializedDepts = visibleDepts;
 
   const serializedRequests = requests.map((r: ReqRow) => ({
     id: r.id,
