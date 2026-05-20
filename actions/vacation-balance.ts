@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin, isManager } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import type { SessionUser } from "@/types";
 
 async function getSession(): Promise<SessionUser | null> {
@@ -60,17 +60,25 @@ export async function getMyVacationBalance(year?: number) {
   };
 }
 
-// Admin: get all users with balances for a given year
+// Admin/Manager: get all users with balances for a given year (scope-filtered)
 export async function getAllVacationBalances(year?: number) {
   const user = await getSession();
   if (!user) return { ok: false as const, error: "Ikke logget ind" };
-  if (!isAdmin(user.role) && !isManager(user.role)) {
+  const subject = buildSubject(user);
+  if (!can(subject, "balance.view_others")) {
     return { ok: false as const, error: "Ingen adgang" };
   }
 
   const y = year ?? new Date().getFullYear();
 
+  // Scope-baseret filtrering af brugerlisten
+  const scope = subject.permissions["balance.view_others"];
+  const userWhere = scope === "OWN_DEPARTMENT"
+    ? { departmentId: user.departmentId ?? undefined }
+    : {};
+
   const users = await prisma.user.findMany({
+    where: userWhere,
     orderBy: { name: "asc" },
     select: {
       id: true,

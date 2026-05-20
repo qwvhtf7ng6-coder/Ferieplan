@@ -41,21 +41,38 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
 
   function refresh() { startTransition(() => router.refresh()); }
 
-  async function handleApprove(e: React.MouseEvent) {
-    e.stopPropagation();
-    setError("");
-    setActionState("approving");
-    const result = await approveRequest(request.id);
+  async function performApprove(confirmOverride: boolean) {
+    const result = await approveRequest(request.id, { confirmOverride });
     if (!result.ok) {
       setError(result.error ?? "Fejl");
       setActionState("idle");
       return;
     }
+    // Hvis serveren returnerede en advarsel, er godkendelsen IKKE gennemført —
+    // brugeren skal bekræfte override i dialog først.
     if (result.data?.capacityWarning) {
       setCapacityWarning(result.data.capacityWarning);
       setShowCapacity(true);
+      setActionState("idle");
+      return;
     }
+    setActionState("idle");
     refresh();
+  }
+
+  async function handleApprove(e: React.MouseEvent) {
+    e.stopPropagation();
+    setError("");
+    setActionState("approving");
+    await performApprove(false);
+  }
+
+  async function handleConfirmOverride() {
+    setShowCapacity(false);
+    setCapacityWarning("");
+    setError("");
+    setActionState("approving");
+    await performApprove(true);
   }
 
   async function handleReject(reason: string) {
@@ -168,7 +185,7 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
         onClose={() => setShowCancelConfirm(false)}
       />
       <CapacityWarningDialog open={showCapacity} warning={capacityWarning}
-        onConfirm={() => { setShowCapacity(false); setCapacityWarning(""); }}
+        onConfirm={handleConfirmOverride}
         onClose={() => { setShowCapacity(false); setCapacityWarning(""); }} />
 
       <RejectDialog open={showReject} onClose={() => setShowReject(false)}

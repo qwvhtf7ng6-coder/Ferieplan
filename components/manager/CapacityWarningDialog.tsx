@@ -26,7 +26,7 @@ export function CapacityWarningDialog({ open, warning, onConfirm, onClose }: Cap
           </div>
         </div>
         <p className="text-[13px] text-text-muted">
-          Du kan stadig godkende ansøgningen. Kapacitetsgrænsen er vejledende og kan overskrides efter vurdering.
+          Godkendelse er ikke gennemført. Bekræft at du vil trumfe kapacitetsadvarslen og godkende ansøgningen alligevel.
         </p>
         <div className="flex gap-2">
           <Btn variant="success" onClick={onConfirm} full>Godkend alligevel</Btn>

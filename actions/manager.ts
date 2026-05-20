@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
-import { canManageDepartment, isManager } from "@/lib/permissions";
+import { can, buildSubject, type PermissionSubject } from "@/lib/can";
 import { revalidatePath } from "next/cache";
 import { notifyEmployeeOfDecision } from "@/lib/notifications";
 import type {
@@ -17,6 +17,15 @@ async function getSession(): Promise<SessionUser | null> {
   const session = await auth();
   if (!session?.user) return null;
   return session.user as SessionUser;
+}
+
+/** Henter session OG bygger subject — bruges af alle actions her. */
+async function getSessionAndSubject(): Promise<
+  { user: SessionUser; subject: PermissionSubject } | null
+> {
+  const user = await getSession();
+  if (!user) return null;
+  return { user, subject: buildSubject(user) };
 }
 
 async function checkCapacity(
@@ -56,13 +65,21 @@ export async function getManagerRequests(filters?: {
   year?: number;
   departmentId?: string;
 }): Promise<ActionResult<VacationRequestRow[]>> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
-  if (!isManager(user.role)) return { ok: false, error: "Ingen adgang" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
+
+  // Skal kunne se andres ansøgninger overhovedet
+  if (!can(subject, "application.view_others")) {
+    return { ok: false, error: "Ingen adgang" };
+  }
 
   const where: Record<string, unknown> = {};
 
-  if (user.role === "MANAGER") {
+  // Scope-baseret filtrering: OWN_DEPARTMENT begrænser til egen afdeling,
+  // ALL tillader på tværs (eller filter fra forespørgsel hvis angivet).
+  const scope = subject.permissions["application.view_others"];
+  if (scope === "OWN_DEPARTMENT") {
     where.departmentId = user.departmentId;
   } else if (filters?.departmentId) {
     where.departmentId = filters.departmentId;
@@ -90,17 +107,24 @@ export async function getManagerRequests(filters?: {
 }
 
 export async function approveRequest(
-  requestId: string
+  requestId: string,
+  options?: { confirmOverride?: boolean }
 ): Promise<ActionResult<{ capacityWarning?: string }>> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
 
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
     include: { entries: true },
   });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (!canManageDepartment(user.role, user.departmentId, request.departmentId)) {
+
+  if (
+    !can(subject, "approval.decide", {
+      targetDepartmentId: request.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (request.status !== "PENDING") {
@@ -113,6 +137,29 @@ export async function approveRequest(
     requestId
   );
 
+  // Variant B: kapacitetsadvarsel blokerer godkendelse medmindre brugeren
+  // har approval.override_capacity OG eksplicit har bekræftet override.
+  if (capacity.exceeded) {
+    const mayOverride = can(subject, "approval.override_capacity");
+    if (!mayOverride) {
+      return {
+        ok: false,
+        error: `Kapacitetsgrænse overskredet for ${capacity.date} (${capacity.current}/${capacity.max}). Du har ikke tilladelse til at trumfe advarslen.`,
+      };
+    }
+    if (!options?.confirmOverride) {
+      // Returnér advarslen så frontend kan vise bekræftelses-dialog.
+      // Bemærk: ok=true men ingen update er sket — frontend skal kalde igen
+      // med confirmOverride: true for at gennemføre godkendelsen.
+      return {
+        ok: true,
+        data: {
+          capacityWarning: `Kapacitetsgrænse overskredet for ${capacity.date} (${capacity.current}/${capacity.max} godkendt)`,
+        },
+      };
+    }
+  }
+
   await prisma.vacationRequest.update({
     where: { id: requestId },
     data: { status: "APPROVED" },
@@ -123,7 +170,7 @@ export async function approveRequest(
     requestId,
     action: "APPROVED",
     details: capacity.exceeded
-      ? `Kapacitetsadvarsel: ${capacity.date} (${capacity.current}/${capacity.max})`
+      ? `Kapacitetsadvarsel trumfet: ${capacity.date} (${capacity.current}/${capacity.max})`
       : undefined,
   });
 
@@ -134,26 +181,24 @@ export async function approveRequest(
   revalidatePath("/manager/calendar");
   revalidatePath("/dashboard");
 
-  return {
-    ok: true,
-    data: capacity.exceeded
-      ? {
-          capacityWarning: `Kapacitetsgrænse overskredet for ${capacity.date} (${capacity.current}/${capacity.max} godkendt)`,
-        }
-      : {},
-  };
+  return { ok: true, data: {} };
 }
 
 export async function rejectRequest(
   requestId: string,
   reason?: string
 ): Promise<ActionResult> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
 
   const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (!canManageDepartment(user.role, user.departmentId, request.departmentId)) {
+  if (
+    !can(subject, "approval.decide", {
+      targetDepartmentId: request.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (request.status !== "PENDING") {
@@ -188,12 +233,17 @@ export async function rejectRequest(
 export async function cancelRequestAsManager(
   requestId: string
 ): Promise<ActionResult> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
 
   const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (!canManageDepartment(user.role, user.departmentId, request.departmentId)) {
+  if (
+    !can(subject, "application.cancel_others", {
+      targetDepartmentId: request.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (!["PENDING", "APPROVED"].includes(request.status)) {
@@ -225,12 +275,17 @@ export async function editRequestNote(
   requestId: string,
   note: string
 ): Promise<ActionResult> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
 
   const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (!canManageDepartment(user.role, user.departmentId, request.departmentId)) {
+  if (
+    !can(subject, "approval.decide", {
+      targetDepartmentId: request.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
 
@@ -265,9 +320,12 @@ export async function getRequestWithAudit(requestId: string): Promise<
     }[];
   }>
 > {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
-  if (!isManager(user.role)) return { ok: false, error: "Ingen adgang" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { subject } = ctx;
+  if (!can(subject, "application.view_others")) {
+    return { ok: false, error: "Ingen adgang" };
+  }
 
   const request = await prisma.vacationRequest.findUnique({
     where: { id: requestId },
@@ -279,7 +337,11 @@ export async function getRequestWithAudit(requestId: string): Promise<
   });
   if (!request) return { ok: false, error: "Ikke fundet" };
 
-  if (!canManageDepartment(user.role, user.departmentId, request.departmentId)) {
+  if (
+    !can(subject, "application.view_others", {
+      targetDepartmentId: request.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang" };
   }
 
@@ -303,9 +365,12 @@ export async function createRequestOnBehalf(input: {
   entries: { date: string; type: string; absenceType: string }[];
   note?: string;
 }): Promise<ActionResult<{ id: string }>> {
-  const user = await getSession();
-  if (!user) return { ok: false, error: "Ikke logget ind" };
-  if (!isManager(user.role)) return { ok: false, error: "Ingen adgang" };
+  const ctx = await getSessionAndSubject();
+  if (!ctx) return { ok: false, error: "Ikke logget ind" };
+  const { user, subject } = ctx;
+  if (!can(subject, "application.create_on_behalf")) {
+    return { ok: false, error: "Ingen adgang" };
+  }
 
   const targetUser = await prisma.user.findUnique({
     where: { id: input.targetUserId },
@@ -314,8 +379,12 @@ export async function createRequestOnBehalf(input: {
   if (!targetUser) return { ok: false, error: "Medarbejder ikke fundet" };
   if (!targetUser.departmentId) return { ok: false, error: "Medarbejder mangler afdeling" };
 
-  // Manager can only create for their own dept, admin for anyone
-  if (!canManageDepartment(user.role, user.departmentId, targetUser.departmentId)) {
+  // Scope-tjek: kan brugeren oprette ansøgning for nogen i denne afdeling?
+  if (
+    !can(subject, "application.create_on_behalf", {
+      targetDepartmentId: targetUser.departmentId,
+    })
+  ) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
 

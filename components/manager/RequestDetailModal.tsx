@@ -65,22 +65,37 @@ export function RequestDetailModal({ requestId, onClose }: RequestDetailModalPro
     startTransition(() => router.refresh());
   }
 
-  async function handleApprove() {
+  async function performApprove(confirmOverride: boolean) {
     if (!requestId) return;
-    setError(""); setActionState("approving");
-    const result = await approveRequest(requestId);
-    if (!result.ok) { setError(result.error ?? "Fejl"); setActionState("idle"); return; }
+    const result = await approveRequest(requestId, { confirmOverride });
+    if (!result.ok) {
+      setError(result.error ?? "Fejl");
+      setActionState("idle");
+      return;
+    }
+    // Hvis advarsel returneres er godkendelsen IKKE gennemført — vent på bekræftelse.
     if (result.data?.capacityWarning) {
       setCapacityWarning(result.data.capacityWarning);
       setShowCapacityDialog(true);
+      setActionState("idle");
+      return;
     }
+    setActionState("idle");
     refresh();
+  }
+
+  async function handleApprove() {
+    if (!requestId) return;
+    setError(""); setActionState("approving");
+    await performApprove(false);
   }
 
   async function handleApproveConfirmed() {
     setShowCapacityDialog(false);
     setCapacityWarning("");
-    refresh();
+    setError("");
+    setActionState("approving");
+    await performApprove(true);
   }
 
   async function handleReject(reason: string) {
