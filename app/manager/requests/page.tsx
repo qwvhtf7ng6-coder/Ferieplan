@@ -73,7 +73,7 @@ export default async function ManagerRequestsPage({
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
+      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
 
         {/* Today widget */}

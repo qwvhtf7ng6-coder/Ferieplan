@@ -28,7 +28,7 @@ export default async function VacationBalancePage({
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={true} />
+      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={true} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <VacationBalanceClient rows={rows ?? []} year={year} />
       </main>

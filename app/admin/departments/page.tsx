@@ -23,7 +23,7 @@ export default async function DepartmentsPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
+      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <DepartmentsClient departments={departments as any} />
       </main>

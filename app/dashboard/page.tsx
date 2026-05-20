@@ -5,8 +5,7 @@ import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
-import { getCalendarVisibility, canSeeShifts, isVacationBalanceEnabled } from "@/lib/settings";
-import { isManager } from "@/lib/permissions";
+import { canSeeShifts, isVacationBalanceEnabled } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
@@ -19,9 +18,8 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [result, visibility, shiftsVisible, balanceResult, balanceFeatureEnabled] = await Promise.all([
+  const [result, shiftsVisible, balanceResult, balanceFeatureEnabled] = await Promise.all([
     getMyRequests(),
-    getCalendarVisibility(),
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
     getMyVacationBalance(),
     isVacationBalanceEnabled(),
@@ -36,7 +34,6 @@ export default async function DashboardPage() {
     0,
   );
 
-  const calendarVisible = isManager(user.role) || visibility === "ALL_EMPLOYEES";
   const balance = balanceResult.ok && balanceFeatureEnabled ? balanceResult.data : null;
 
   const stats = [
@@ -48,7 +45,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
+      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Mine ansøgninger"

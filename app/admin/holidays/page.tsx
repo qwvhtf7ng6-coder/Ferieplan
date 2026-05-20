@@ -20,7 +20,7 @@ export default async function HolidaysPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
+      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <HolidaysClient holidays={holidays as any} />
       </main>

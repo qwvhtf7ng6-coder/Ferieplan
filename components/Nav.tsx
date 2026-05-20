@@ -15,7 +15,6 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 interface NavProps {
   role: string;
   name: string;
-  calendarVisible?: boolean;
   shiftsVisible?: boolean;
   vacationBalanceEnabled?: boolean;
 }
@@ -27,7 +26,7 @@ interface NavLink {
   roles: string[];
 }
 
-export default function Nav({ role, name, calendarVisible = false, shiftsVisible = true, vacationBalanceEnabled = false }: NavProps) {
+export default function Nav({ role, name, shiftsVisible = true, vacationBalanceEnabled = false }: NavProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -42,10 +41,7 @@ export default function Nav({ role, name, calendarVisible = false, shiftsVisible
     { href: "/requests/new",      label: "Ny ansøgning",      icon: <Plus size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/manager/requests",  label: "Ansøgninger",       icon: <ClipboardList size={16} />, roles: ["MANAGER", "ADMIN"] },
     ...(shiftsVisible ? [{ href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />, roles: ["EMPLOYEE", "MANAGER", "ADMIN"] }] : []),
-    { href: "/manager/calendar",  label: "Kalender",          icon: <Calendar size={16} />,    roles: ["MANAGER", "ADMIN"] },
-    ...(calendarVisible && role === "EMPLOYEE"
-      ? [{ href: "/manager/calendar", label: "Kalender", icon: <Calendar size={16} />, roles: ["EMPLOYEE"] }]
-      : []),
+    { href: "/manager/calendar",  label: "Kalender",          icon: <Calendar size={16} />,    roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
     { href: "/admin/users",       label: "Brugere",           icon: <Users size={16} />,       roles: ["ADMIN"] },
     { href: "/admin/departments",  label: "Afdelinger",       icon: <Building2 size={16} />,   roles: ["ADMIN"] },
     { href: "/admin/holidays",    label: "Helligdage",        icon: <Flag size={16} />,        roles: ["ADMIN"] },

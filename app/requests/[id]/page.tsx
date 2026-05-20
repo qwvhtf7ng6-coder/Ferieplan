@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
-import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
+import { canSeeShifts } from "@/lib/settings";
 import { canManageDepartment } from "@/lib/permissions";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
@@ -18,9 +18,8 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [{ id }, calendarVisible, shiftsVisible] = await Promise.all([
+  const [{ id }, shiftsVisible] = await Promise.all([
     params,
-    canSeeCalendar(user.role),
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
 
@@ -55,7 +54,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
+      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Ansøgning"

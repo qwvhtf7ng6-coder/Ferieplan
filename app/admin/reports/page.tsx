@@ -65,7 +65,7 @@ export default async function ReportsPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
+      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text">Rapporter</h1>

@@ -27,7 +27,7 @@ export default async function SettingsPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
+      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-xl mx-auto p-6">
         <SettingsClient settings={settings as Settings | null} />
       </main>

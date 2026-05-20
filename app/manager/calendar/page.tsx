@@ -21,9 +21,11 @@ export default async function CalendarPage({
     getCalendarVisibility(),
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
   ]);
-  if (!isManager(user.role) && visibility === "MANAGEMENT_ONLY") {
-    redirect("/dashboard");
-  }
+
+  // Medarbejdere kan altid se kalenderen.
+  // MANAGEMENT_ONLY betyder kun at de kun ser egne data — ikke andres.
+  const isManagerOrAdmin = isManager(user.role);
+  const canSeeAll = isManagerOrAdmin || visibility === "ALL_EMPLOYEES";
 
   const sp = await searchParams;
   const now = new Date();
@@ -32,8 +34,6 @@ export default async function CalendarPage({
 
   const start = new Date(year, month - 1, 1);
   const end   = new Date(year, month,     0, 23, 59, 59);
-
-  const isManagerOrAdmin = isManager(user.role);
 
   const [departments, requests, holidays, shiftAssignments] = await Promise.all([
     prisma.department.findMany({
@@ -50,6 +50,7 @@ export default async function CalendarPage({
       where: {
         status: { in: isManagerOrAdmin ? ["APPROVED", "PENDING"] : ["APPROVED"] },
         entries: { some: { date: { gte: start, lte: end } } },
+        ...(!canSeeAll ? { userId: user.id } : {}),
       },
       include: {
         entries: {
@@ -64,7 +65,10 @@ export default async function CalendarPage({
       orderBy: { date: "asc" },
     }),
     prisma.shiftAssignment.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(!canSeeAll ? { userId: user.id } : {}),
+      },
       include: {
         template: { select: { name: true, startTime: true, endTime: true, color: true } },
       },
@@ -140,7 +144,7 @@ export default async function CalendarPage({
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} shiftsVisible={shiftsVisible} />
+      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
           year={year}

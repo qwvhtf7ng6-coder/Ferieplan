@@ -4,7 +4,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { RequestForm } from "@/components/RequestForm";
-import { canSeeCalendar, canSeeShifts } from "@/lib/settings";
+import { canSeeShifts } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
@@ -16,15 +16,12 @@ export default async function NewRequestPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [calendarVisible, shiftsVisible] = await Promise.all([
-    canSeeCalendar(user.role),
-    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
-  ]);
+  const shiftsVisible = await canSeeShifts(user.role, user.departmentId, user.canManageShifts);
 
   if (!user.departmentId) {
     return (
       <AppShell>
-        <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
+        <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
         <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
           <Card className="p-8 text-center">
             <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
@@ -41,7 +38,7 @@ export default async function NewRequestPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={calendarVisible} shiftsVisible={shiftsVisible} />
+      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Ny ansøgning"
