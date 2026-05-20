@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-import { isAdmin } from "@/lib/permissions";
 import type { UserRole } from "@/types";
 
 // Cache app settings for 1 hour — rarely changes
@@ -40,7 +39,7 @@ const getDepartmentShiftsEnabled = unstable_cache(
  *  EMPLOYEEs can see shifts (read-only) if their department has shiftsEnabled.
  *  Users with canManageShifts can always see shifts. */
 export async function canSeeShifts(role: UserRole, departmentId: string | null | undefined, canManageShifts?: boolean): Promise<boolean> {
-  if (isAdmin(role)) return true;
+  if (role === "ADMIN") return true;
   if (canManageShifts) return true;
   if (!departmentId) return false;
   return await getDepartmentShiftsEnabled(departmentId);

@@ -38,37 +38,51 @@ import {
  *
  * For andre roller: hvis brugeren har gemte overrides, bruges de (merged over
  * rolle-defaults for at fylde manglende nøgler ud). Ellers bruges rolle-defaults.
+ *
+ * Legacy: hvis legacyOverrides.canManageShifts er true (det gamle boolean-felt
+ * på User), tilføjes shift.edit_templates: true og shift.assign: OWN_DEPARTMENT
+ * automatisk. Det bevarer bagudkompatibilitet med eksisterende brugere der har
+ * fået dette flag sat før tilladelsessystemet eksisterede.
  */
 export function getEffectivePermissions(
   role: UserRole,
-  storedPermissions: unknown
+  storedPermissions: unknown,
+  legacyOverrides?: { canManageShifts?: boolean | null }
 ): Permissions {
   // ADMIN: altid fuld adgang. Ingen DB-værdi kan reducere dette.
   if (role === "ADMIN") return ADMIN_DEFAULTS;
 
   const defaults = defaultsForRole(role);
 
-  // Ingen gemte overrides → brug defaults.
+  // Start fra defaults
+  let merged: Record<string, unknown> = { ...defaults };
+
+  // Læg gemte overrides oveni (kun gyldige værdier).
   if (
-    storedPermissions == null ||
-    typeof storedPermissions !== "object" ||
-    Array.isArray(storedPermissions)
+    storedPermissions != null &&
+    typeof storedPermissions === "object" &&
+    !Array.isArray(storedPermissions)
   ) {
-    return defaults;
+    const stored = storedPermissions as Record<string, unknown>;
+    for (const key of PERMISSION_KEYS) {
+      const value = stored[key];
+      if (value === undefined) continue;
+
+      if (isScopePermission(key)) {
+        if (isValidScope(value)) merged[key] = value;
+      } else {
+        if (typeof value === "boolean") merged[key] = value;
+      }
+    }
   }
 
-  // Merge: defaults først, gemte værdier oveni. Manglende nøgler fyldes ud.
-  const stored = storedPermissions as Record<string, unknown>;
-  const merged: Record<string, unknown> = { ...defaults };
-
-  for (const key of PERMISSION_KEYS) {
-    const value = stored[key];
-    if (value === undefined) continue;
-
-    if (isScopePermission(key)) {
-      if (isValidScope(value)) merged[key] = value;
-    } else {
-      if (typeof value === "boolean") merged[key] = value;
+  // Legacy canManageShifts: kan kun udvide adgang, aldrig indskrænke.
+  if (legacyOverrides?.canManageShifts === true) {
+    if (merged["shift.edit_templates"] === false) {
+      merged["shift.edit_templates"] = true;
+    }
+    if (merged["shift.assign"] === "NONE") {
+      merged["shift.assign"] = "OWN_DEPARTMENT";
     }
   }
 
@@ -103,17 +117,20 @@ export interface PermissionSubject {
  * Bygger et PermissionSubject fra en bruger-objekt (typisk session.user).
  *
  * Tager rå `permissions`-feltet (JSON eller null) og beregner effektive
- * tilladelser inkl. ADMIN-override.
+ * tilladelser inkl. ADMIN-override og legacy canManageShifts-flag.
  */
 export function buildSubject(user: {
   role: UserRole;
   departmentId?: string | null;
   permissions?: unknown;
+  canManageShifts?: boolean | null;
 }): PermissionSubject {
   return {
     role: user.role,
     departmentId: user.departmentId ?? null,
-    permissions: getEffectivePermissions(user.role, user.permissions),
+    permissions: getEffectivePermissions(user.role, user.permissions, {
+      canManageShifts: user.canManageShifts ?? null,
+    }),
   };
 }
 

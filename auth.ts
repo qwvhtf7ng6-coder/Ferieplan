@@ -72,7 +72,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: user.role,
           departmentId: user.departmentId,
           canManageShifts: user.canManageShifts,
-          permissions: getEffectivePermissions(user.role, user.permissions),
+          permissions: getEffectivePermissions(user.role, user.permissions, {
+            canManageShifts: user.canManageShifts,
+          }),
         };
       },
     }),
@@ -111,7 +113,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.canManageShifts = dbUser.canManageShifts;
             token.permissions = getEffectivePermissions(
               dbUser.role,
-              dbUser.permissions
+              dbUser.permissions,
+              { canManageShifts: dbUser.canManageShifts }
             );
             token.profileCachedAt = now;
           } else {
