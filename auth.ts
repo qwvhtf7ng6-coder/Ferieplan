@@ -77,27 +77,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
+      const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutter
+      const now = Date.now();
+
       if (user) {
         // Første login: gem fra user-objektet
         token.id = user.id;
         token.role = (user as any).role;
         token.departmentId = (user as any).departmentId;
         token.canManageShifts = (user as any).canManageShifts;
+        token.profileCachedAt = now;
       } else if (token.id) {
-        // Efterfølgende requests: hent altid frisk fra DB
-        // så ændringer i rolle/afdeling træder i kraft øjeblikkeligt
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true, departmentId: true, canManageShifts: true },
-        });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.departmentId = dbUser.departmentId;
-          token.canManageShifts = dbUser.canManageShifts;
-        } else {
-          // Bruger slettet — invalider token
-          return null as any;
+        const lastCached = (token.profileCachedAt as number) ?? 0;
+        const cacheExpired = now - lastCached > CACHE_TTL_MS;
+
+        if (cacheExpired) {
+          // Cache udløbet — hent frisk fra DB (max hvert 5. min)
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, departmentId: true, canManageShifts: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+            token.departmentId = dbUser.departmentId;
+            token.canManageShifts = dbUser.canManageShifts;
+            token.profileCachedAt = now;
+          } else {
+            // Bruger slettet — invalider token
+            return null as any;
+          }
         }
+        // Hvis cache ikke er udløbet: brug token som det er (ingen DB-query)
       }
       return token;
     },
