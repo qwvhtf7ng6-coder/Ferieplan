@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import AdminUsersClient from "./AdminUsersClient";
 import { isAdmin } from "@/lib/permissions";
+import { isVacationBalanceEnabled } from "@/lib/settings";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -12,17 +13,18 @@ export default async function AdminUsersPage() {
   const user = session.user as any;
   if (!isAdmin(user.role)) redirect("/dashboard");
 
-  const [users, departments] = await Promise.all([
+  const [users, departments, balanceEnabled] = await Promise.all([
     prisma.user.findMany({
       include: { department: { select: { name: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.department.findMany({ orderBy: { name: "asc" } }),
+    isVacationBalanceEnabled(),
   ]);
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <AdminUsersClient
           users={users.map((u: typeof users[0]) => ({ ...u, password: "" }))}

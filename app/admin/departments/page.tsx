@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import DepartmentsClient from "./DepartmentsClient";
 import { isAdmin } from "@/lib/permissions";
+import { isVacationBalanceEnabled } from "@/lib/settings";
 
 export default async function DepartmentsPage() {
   const session = await auth();
@@ -12,14 +13,17 @@ export default async function DepartmentsPage() {
   const user = session.user as any;
   if (!isAdmin(user.role)) redirect("/dashboard");
 
-  const departments = await prisma.department.findMany({
-    include: { _count: { select: { users: true } } },
-    orderBy: { name: "asc" },
-  });
+  const [departments, balanceEnabled] = await Promise.all([
+    prisma.department.findMany({
+      include: { _count: { select: { users: true } } },
+      orderBy: { name: "asc" },
+    }),
+    isVacationBalanceEnabled(),
+  ]);
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} />
+      <Nav role={user.role} name={user.name ?? ""} calendarVisible={true} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <DepartmentsClient departments={departments as any} />
       </main>

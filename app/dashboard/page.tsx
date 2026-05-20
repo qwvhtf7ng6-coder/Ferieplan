@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
-import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
+import { getCalendarVisibility, canSeeShifts, isVacationBalanceEnabled } from "@/lib/settings";
 import { isManager } from "@/lib/permissions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
@@ -19,11 +19,12 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [result, visibility, shiftsVisible, balanceResult] = await Promise.all([
+  const [result, visibility, shiftsVisible, balanceResult, balanceFeatureEnabled] = await Promise.all([
     getMyRequests(),
     getCalendarVisibility(),
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
     getMyVacationBalance(),
+    isVacationBalanceEnabled(),
   ]);
 
   const requests = result.ok ? result.data ?? [] : [];
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
   );
 
   const calendarVisible = isManager(user.role) || visibility === "ALL_EMPLOYEES";
-  const balance = balanceResult.ok ? balanceResult.data : null;
+  const balance = balanceResult.ok && balanceFeatureEnabled ? balanceResult.data : null;
 
   const stats = [
     { label: "I alt",           value: totalCount,    icon: <CalendarDays size={18} />, color: "#4f46e5", bg: "rgba(79,70,229,.1)" },

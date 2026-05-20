@@ -156,10 +156,11 @@ model Holiday {
 }
 
 model AppSettings {
-  id                   String            @id @default(cuid())
-  calendarVisibility   VisibilitySetting @default(ALL_EMPLOYEES)
-  reminderThresholdDays Int              @default(3)
-  updatedAt            DateTime          @updatedAt
+  id                    String            @id @default(cuid())
+  calendarVisibility    VisibilitySetting @default(ALL_EMPLOYEES)
+  reminderThresholdDays Int               @default(3)
+  vacationBalanceEnabled Boolean          @default(false)
+  updatedAt             DateTime          @updatedAt
 }
 
 model AuditLog {

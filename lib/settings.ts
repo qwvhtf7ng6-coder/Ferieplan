@@ -14,7 +14,11 @@ export async function canSeeCalendar(role: UserRole): Promise<boolean> {
   return visibility === "ALL_EMPLOYEES";
 }
 
-/** Single source of truth for whether a user can see the shifts link.
+export async function isVacationBalanceEnabled(): Promise<boolean> {
+  const settings = await prisma.appSettings.findFirst();
+  return settings?.vacationBalanceEnabled ?? false;
+}
+
  *  ADMINs always can. MANAGERs only if their department has shiftsEnabled.
  *  EMPLOYEEs can see shifts (read-only) if their department has shiftsEnabled.
  *  Users with canManageShifts can always see shifts. */
