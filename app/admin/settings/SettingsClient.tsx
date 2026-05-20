@@ -150,44 +150,46 @@ export default function SettingsClient({ settings }: { settings: Settings | null
 
         {/* Vacation balance toggle */}
         <Card className="p-5">
-          <div className="flex items-start gap-3 mb-4">
+          <div className="flex items-start gap-3">
             <div className="w-[42px] h-[42px] rounded-lg flex items-center justify-center shrink-0"
               style={{ background: vacationBalanceEnabled ? "rgba(5,150,105,.1)" : "var(--c-bg)", color: vacationBalanceEnabled ? "var(--c-success)" : "var(--c-text-muted)" }}>
               <Wallet size={20} />
             </div>
-            <div className="flex-1">
-              <p className="text-[15px] font-bold text-text">Feriedagsregnskab</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[15px] font-bold text-text">Feriedagsregnskab</p>
+                {/* Toggle switch */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={vacationBalanceEnabled}
+                  onClick={() => setVacationBalanceEnabled((v) => !v)}
+                  className={cn(
+                    "relative w-11 h-6 rounded-full transition-colors duration-150 shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                    vacationBalanceEnabled ? "bg-success" : "bg-border"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-150",
+                      vacationBalanceEnabled ? "translate-x-5" : "translate-x-0.5"
+                    )}
+                  />
+                </button>
+              </div>
               <p className="text-[12px] text-text-muted mt-0.5">
                 Vis feriesaldo til medarbejdere på dashboardet og aktiver admin-siden til saldostyring.
               </p>
+              <p className={cn(
+                "text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-block mt-2",
+                vacationBalanceEnabled
+                  ? "bg-success-bg text-success-text"
+                  : "bg-warning-bg text-warning-text"
+              )}>
+                {vacationBalanceEnabled ? "Aktiv" : "Deaktiveret"}
+              </p>
             </div>
-            {/* Toggle switch */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={vacationBalanceEnabled}
-              onClick={() => setVacationBalanceEnabled((v) => !v)}
-              className={cn(
-                "relative w-11 h-6 rounded-full transition-colors duration-150 shrink-0 mt-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-                vacationBalanceEnabled ? "bg-success" : "bg-border"
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-150",
-                  vacationBalanceEnabled ? "translate-x-5" : "translate-x-0.5"
-                )}
-              />
-            </button>
           </div>
-          <p className={cn(
-            "text-[12px] font-semibold px-2.5 py-1 rounded-full inline-block",
-            vacationBalanceEnabled
-              ? "bg-success-bg text-success-text"
-              : "bg-warning-bg text-warning-text"
-          )}>
-            {vacationBalanceEnabled ? "Aktiv" : "Deaktiveret"}
-          </p>
         </Card>
 
         {/* Save */}
