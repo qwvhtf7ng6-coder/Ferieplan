@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { TopBar } from "@/components/TopBar";
+import { Analytics } from "@vercel/analytics/next";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {children}
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
