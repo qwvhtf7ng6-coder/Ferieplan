@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getEffectivePermissions } from "@/lib/can";
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -71,6 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: user.role,
           departmentId: user.departmentId,
           canManageShifts: user.canManageShifts,
+          permissions: getEffectivePermissions(user.role, user.permissions),
         };
       },
     }),
@@ -86,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role;
         token.departmentId = (user as any).departmentId;
         token.canManageShifts = (user as any).canManageShifts;
+        token.permissions = (user as any).permissions;
         token.profileCachedAt = now;
       } else if (token.id) {
         const lastCached = (token.profileCachedAt as number) ?? 0;
@@ -95,12 +98,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Cache udløbet — hent frisk fra DB (max hvert 5. min)
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true, departmentId: true, canManageShifts: true },
+            select: {
+              role: true,
+              departmentId: true,
+              canManageShifts: true,
+              permissions: true,
+            },
           });
           if (dbUser) {
             token.role = dbUser.role;
             token.departmentId = dbUser.departmentId;
             token.canManageShifts = dbUser.canManageShifts;
+            token.permissions = getEffectivePermissions(
+              dbUser.role,
+              dbUser.permissions
+            );
             token.profileCachedAt = now;
           } else {
             // Bruger slettet — invalider token
@@ -117,6 +129,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).role = token.role;
         (session.user as any).departmentId = token.departmentId;
         (session.user as any).canManageShifts = token.canManageShifts;
+        (session.user as any).permissions = token.permissions;
       }
       return session;
     },

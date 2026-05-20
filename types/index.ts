@@ -1,3 +1,5 @@
+import type { Permissions } from "@/lib/permission-types";
+
 export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN";
 export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type EntryType = "FULL_DAY" | "HALF_DAY_AM" | "HALF_DAY_PM";
@@ -11,6 +13,9 @@ export interface SessionUser {
   role: UserRole;
   departmentId: string | null;
   canManageShifts?: boolean;
+  // Effektive tilladelser (rolle-defaults merget med evt. per-bruger overrides).
+  // Beregnes i auth.ts via getEffectivePermissions. Altid fuldt udfyldt på session.
+  permissions?: Permissions;
 }
 
 export interface EntryInput {
