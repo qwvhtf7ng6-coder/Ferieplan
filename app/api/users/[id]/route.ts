@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isValidRole } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
@@ -12,10 +12,20 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
-  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+  const subject = buildSubject(actor);
+  // Sletning kræver "edit" på den specifikke bruger — vi skal kende deres afdeling først
   const { id } = await params;
   if (id === actor.id) return NextResponse.json({ error: "Kan ikke slette dig selv" }, { status: 400 });
+
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { departmentId: true, role: true },
+  });
+  if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
+
+  if (!can(subject, "user.edit", { targetDepartmentId: target.departmentId })) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Cascade: slet bruger og alle tilknyttede data
   await prisma.user.delete({ where: { id } });
@@ -30,10 +40,28 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
-  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(actor);
 
   const { id } = await params;
-  const { name, email, role, departmentId, newPassword, canManageShifts } = await req.json();
+  const body = await req.json();
+  const { name, email, role, departmentId, newPassword, canManageShifts } = body;
+
+  // Find målbruger først så vi kan tjekke scope mod deres aktuelle afdeling
+  const target = await prisma.user.findUnique({
+    where: { id },
+    select: { departmentId: true },
+  });
+  if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
+
+  // Generel redigerings-adgang
+  if (!can(subject, "user.edit", { targetDepartmentId: target.departmentId })) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Adgangskode-reset kræver separat tilladelse med scope
+  if (newPassword && !can(subject, "user.reset_password", { targetDepartmentId: target.departmentId })) {
+    return NextResponse.json({ error: "Ingen tilladelse til at nulstille adgangskode" }, { status: 403 });
+  }
 
   if (!name || !email) {
     return NextResponse.json({ error: "Navn og email er påkrævet" }, { status: 400 });

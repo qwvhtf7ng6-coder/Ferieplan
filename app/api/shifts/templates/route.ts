@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject, scopeOf } from "@/lib/can";
 import { isValidTime, isValidHexColor } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -8,12 +8,16 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const departmentId = searchParams.get("departmentId");
 
-  const where = isAdmin(user.role)
+  // ALL-scope brugere (admin + give-de-rettighed managers) kan filtrere på enhver afdeling.
+  // OWN_DEPARTMENT-brugere låses til egen afdeling.
+  const assignScope = scopeOf(subject, "shift.assign");
+  const where = assignScope === "ALL"
     ? departmentId ? { departmentId } : {}
     : { departmentId: user.departmentId };
 
@@ -30,7 +34,8 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, startTime, endTime, color, departmentId, dayTimeRules } = await req.json();
 
@@ -42,8 +47,8 @@ export async function POST(req: NextRequest) {
   }
   const safeColor = isValidHexColor(color) ? color : "#3b82f6";
 
-  // Non-admin managers can only create for their own department
-  if (!isAdmin(user.role) && departmentId !== user.departmentId) {
+  // Scope-tjek: må brugeren tildele vagter i denne afdeling?
+  if (!can(subject, "shift.assign", { targetDepartmentId: departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

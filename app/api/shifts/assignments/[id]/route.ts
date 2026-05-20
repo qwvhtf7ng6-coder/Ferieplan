@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
@@ -10,7 +10,8 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 
@@ -21,7 +22,7 @@ export async function DELETE(
 
   if (!assignment) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
-  if (!isAdmin(user.role) && assignment.template.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: assignment.template.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

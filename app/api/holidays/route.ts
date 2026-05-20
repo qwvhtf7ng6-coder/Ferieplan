@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!isAdmin(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(buildSubject(user), "holidays.edit")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, date, isNational } = await req.json();
   if (!name || !date) return NextResponse.json({ error: "Navn og dato påkrævet" }, { status: 400 });

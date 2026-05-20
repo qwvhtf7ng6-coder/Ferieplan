@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isValidRecurrenceType, isValidIntervalWeeks, isValidDateString } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { generateAssignmentsFromPattern } from "@/lib/shift-patterns";
@@ -9,12 +9,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const existing = await prisma.shiftPattern.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
-  if (!isAdmin(user.role) && existing.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -57,12 +58,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const existing = await prisma.shiftPattern.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
-  if (!isAdmin(user.role) && existing.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -75,14 +77,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const pattern = await prisma.shiftPattern.findUnique({ where: { id } });
   if (!pattern) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
-  // Scope: manager kan kun regenerere mønstre fra egen afdeling
-  if (!isAdmin(user.role) && pattern.departmentId !== user.departmentId) {
+  // Scope: brugeren skal kunne tildele vagter i mønsterets afdeling
+  if (!can(subject, "shift.assign", { targetDepartmentId: pattern.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

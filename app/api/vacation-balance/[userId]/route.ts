@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isAdmin, isManager } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 
 interface Params {
@@ -12,11 +12,24 @@ export async function GET(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
-  if (!isAdmin(actor.role) && !isManager(actor.role) && actor.id !== (await params).userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const subject = buildSubject(actor);
 
   const { userId } = await params;
+
+  // Egen saldo må altid ses
+  if (actor.id !== userId) {
+    // Hent målbrugers afdeling for scope-tjek
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { departmentId: true },
+    });
+    if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
+
+    if (!can(subject, "balance.view_others", { targetDepartmentId: target.departmentId })) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const year = parseInt(req.nextUrl.searchParams.get("year") ?? String(new Date().getFullYear()));
 
   const [balance, usedResult] = await Promise.all([
@@ -57,9 +70,18 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
-  if (!isAdmin(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(actor);
 
   const { userId } = await params;
+
+  // Verificér målbruger og scope
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
+
+  if (!can(subject, "balance.edit", { targetDepartmentId: target.departmentId })) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { year, totalDays, carryOverDays, note } = await req.json();
 
   if (!year || totalDays === undefined) {
@@ -71,10 +93,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if ((carryOverDays ?? 0) < 0) {
     return NextResponse.json({ error: "carryOverDays kan ikke være negativ" }, { status: 400 });
   }
-
-  // Verify user exists
-  const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
 
   const balance = await prisma.vacationBalance.upsert({
     where: { userId_year: { userId, year } },

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject } from "@/lib/can";
 import { isValidTime, isValidHexColor } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -11,7 +11,8 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
   const { name, startTime, endTime, color, dayTimeRules } = await req.json();
@@ -27,7 +28,7 @@ export async function PATCH(
   const existing = await prisma.shiftTemplate.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
-  if (!isAdmin(user.role) && existing.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -52,14 +53,15 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 
   const existing = await prisma.shiftTemplate.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
-  if (!isAdmin(user.role) && existing.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

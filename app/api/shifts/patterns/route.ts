@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject, scopeOf } from "@/lib/can";
 import { isValidRecurrenceType, isValidIntervalWeeks, isValidDateString } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { generateAssignmentsFromPattern } from "@/lib/shift-patterns";
@@ -9,12 +9,14 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const departmentId = searchParams.get("departmentId");
 
-  const where = isAdmin(user.role)
+  const assignScope = scopeOf(subject, "shift.assign");
+  const where = assignScope === "ALL"
     ? departmentId ? { departmentId } : {}
     : { departmentId: user.departmentId };
 
@@ -34,7 +36,8 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, departmentId, templateId, userId, startDate, endDate, recurrenceType, intervalWeeks, weekdayRules, note } = await req.json();
 
@@ -42,8 +45,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Manglende påkrævede felter" }, { status: 400 });
   }
 
-  // Scope: manager kan kun oprette i egen afdeling
-  if (!isAdmin(user.role) && departmentId !== user.departmentId) {
+  // Scope: brugeren skal kunne tildele vagter i målafdelingen
+  if (!can(subject, "shift.assign", { targetDepartmentId: departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

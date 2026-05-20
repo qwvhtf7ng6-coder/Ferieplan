@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isManager, isAdmin, canEditShifts } from "@/lib/permissions";
+import { can, buildSubject, scopeOf } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 import { startOfWeek, endOfWeek, addDays } from "date-fns";
 
@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const subject = buildSubject(user);
 
   const { searchParams } = new URL(req.url);
   const weekStart = searchParams.get("weekStart"); // ISO date string
@@ -24,11 +25,13 @@ export async function GET(req: NextRequest) {
     to = endOfWeek(new Date(), { weekStartsOn: 1 });
   }
 
-  // Scope: EMPLOYEE sees own, MANAGER sees department, ADMIN sees all
+  // Scope-baseret filtrering: ingen shift.assign-scope = kun egne vagter.
+  // OWN_DEPARTMENT = egen afdeling. ALL = alt (eller filter fra forespørgsel).
+  const assignScope = scopeOf(subject, "shift.assign");
   const whereUser =
-    user.role === "EMPLOYEE"
+    assignScope === "NONE"
       ? { userId: user.id }
-      : isAdmin(user.role)
+      : assignScope === "ALL"
       ? departmentId
         ? { user: { departmentId } }
         : {}
@@ -80,7 +83,8 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (!canEditShifts(user.role, user.canManageShifts)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const subject = buildSubject(user);
+  if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { userId, templateId, date, note } = await req.json();
 
@@ -96,21 +100,18 @@ export async function POST(req: NextRequest) {
   // Verify template belongs to manager's department
   const template = await prisma.shiftTemplate.findUnique({ where: { id: templateId } });
   if (!template) return NextResponse.json({ error: "Vagtskabelon ikke fundet" }, { status: 404 });
-  if (!isAdmin(user.role) && template.departmentId !== user.departmentId) {
+  if (!can(subject, "shift.assign", { targetDepartmentId: template.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Verify userId tilhører samme afdeling som template
-  // (gælder også admin — en bruger fra dept B må ikke tildeles dept A's template)
+  // (en bruger fra dept B må ikke tildeles dept A's template — også selvom admin)
   const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { departmentId: true } });
   if (!targetUser) {
     return NextResponse.json({ error: "Medarbejder ikke fundet" }, { status: 404 });
   }
   if (targetUser.departmentId !== template.departmentId) {
     return NextResponse.json({ error: "Medarbejder tilhører ikke skabelonens afdeling" }, { status: 403 });
-  }
-  if (!isAdmin(user.role) && targetUser.departmentId !== user.departmentId) {
-    return NextResponse.json({ error: "Medarbejder tilhører ikke din afdeling" }, { status: 403 });
   }
 
   // Check if user has approved absence on this date
