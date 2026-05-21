@@ -10,6 +10,7 @@ import { SlideOver } from "@/components/ui/SlideOver";
 import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Pencil, Trash2, Key, User, Shield, Users } from "lucide-react";
 
@@ -44,6 +45,14 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
   const [editError, setEditError] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
+  type EditTabId = "profile" | "access" | "permissions";
+  const [editTab, setEditTab] = useState<EditTabId>("profile");
+  const EDIT_TABS: TabDef<EditTabId>[] = [
+    { id: "profile",     label: "Profil" },
+    { id: "access",      label: "Adgang" },
+    { id: "permissions", label: "Tilladelser" },
+  ];
+
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -66,6 +75,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditUser(u);
     setEditForm({ name: u.name, email: u.email, role: u.role, departmentId: u.departmentId ?? "", newPassword: "", canManageShifts: u.canManageShifts });
     setEditError(""); setShowPwField(false);
+    setEditTab("profile");
   }
 
   async function saveEdit() {
@@ -181,9 +191,10 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
         </form>
       </SlideOver>
 
-      {/* Edit SlideOver */}
+      {/* Edit SlideOver — opdelt i tabs (Profil / Adgang / Tilladelser). */}
       <SlideOver open={!!editUser} onClose={() => setEditUser(null)} title="Rediger bruger" subtitle={editUser?.email}>
         <div className="space-y-5">
+          {/* Bruger-header (vises på alle tabs) */}
           {editUser && (
             <div className="flex items-center gap-4 p-4 rounded-lg bg-bg">
               <Avatar name={editForm.name || editUser.name} size={48} />
@@ -193,61 +204,94 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldInput label="Fulde navn" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-            <FieldInput label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-            <div className="sm:col-span-2">
-              <label className="block text-[13px] font-semibold text-text mb-1">Afdeling</label>
-              <select value={editForm.departmentId} onChange={(e) => setEditForm({ ...editForm, departmentId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-md border-[1.5px] border-border bg-surface text-sm text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
-                <option value="">Ingen</option>
-                {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+
+          {/* Tab-bar */}
+          <Tabs tabs={EDIT_TABS} active={editTab} onChange={setEditTab} />
+
+          {/* Profil-tab — navn, email, afdeling */}
+          {editTab === "profile" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FieldInput label="Fulde navn" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+              <FieldInput label="Email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              <div className="sm:col-span-2">
+                <label className="block text-[13px] font-semibold text-text mb-1">Afdeling</label>
+                <select value={editForm.departmentId} onChange={(e) => setEditForm({ ...editForm, departmentId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-md border-[1.5px] border-border bg-surface text-sm text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-[rgba(79,70,229,.12)]">
+                  <option value="">Ingen</option>
+                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
-          <div>
-            <SectionLabel>Rolle</SectionLabel>
-            <div className="space-y-2">
-              {ROLE_OPTIONS.map((opt) => (
-                <label key={opt.value} className={cn("flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
-                  editForm.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
-                  <input type="radio" name="e-role" value={opt.value} checked={editForm.role === opt.value}
-                    onChange={() => setEditForm({ ...editForm, role: opt.value })} className="mt-0.5 accent-primary" />
+          )}
+
+          {/* Adgang-tab — rolle + adgangskode */}
+          {editTab === "access" && (
+            <div className="space-y-5">
+              <div>
+                <SectionLabel>Rolle</SectionLabel>
+                <div className="space-y-2">
+                  {ROLE_OPTIONS.map((opt) => (
+                    <label key={opt.value} className={cn("flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
+                      editForm.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
+                      <input type="radio" name="e-role" value={opt.value} checked={editForm.role === opt.value}
+                        onChange={() => setEditForm({ ...editForm, role: opt.value })} className="mt-0.5 accent-primary" />
+                      <div>
+                        <p className="text-[13px] font-semibold text-text">{opt.label}</p>
+                        <p className="text-[12px] text-text-muted">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <SectionLabel>Adgangskode</SectionLabel>
+                {!showPwField ? (
+                  <button onClick={() => setShowPwField(true)}
+                    className="flex items-center gap-2 text-[13px] text-warning font-semibold hover:text-warning/80 transition-colors">
+                    <Key size={14} /> Nulstil adgangskode
+                  </button>
+                ) : (
+                  <FieldInput label="Ny adgangskode" type="password" value={editForm.newPassword}
+                    onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
+                    placeholder="Min. 8 tegn — tom = behold nuværende"
+                    hint="Mindst 8 tegn" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tilladelser-tab — legacy canManageShifts + indgang til fuld tilladelses-editor */}
+          {editTab === "permissions" && (
+            <div className="space-y-5">
+              <div>
+                <SectionLabel>Tilpassede tilladelser</SectionLabel>
+                <p className="text-[12px] text-text-muted mb-3">
+                  Som standard arver brugeren tilladelserne for sin rolle. Du kan tilpasse de enkelte tilladelser herunder.
+                </p>
+                <Btn variant="secondary" size="sm" icon={<Shield size={14} />} disabled>
+                  Tilpas tilladelser
+                </Btn>
+                <p className="text-[11px] text-text-subtle mt-2 italic">
+                  Tilgængelig i næste opdatering.
+                </p>
+              </div>
+
+              <div>
+                <SectionLabel>Specialtilladelser</SectionLabel>
+                <label className={cn("flex items-center gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
+                  editForm.canManageShifts ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
+                  <input type="checkbox" checked={editForm.canManageShifts}
+                    onChange={(e) => setEditForm({ ...editForm, canManageShifts: e.target.checked })}
+                    className="accent-primary w-4 h-4" />
                   <div>
-                    <p className="text-[13px] font-semibold text-text">{opt.label}</p>
-                    <p className="text-[12px] text-text-muted">{opt.desc}</p>
+                    <p className="text-[13px] font-semibold text-text">Vagtplan ansvarlig</p>
+                    <p className="text-[12px] text-text-muted">Kan oprette, redigere og slette vagter uanset rolle</p>
                   </div>
                 </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <SectionLabel>Tilladelser</SectionLabel>
-            <label className={cn("flex items-center gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
-              editForm.canManageShifts ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
-              <input type="checkbox" checked={editForm.canManageShifts}
-                onChange={(e) => setEditForm({ ...editForm, canManageShifts: e.target.checked })}
-                className="accent-primary w-4 h-4" />
-              <div>
-                <p className="text-[13px] font-semibold text-text">Vagtplan ansvarlig</p>
-                <p className="text-[12px] text-text-muted">Kan oprette, redigere og slette vagter uanset rolle</p>
               </div>
-            </label>
-          </div>
-          <div>
-            <SectionLabel>Adgangskode</SectionLabel>
-            {!showPwField ? (
-              <button onClick={() => setShowPwField(true)}
-                className="flex items-center gap-2 text-[13px] text-warning font-semibold hover:text-warning/80 transition-colors">
-                <Key size={14} /> Nulstil adgangskode
-              </button>
-            ) : (
-              <FieldInput label="Ny adgangskode" type="password" value={editForm.newPassword}
-                onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                placeholder="Min. 8 tegn — tom = behold nuværende"
-                hint="Mindst 8 tegn" />
-            )}
-          </div>
+            </div>
+          )}
+
           {editError && <p className="text-[12px] text-danger">{editError}</p>}
           <div className="flex gap-2 pt-2">
             <Btn onClick={saveEdit} disabled={editLoading}>{editLoading ? "Gemmer..." : "Gem ændringer"}</Btn>
