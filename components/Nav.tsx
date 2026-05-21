@@ -7,8 +7,8 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import {
-  Home, Plus, ClipboardList, Calendar, Users, Building2, Flag,
-  BarChart3, Settings, User, LogOut, Menu, X, CalendarDays, Wallet,
+  Home, Plus, ClipboardList, Calendar, Users,
+  BarChart3, Settings, User, LogOut, Menu, X, CalendarDays,
 } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import type { UserRole } from "@/lib/permissions";
@@ -74,18 +74,19 @@ export default function Nav({
     { href: "/manager/calendar", label: "Kalender", icon: <Calendar size={16} />, show: () => true },
 
     // Admin-sektionen — hver låst på sin specifikke tilladelse.
+    // Afdelinger, Helligdage og Feriesaldo er flyttet under Indstillinger som tabs (Fase 4b).
     { href: "/admin/users",     label: "Brugere",     icon: <Users size={16} />,
       show: (s) => can(s, "user.view") },
-    { href: "/admin/departments", label: "Afdelinger", icon: <Building2 size={16} />,
-      show: (s) => can(s, "departments.edit") },
-    { href: "/admin/holidays",  label: "Helligdage",  icon: <Flag size={16} />,
-      show: (s) => can(s, "holidays.edit") },
-    { href: "/admin/vacation-balance", label: "Feriesaldo", icon: <Wallet size={16} />,
-      show: (s) => vacationBalanceEnabled && can(s, "balance.view_others") },
     { href: "/admin/reports", label: "Rapporter", icon: <BarChart3 size={16} />,
       show: (s) => can(s, "report.absence") || can(s, "report.department") },
+    // Indstillinger åbnes hvis brugeren har EN af de fire underliggende tilladelser —
+    // siden viser kun de tabs brugeren faktisk har lov til at se.
     { href: "/admin/settings", label: "Indstillinger", icon: <Settings size={16} />,
-      show: (s) => can(s, "settings.edit") },
+      show: (s) =>
+        can(s, "settings.edit") ||
+        can(s, "holidays.edit") ||
+        can(s, "departments.edit") ||
+        (vacationBalanceEnabled && can(s, "balance.view_others")) },
 
     // Profil — altid synlig.
     { href: "/profile", label: "Min profil", icon: <User size={16} />, show: () => true },

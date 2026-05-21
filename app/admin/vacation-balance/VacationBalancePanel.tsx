@@ -2,16 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { cn } from "@/lib/utils";
 import { Pencil, ChevronLeft, ChevronRight, TrendingUp, Users, Check } from "lucide-react";
 
-interface BalanceRow {
+export interface BalanceRow {
   userId: string;
   name: string;
   email: string;
@@ -28,7 +26,8 @@ interface BalanceRow {
 
 function BalanceBar({ used, allotted }: { used: number; allotted: number }) {
   const pct = allotted > 0 ? Math.min(100, (used / allotted) * 100) : 0;
-  const color = pct >= 100 ? "var(--c-danger)" : pct >= 80 ? "var(--c-warning)" : "var(--c-success)";
+  const color =
+    pct >= 100 ? "var(--c-danger)" : pct >= 80 ? "var(--c-warning)" : "var(--c-success)";
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
@@ -37,12 +36,21 @@ function BalanceBar({ used, allotted }: { used: number; allotted: number }) {
           style={{ width: `${pct}%`, background: color }}
         />
       </div>
-      <span className="text-[11px] font-semibold text-text-muted shrink-0">{Math.round(pct)}%</span>
+      <span className="text-[11px] font-semibold text-text-muted shrink-0">
+        {Math.round(pct)}%
+      </span>
     </div>
   );
 }
 
-export default function VacationBalanceClient({
+/**
+ * VacationBalancePanel — embeddable variant af VacationBalanceClient.
+ * Forskelle fra Client:
+ *  - Ingen PageHeader (årsskifter ligger nu i lokal panel-header).
+ *  - Årsskifte navigerer til /admin/settings?tab=balance&year=... så tab-state bevares.
+ *    Vi inkluderer altid tab=balance i URL'en så hard-refresh viser den rigtige tab.
+ */
+export default function VacationBalancePanel({
   rows: initialRows,
   year: initialYear,
 }: {
@@ -50,7 +58,7 @@ export default function VacationBalanceClient({
   year: number;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const [year, setYear] = useState(initialYear);
   const [rows, setRows] = useState(initialRows);
@@ -64,13 +72,17 @@ export default function VacationBalanceClient({
     const y = year + delta;
     setYear(y);
     startTransition(() => {
-      router.push(`/admin/vacation-balance?year=${y}`);
+      router.push(`/admin/settings?tab=balance&year=${y}`);
     });
   }
 
   function openEdit(row: BalanceRow) {
     setEditRow(row);
-    setForm({ totalDays: row.totalDays, carryOverDays: row.carryOverDays, note: row.note ?? "" });
+    setForm({
+      totalDays: row.totalDays,
+      carryOverDays: row.carryOverDays,
+      note: row.note ?? "",
+    });
     setSaveError("");
     setSavedId(null);
   }
@@ -82,11 +94,15 @@ export default function VacationBalanceClient({
     const res = await fetch(`/api/vacation-balance/${editRow.userId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ year, totalDays: form.totalDays, carryOverDays: form.carryOverDays, note: form.note || null }),
+      body: JSON.stringify({
+        year,
+        totalDays: form.totalDays,
+        carryOverDays: form.carryOverDays,
+        note: form.note || null,
+      }),
     });
     if (res.ok) {
       setSavedId(editRow.userId);
-      // Update local state
       setRows((prev) =>
         prev.map((r) =>
           r.userId === editRow.userId
@@ -98,8 +114,8 @@ export default function VacationBalanceClient({
                 remainingDays: form.totalDays + form.carryOverDays - r.usedDays,
                 note: form.note || null,
               }
-            : r
-        )
+            : r,
+        ),
       );
       setTimeout(() => setEditRow(null), 600);
     } else {
@@ -114,43 +130,71 @@ export default function VacationBalanceClient({
 
   return (
     <div>
-      <PageHeader
-        title="Feriedagsregnskab"
-        subtitle={`${rows.length} medarbejdere · ${year}`}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => changeYear(-1)}
-              className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-[15px] font-bold text-text w-12 text-center">{year}</span>
-            <button
-              type="button"
-              onClick={() => changeYear(1)}
-              className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        }
-      />
+      {/* Lokal panel-header med årsskifter */}
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-[15px] font-bold text-text">Feriedagsregnskab</p>
+          <p className="text-[12px] text-text-muted mt-0.5">
+            {rows.length} medarbejdere · {year}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => changeYear(-1)}
+            className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors"
+            aria-label="Forrige år"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-[15px] font-bold text-text w-12 text-center">{year}</span>
+          <button
+            type="button"
+            onClick={() => changeYear(1)}
+            className="w-8 h-8 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors"
+            aria-label="Næste år"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {[
-          { label: "Medarbejdere", value: rows.length, icon: <Users size={18} />, color: "#4f46e5", bg: "rgba(79,70,229,.1)" },
-          { label: "Tildelte dage i alt", value: totalAllotted, icon: <TrendingUp size={18} />, color: "#059669", bg: "rgba(5,150,105,.1)" },
-          { label: "Brugte dage i alt", value: +totalUsed.toFixed(1), icon: <TrendingUp size={18} />, color: "#d97706", bg: "rgba(217,119,6,.1)" },
+          {
+            label: "Medarbejdere",
+            value: rows.length,
+            icon: <Users size={18} />,
+            color: "#4f46e5",
+            bg: "rgba(79,70,229,.1)",
+          },
+          {
+            label: "Tildelte dage i alt",
+            value: totalAllotted,
+            icon: <TrendingUp size={18} />,
+            color: "#059669",
+            bg: "rgba(5,150,105,.1)",
+          },
+          {
+            label: "Brugte dage i alt",
+            value: +totalUsed.toFixed(1),
+            icon: <TrendingUp size={18} />,
+            color: "#d97706",
+            bg: "rgba(217,119,6,.1)",
+          },
         ].map((s) => (
           <Card key={s.label} className="p-4">
-            <div className="w-[38px] h-[38px] rounded-lg flex items-center justify-center mb-3"
-              style={{ background: s.bg, color: s.color }}>
+            <div
+              className="w-[38px] h-[38px] rounded-lg flex items-center justify-center mb-3"
+              style={{ background: s.bg, color: s.color }}
+            >
               {s.icon}
             </div>
-            <p className="text-[28px] font-extrabold tracking-[-0.03em] leading-none" style={{ color: s.color }}>
+            <p
+              className="text-[28px] font-extrabold tracking-[-0.03em] leading-none"
+              style={{ color: s.color }}
+            >
               {s.value}
             </p>
             <p className="text-[12px] font-semibold text-text-muted mt-1">{s.label}</p>
@@ -169,41 +213,66 @@ export default function VacationBalanceClient({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-[13.5px] font-semibold text-text truncate">{row.name}</p>
-                    <p className="text-[11px] text-text-subtle mt-0.5">{row.department ?? "Ingen afdeling"}</p>
+                    <p className="text-[11px] text-text-subtle mt-0.5">
+                      {row.department ?? "Ingen afdeling"}
+                    </p>
                   </div>
-                  {/* Days summary */}
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
-                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Tildelt</p>
+                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                        Tildelt
+                      </p>
                       <p className="text-[17px] font-extrabold tracking-tight text-text leading-tight">
                         {row.allottedDays}
                         {row.carryOverDays > 0 && (
-                          <span className="text-[11px] font-semibold text-text-subtle ml-1">+{row.carryOverDays}</span>
+                          <span className="text-[11px] font-semibold text-text-subtle ml-1">
+                            +{row.carryOverDays}
+                          </span>
                         )}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Brugt</p>
-                      <p className="text-[17px] font-extrabold tracking-tight leading-tight"
-                        style={{ color: row.usedDays > row.allottedDays ? "var(--c-danger)" : "var(--c-text)" }}>
+                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                        Brugt
+                      </p>
+                      <p
+                        className="text-[17px] font-extrabold tracking-tight leading-tight"
+                        style={{
+                          color:
+                            row.usedDays > row.allottedDays ? "var(--c-danger)" : "var(--c-text)",
+                        }}
+                      >
                         {row.usedDays}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Tilbage</p>
-                      <p className="text-[17px] font-extrabold tracking-tight leading-tight"
+                      <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                        Tilbage
+                      </p>
+                      <p
+                        className="text-[17px] font-extrabold tracking-tight leading-tight"
                         style={{
-                          color: row.remainingDays < 0 ? "var(--c-danger)" : row.remainingDays <= 5 ? "var(--c-warning)" : "var(--c-success)",
-                        }}>
+                          color:
+                            row.remainingDays < 0
+                              ? "var(--c-danger)"
+                              : row.remainingDays <= 5
+                                ? "var(--c-warning)"
+                                : "var(--c-success)",
+                        }}
+                      >
                         {row.remainingDays}
                       </p>
                     </div>
-                    <Btn variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => openEdit(row)}>
+                    <Btn
+                      variant="ghost"
+                      size="sm"
+                      icon={<Pencil size={13} />}
+                      onClick={() => openEdit(row)}
+                    >
                       Rediger
                     </Btn>
                   </div>
                 </div>
-                {/* Progress bar */}
                 <div className="mt-2">
                   <BalanceBar used={row.usedDays} allotted={row.allottedDays} />
                 </div>
@@ -235,7 +304,9 @@ export default function VacationBalanceClient({
               <Avatar name={editRow.name} size={40} />
               <div>
                 <p className="text-[14px] font-semibold text-text">{editRow.name}</p>
-                <p className="text-[12px] text-text-muted">{editRow.department ?? "Ingen afdeling"}</p>
+                <p className="text-[12px] text-text-muted">
+                  {editRow.department ?? "Ingen afdeling"}
+                </p>
               </div>
             </div>
 
@@ -249,7 +320,9 @@ export default function VacationBalanceClient({
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, totalDays: Math.max(0, f.totalDays - 0.5) }))}
+                    onClick={() =>
+                      setForm((f) => ({ ...f, totalDays: Math.max(0, f.totalDays - 0.5) }))
+                    }
                     className="w-9 h-9 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors text-lg font-bold"
                   >
                     −
@@ -260,12 +333,16 @@ export default function VacationBalanceClient({
                     max={365}
                     step={0.5}
                     value={form.totalDays}
-                    onChange={(e) => setForm((f) => ({ ...f, totalDays: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, totalDays: parseFloat(e.target.value) || 0 }))
+                    }
                     className="w-20 h-9 text-center text-[18px] font-extrabold text-text bg-bg border border-border rounded-md focus:outline-none focus:border-primary"
                   />
                   <button
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, totalDays: Math.min(365, f.totalDays + 0.5) }))}
+                    onClick={() =>
+                      setForm((f) => ({ ...f, totalDays: Math.min(365, f.totalDays + 0.5) }))
+                    }
                     className="w-9 h-9 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors text-lg font-bold"
                   >
                     +
@@ -281,7 +358,12 @@ export default function VacationBalanceClient({
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, carryOverDays: Math.max(0, f.carryOverDays - 0.5) }))}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        carryOverDays: Math.max(0, f.carryOverDays - 0.5),
+                      }))
+                    }
                     className="w-9 h-9 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors text-lg font-bold"
                   >
                     −
@@ -292,12 +374,19 @@ export default function VacationBalanceClient({
                     max={365}
                     step={0.5}
                     value={form.carryOverDays}
-                    onChange={(e) => setForm((f) => ({ ...f, carryOverDays: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, carryOverDays: parseFloat(e.target.value) || 0 }))
+                    }
                     className="w-20 h-9 text-center text-[18px] font-extrabold text-text bg-bg border border-border rounded-md focus:outline-none focus:border-primary"
                   />
                   <button
                     type="button"
-                    onClick={() => setForm((f) => ({ ...f, carryOverDays: Math.min(365, f.carryOverDays + 0.5) }))}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        carryOverDays: Math.min(365, f.carryOverDays + 0.5),
+                      }))
+                    }
                     className="w-9 h-9 rounded-md border border-border flex items-center justify-center text-text-muted hover:border-primary hover:text-primary transition-colors text-lg font-bold"
                   >
                     +
@@ -306,23 +395,35 @@ export default function VacationBalanceClient({
                 </div>
               </div>
 
-              {/* Summary */}
               <Card className="p-3 bg-primary-light border-primary/30">
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
-                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Total</p>
-                    <p className="text-[20px] font-extrabold text-primary">{form.totalDays + form.carryOverDays}</p>
+                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                      Total
+                    </p>
+                    <p className="text-[20px] font-extrabold text-primary">
+                      {form.totalDays + form.carryOverDays}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Brugt</p>
+                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                      Brugt
+                    </p>
                     <p className="text-[20px] font-extrabold text-text">{editRow.usedDays}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">Tilbage</p>
-                    <p className="text-[20px] font-extrabold"
+                    <p className="text-[11px] font-semibold text-text-subtle uppercase tracking-wide">
+                      Tilbage
+                    </p>
+                    <p
+                      className="text-[20px] font-extrabold"
                       style={{
-                        color: form.totalDays + form.carryOverDays - editRow.usedDays < 0 ? "var(--c-danger)" : "var(--c-success)",
-                      }}>
+                        color:
+                          form.totalDays + form.carryOverDays - editRow.usedDays < 0
+                            ? "var(--c-danger)"
+                            : "var(--c-success)",
+                      }}
+                    >
                       {form.totalDays + form.carryOverDays - editRow.usedDays}
                     </p>
                   </div>
@@ -348,10 +449,16 @@ export default function VacationBalanceClient({
             )}
 
             <div className="flex gap-2 pt-2">
-              <Btn onClick={saveBalance} disabled={saving} icon={savedId === editRow.userId ? <Check size={14} /> : undefined}>
+              <Btn
+                onClick={saveBalance}
+                disabled={saving}
+                icon={savedId === editRow.userId ? <Check size={14} /> : undefined}
+              >
                 {saving ? "Gemmer..." : "Gem saldo"}
               </Btn>
-              <Btn variant="secondary" onClick={() => setEditRow(null)}>Annuller</Btn>
+              <Btn variant="secondary" onClick={() => setEditRow(null)}>
+                Annuller
+              </Btn>
             </div>
           </div>
         )}

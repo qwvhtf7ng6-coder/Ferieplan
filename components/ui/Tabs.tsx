@@ -34,13 +34,27 @@ interface TabsProps<T extends string = string> {
   tabs: TabDef<T>[];
   active: T;
   onChange: (id: T) => void;
+  /**
+   * Negativ margin + matching padding så border-b'en bløder ud i kanten af parent.
+   * Default "slideover" matcher SlideOver's 24px padding (-mx-6 px-6).
+   * "none" springer bleed over — brug på sider hvor border skal følge indholdsbredden.
+   */
+  bleed?: "slideover" | "none";
 }
 
-export function Tabs<T extends string = string>({ tabs, active, onChange }: TabsProps<T>) {
+export function Tabs<T extends string = string>({
+  tabs,
+  active,
+  onChange,
+  bleed = "slideover",
+}: TabsProps<T>) {
   return (
     <div
       role="tablist"
-      className="flex items-end gap-0 border-b border-border -mx-6 px-6"
+      className={cn(
+        "flex items-end gap-0 border-b border-border overflow-x-auto",
+        bleed === "slideover" && "-mx-6 px-6",
+      )}
     >
       {tabs.map((t) => {
         const isActive = t.id === active;

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { FieldInput } from "@/components/ui/FieldInput";
@@ -11,14 +10,21 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Flag, Trash2, Download, Plus } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-interface Holiday {
+export interface Holiday {
   id: string;
   name: string;
   date: string;
   isNational: boolean;
 }
 
-export default function HolidaysClient({ holidays: initial }: { holidays: Holiday[] }) {
+/**
+ * HolidaysPanel — embeddable variant af HolidaysClient til brug i Settings-tab.
+ * Forskelle fra HolidaysClient:
+ *  - Ingen PageHeader (samlesidens header dækker).
+ *  - "Tilføj manuelt"-knap ligger inde i header-rækken på panelet.
+ *  - Ellers identisk funktionalitet og API-kald.
+ */
+export default function HolidaysPanel({ holidays: initial }: { holidays: Holiday[] }) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<Holiday | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -61,7 +67,10 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
     });
     const data = await res.json();
     if (data.ok) {
-      setImportMsg({ ok: true, text: `${data.inserted} helligdage importeret for ${data.year} (${data.skipped} fandtes allerede)` });
+      setImportMsg({
+        ok: true,
+        text: `${data.inserted} helligdage importeret for ${data.year} (${data.skipped} fandtes allerede)`,
+      });
       router.refresh();
     } else {
       setImportMsg({ ok: false, text: data.error ?? "Fejl ved import" });
@@ -70,25 +79,32 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
   }
 
   const years = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
-  const sorted = [...initial].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sorted = [...initial].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
 
   return (
     <div>
-      <PageHeader
-        title="Helligdage"
-        subtitle={`${sorted.length} helligdage registreret`}
-        actions={
-          <Btn onClick={() => setShowForm(!showForm)} icon={<Plus size={14} />} size="sm">
-            Tilføj manuelt
-          </Btn>
-        }
-      />
+      {/* Lokal panel-header (erstatter PageHeader) */}
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <p className="text-[15px] font-bold text-text">Helligdage</p>
+          <p className="text-[12px] text-text-muted mt-0.5">
+            {sorted.length} helligdage registreret
+          </p>
+        </div>
+        <Btn onClick={() => setShowForm(!showForm)} icon={<Plus size={14} />} size="sm">
+          Tilføj manuelt
+        </Btn>
+      </div>
 
       {/* Import card */}
       <Card className="p-5 mb-5" style={{ background: "var(--c-primary-light)" }}>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "var(--c-primary-muted)", color: "var(--c-primary)" }}>
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "var(--c-primary-muted)", color: "var(--c-primary)" }}
+          >
             <Download size={16} />
           </div>
           <div>
@@ -100,14 +116,20 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label htmlFor="import-year" className="block text-[12px] font-semibold text-text mb-1">År</label>
+            <label htmlFor="import-year" className="block text-[12px] font-semibold text-text mb-1">
+              År
+            </label>
             <select
               id="import-year"
               value={importYear}
               onChange={(e) => setImportYear(e.target.value)}
               className="border border-border rounded-md px-3 py-2 text-sm bg-surface text-text focus:outline-none focus:border-primary"
             >
-              {years.map((y) => <option key={y} value={String(y)}>{y}</option>)}
+              {years.map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
             </select>
           </div>
           <Btn onClick={importHolidays} disabled={importLoading} icon={<Download size={14} />} size="sm">
@@ -168,29 +190,35 @@ export default function HolidaysClient({ holidays: initial }: { holidays: Holida
       {sorted.length === 0 ? (
         <Card className="py-14 text-center">
           <Flag size={28} className="mx-auto mb-2 text-text-subtle" />
-          <p className="text-[13px] text-text-muted">Ingen helligdage endnu — brug import-knappen ovenfor.</p>
+          <p className="text-[13px] text-text-muted">
+            Ingen helligdage endnu — brug import-knappen ovenfor.
+          </p>
         </Card>
       ) : (
         <Card className="overflow-hidden">
           <div className="divide-y divide-border">
             {sorted.map((h) => (
               <div key={h.id} className="flex items-center gap-3 px-5 py-3.5">
-                <div className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
+                <div
+                  className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
                   style={{
                     background: h.isNational ? "var(--c-primary-muted)" : "rgba(217,119,6,.1)",
                     color: h.isNational ? "var(--c-primary)" : "var(--c-warning)",
-                  }}>
+                  }}
+                >
                   <Flag size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-text">{h.name}</p>
                   <p className="text-[12px] text-text-muted">{formatDate(h.date)}</p>
                 </div>
-                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                  h.isNational
-                    ? "bg-primary-light text-primary"
-                    : "bg-warning-bg text-warning-text"
-                }`}>
+                <span
+                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                    h.isNational
+                      ? "bg-primary-light text-primary"
+                      : "bg-warning-bg text-warning-text"
+                  }`}
+                >
                   {h.isNational ? "National" : "Lokal"}
                 </span>
                 <button
