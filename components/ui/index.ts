@@ -8,3 +8,4 @@ export { PageHeader } from "./PageHeader";
 export { SectionLabel } from "./SectionLabel";
 export { Toggle } from "./Toggle";
 export { Tabs, type TabDef } from "./Tabs";
+export { SegmentedControl } from "./SegmentedControl";

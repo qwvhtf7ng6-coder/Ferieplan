@@ -100,3 +100,36 @@ export function isBoolPermission(key: PermissionKey): key is BoolPermissionKey {
 export function isValidScope(value: unknown): value is Scope {
   return value === "NONE" || value === "OWN_DEPARTMENT" || value === "ALL";
 }
+
+/**
+ * Saniterer rå JSON-input fra API til et velformet Permissions-input.
+ *
+ * Returnerer et sub-objekt med kun gyldige nøgler/værdier. Ukendte nøgler
+ * forkastes lydløst. Ugyldige værdier udelades (så getEffectivePermissions
+ * falder tilbage til rolle-defaults for den nøgle).
+ *
+ * Bruges af API-routen før vi gemmer på User.permissions, så vi ikke
+ * skriver ondsindet eller misformet JSON ned i DB.
+ */
+export function sanitizePermissions(input: unknown): Partial<Permissions> {
+  if (input == null || typeof input !== "object" || Array.isArray(input)) {
+    return {};
+  }
+  const raw = input as Record<string, unknown>;
+  const result: Record<string, Scope | boolean> = {};
+
+  for (const key of SCOPE_PERMISSION_KEYS) {
+    const value = raw[key];
+    if (isValidScope(value)) {
+      result[key] = value;
+    }
+  }
+  for (const key of BOOL_PERMISSION_KEYS) {
+    const value = raw[key];
+    if (typeof value === "boolean") {
+      result[key] = value;
+    }
+  }
+
+  return result as Partial<Permissions>;
+}

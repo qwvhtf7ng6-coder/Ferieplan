@@ -11,9 +11,13 @@ interface SlideOverProps {
   subtitle?: string;
   children: React.ReactNode;
   width?: number;
+  /** Valgfri sticky footer — gengives under det scrollable body. Bruges
+   *  til Annullér/Gem-rækker i editorer. Undlad for simple slide-overs
+   *  hvor footer-knapper sidder inde i body. */
+  footer?: React.ReactNode;
 }
 
-export function SlideOver({ open, onClose, title, subtitle, children, width = 500 }: SlideOverProps) {
+export function SlideOver({ open, onClose, title, subtitle, children, width = 500, footer }: SlideOverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,6 +72,13 @@ export function SlideOver({ open, onClose, title, subtitle, children, width = 50
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {children}
         </div>
+
+        {/* Optional sticky footer */}
+        {footer && (
+          <div className="shrink-0 border-t border-border bg-surface px-6 py-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

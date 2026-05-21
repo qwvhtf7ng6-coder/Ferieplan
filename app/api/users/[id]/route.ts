@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { can, buildSubject } from "@/lib/can";
 import { isValidRole } from "@/lib/validators";
+import { sanitizePermissions } from "@/lib/permission-types";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -44,7 +45,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, email, role, departmentId, newPassword, canManageShifts } = body;
+  const { name, email, role, departmentId, newPassword, canManageShifts, permissions } = body;
 
   // Find målbruger først så vi kan tjekke scope mod deres aktuelle afdeling
   const target = await prisma.user.findUnique({
@@ -85,6 +86,22 @@ export async function PATCH(
     departmentId: departmentId || null,
     canManageShifts: canManageShifts === true,
   };
+
+  // Permissions-overrides: kun tilladt for brugere med permissions.edit-tilladelsen.
+  // Nøglen optræder kun i body hvis admin eksplicit har redigeret tilladelser
+  // (frontend sender ikke feltet ellers), så vi ignorerer fraværet.
+  if (permissions !== undefined) {
+    if (!can(subject, "permissions.edit")) {
+      return NextResponse.json({ error: "Ingen tilladelse til at redigere tilladelser" }, { status: 403 });
+    }
+    if (permissions === null) {
+      // Eksplicit nulstilling — bruger arver rolle-defaults fremover.
+      data.permissions = null;
+    } else {
+      // Saniter input og gem som JSON.
+      data.permissions = sanitizePermissions(permissions);
+    }
+  }
 
   if (newPassword) {
     if (newPassword.length < 8) {

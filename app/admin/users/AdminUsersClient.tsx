@@ -11,6 +11,10 @@ import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Tabs, type TabDef } from "@/components/ui/Tabs";
+import { PermissionsEditor } from "@/components/admin/PermissionsEditor";
+import { getEffectivePermissions } from "@/lib/can";
+import type { Permissions } from "@/lib/permission-types";
+import type { UserRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { Plus, Search, Pencil, Trash2, Key, User, Shield, Users } from "lucide-react";
 
@@ -18,6 +22,8 @@ interface UserRow {
   id: string; name: string; email: string; role: string;
   departmentId: string | null; department: { name: string } | null;
   canManageShifts: boolean;
+  /** Gemte tilladelses-overrides (null = brug rolle-defaults). */
+  permissions: unknown;
 }
 interface Department { id: string; name: string; }
 
@@ -53,6 +59,15 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     { id: "permissions", label: "Tilladelser" },
   ];
 
+  // Permissions-editor state.
+  // showPermissionsEditor styrer sub-slide-overen.
+  // pendingPermissions er det "dirty" permissions-objekt der venter på at
+  // blive gemt sammen med resten af brugeren — undefined hvis admin ikke
+  // har rørt tilladelses-editoren i denne session, null hvis de eksplicit
+  // nulstillede til rolle-defaults, ellers et fuldt Permissions-objekt.
+  const [showPermissionsEditor, setShowPermissionsEditor] = useState(false);
+  const [pendingPermissions, setPendingPermissions] = useState<Permissions | null | undefined>(undefined);
+
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -76,14 +91,32 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditForm({ name: u.name, email: u.email, role: u.role, departmentId: u.departmentId ?? "", newPassword: "", canManageShifts: u.canManageShifts });
     setEditError(""); setShowPwField(false);
     setEditTab("profile");
+    setPendingPermissions(undefined);
   }
 
   async function saveEdit() {
     if (!editUser) return;
     setEditLoading(true); setEditError("");
+
+    // Byg request-body. permissions inkluderes kun hvis admin har rørt
+    // editoren i denne session — fraværet betyder "lad være med at røre
+    // permissions-feltet i DB" (vigtigt fordi PATCH-endpoint'et ellers
+    // ville have nulstillet det).
+    const payload: Record<string, unknown> = {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+      departmentId: editForm.departmentId || null,
+      newPassword: editForm.newPassword || undefined,
+      canManageShifts: editForm.canManageShifts,
+    };
+    if (pendingPermissions !== undefined) {
+      payload.permissions = pendingPermissions; // Permissions-objekt eller null
+    }
+
     const res = await fetch(`/api/users/${editUser.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editForm.name, email: editForm.email, role: editForm.role, departmentId: editForm.departmentId || null, newPassword: editForm.newPassword || undefined, canManageShifts: editForm.canManageShifts }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) { setEditUser(null); router.refresh(); }
     else { const d = await res.json(); setEditError(d.error || "Fejl ved opdatering"); }
@@ -260,20 +293,40 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
             </div>
           )}
 
-          {/* Tilladelser-tab — legacy canManageShifts + indgang til fuld tilladelses-editor */}
+          {/* Tilladelser-tab — fuld tilladelses-editor + legacy canManageShifts */}
           {editTab === "permissions" && (
             <div className="space-y-5">
               <div>
                 <SectionLabel>Tilpassede tilladelser</SectionLabel>
-                <p className="text-[12px] text-text-muted mb-3">
-                  Som standard arver brugeren tilladelserne for sin rolle. Du kan tilpasse de enkelte tilladelser herunder.
-                </p>
-                <Btn variant="secondary" size="sm" icon={<Shield size={14} />} disabled>
-                  Tilpas tilladelser
-                </Btn>
-                <p className="text-[11px] text-text-subtle mt-2 italic">
-                  Tilgængelig i næste opdatering.
-                </p>
+                {editForm.role === "ADMIN" ? (
+                  // Admin har hard-locked fulde rettigheder uanset DB-værdi
+                  // (sikkerhedslås i lib/can.ts). Tilladelser-editoren ville
+                  // vildlede admin til at tro deres ændringer virkede.
+                  <p className="text-[12px] text-text-muted">
+                    Administratorer har altid fulde rettigheder. Tilladelser kan ikke tilpasses for denne rolle.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[12px] text-text-muted mb-3">
+                      Som standard arver brugeren tilladelserne for sin rolle. Du kan tilpasse de enkelte tilladelser herunder.
+                    </p>
+                    <Btn
+                      variant="secondary"
+                      size="sm"
+                      icon={<Shield size={14} />}
+                      onClick={() => setShowPermissionsEditor(true)}
+                    >
+                      Tilpas tilladelser
+                    </Btn>
+                    {pendingPermissions !== undefined && (
+                      <p className="text-[11px] text-warning mt-2 font-semibold">
+                        {pendingPermissions === null
+                          ? "Tilladelser nulstilles til rolle-defaults når du gemmer."
+                          : "Tilpassede tilladelser afventer gem."}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
 
               <div>
@@ -299,6 +352,40 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
           </div>
         </div>
       </SlideOver>
+
+      {/* Sekundær slide-over: fuld tilladelses-editor.
+          Rendres oven på den primære bruger-slide-over. */}
+      {editUser && (
+        <PermissionsEditor
+          open={showPermissionsEditor}
+          onClose={() => setShowPermissionsEditor(false)}
+          userName={editForm.name || editUser.name}
+          userRole={editForm.role as UserRole}
+          // Initial-permissions: hvis admin allerede har redigeret i denne
+          // session, brug deres pending-værdi (også null → defaults). Ellers
+          // beregn effektive permissions fra brugerens nuværende DB-overrides.
+          initial={
+            pendingPermissions !== undefined
+              ? (pendingPermissions === null
+                  ? getEffectivePermissions(editForm.role as UserRole, null)
+                  : pendingPermissions)
+              : getEffectivePermissions(editForm.role as UserRole, editUser.permissions)
+          }
+          onSave={(next) => {
+            // Persist ikke direkte — gem som "pending" så det sendes med
+            // når admin trykker Gem ændringer på den primære slide-over.
+            // Det giver mulighed for at fortryde via Annuller, og samler
+            // alle ændringer i én PATCH-request.
+            setPendingPermissions(next);
+          }}
+          onResetToRoleDefaults={() => {
+            // null signaler til API at vi vil fjerne brugerens overrides.
+            // Brugeren arver derefter rolle-defaults — inkl. fremtidige
+            // ændringer i koden.
+            setPendingPermissions(null);
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}
