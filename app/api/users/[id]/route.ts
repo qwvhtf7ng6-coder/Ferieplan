@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { can, buildSubject } from "@/lib/can";
 import { isValidRole } from "@/lib/validators";
 import { sanitizePermissions } from "@/lib/permission-types";
+import { wouldRemoveLastAdminByDelete, wouldRemoveLastAdminByRoleChange } from "@/lib/admin-guard";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -28,6 +29,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Sidste-admin-beskyttelse: forhindrer at systemet låses ude
+  if (await wouldRemoveLastAdminByDelete(target)) {
+    return NextResponse.json(
+      { error: "Kan ikke slette den sidste administrator. Opret en anden administrator først." },
+      { status: 400 },
+    );
+  }
+
   // Cascade: slet bruger og alle tilknyttede data
   await prisma.user.delete({ where: { id } });
 
@@ -50,7 +59,7 @@ export async function PATCH(
   // Find målbruger først så vi kan tjekke scope mod deres aktuelle afdeling
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { departmentId: true },
+    select: { departmentId: true, role: true },
   });
   if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
 
@@ -78,6 +87,14 @@ export async function PATCH(
   if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
 
   const safeRole = isValidRole(role) ? role : "EMPLOYEE";
+
+  // Sidste-admin-beskyttelse: forhindrer at den eneste admin degraderes
+  if (await wouldRemoveLastAdminByRoleChange(target, safeRole)) {
+    return NextResponse.json(
+      { error: "Kan ikke ændre rolle på den sidste administrator. Opret en anden administrator først." },
+      { status: 400 },
+    );
+  }
 
   const data: any = {
     name: name.trim(),

@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { FieldInput } from "@/components/ui/FieldInput";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
 import { Tabs, type TabDef } from "@/components/ui/Tabs";
 import { PermissionsEditor } from "@/components/admin/PermissionsEditor";
 import { getEffectivePermissions } from "@/lib/can";
@@ -68,6 +68,12 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
   const [showPermissionsEditor, setShowPermissionsEditor] = useState(false);
   const [pendingPermissions, setPendingPermissions] = useState<Permissions | null | undefined>(undefined);
 
+  // Rolleskift-dialog: vises kun når admin er ved at gemme en bruger hvor
+  // (a) rollen er ændret OG (b) brugeren har gemte tilladelses-overrides
+  // OG (c) admin ikke selv har rørt tilladelser i denne session.
+  // Dialogen lader admin vælge mellem at bevare eller nulstille.
+  const [showRoleChangeDialog, setShowRoleChangeDialog] = useState(false);
+
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -76,6 +82,13 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     u.name.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Sidste-admin-detektion (klient-side preview af server-guard).
+  // adminCount tæller alle admins i listen — bruges til at gøre UI'et
+  // smart, men server-side validering i lib/admin-guard.ts er den
+  // egentlige sikkerhedslås.
+  const adminCount = initialUsers.filter((u) => u.role === "ADMIN").length;
+  const isEditingLastAdmin = !!editUser && editUser.role === "ADMIN" && adminCount === 1;
 
   async function createUser(e: React.FormEvent) {
     e.preventDefault();
@@ -94,14 +107,37 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setPendingPermissions(undefined);
   }
 
-  async function saveEdit() {
+  /**
+   * Beslutter om vi kan gemme direkte eller skal spørge admin først.
+   * Rolleskift-dialog vises kun når alle tre er sande:
+   *   - rollen ændres
+   *   - brugeren har eksisterende DB-overrides
+   *   - admin har ikke selv rørt tilladelser i denne session
+   * Ellers fortsætter vi direkte til performSave.
+   */
+  function requestSave() {
+    if (!editUser) return;
+    const roleChanged = editForm.role !== editUser.role;
+    const hasStoredOverrides = editUser.permissions != null;
+    const adminTouchedPermissions = pendingPermissions !== undefined;
+    if (roleChanged && hasStoredOverrides && !adminTouchedPermissions) {
+      setShowRoleChangeDialog(true);
+      return;
+    }
+    performSave();
+  }
+
+  /**
+   * Sender selve PATCH-requesten. permissionsAction styrer hvad der gøres
+   * med permissions-feltet:
+   *   - "default": brug pendingPermissions hvis sat, ellers send ikke feltet
+   *   - "keep":    eksplicit "send ikke feltet" (bevar nuværende overrides)
+   *   - "reset":   send null (nulstil til rolle-defaults)
+   */
+  async function performSave(permissionsAction: "default" | "keep" | "reset" = "default") {
     if (!editUser) return;
     setEditLoading(true); setEditError("");
 
-    // Byg request-body. permissions inkluderes kun hvis admin har rørt
-    // editoren i denne session — fraværet betyder "lad være med at røre
-    // permissions-feltet i DB" (vigtigt fordi PATCH-endpoint'et ellers
-    // ville have nulstillet det).
     const payload: Record<string, unknown> = {
       name: editForm.name,
       email: editForm.email,
@@ -110,7 +146,12 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
       newPassword: editForm.newPassword || undefined,
       canManageShifts: editForm.canManageShifts,
     };
-    if (pendingPermissions !== undefined) {
+
+    if (permissionsAction === "reset") {
+      payload.permissions = null;
+    } else if (permissionsAction === "keep") {
+      // Send ikke permissions-feltet — DB-værdien bevares uændret.
+    } else if (pendingPermissions !== undefined) {
       payload.permissions = pendingPermissions; // Permissions-objekt eller null
     }
 
@@ -123,13 +164,23 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
     setEditLoading(false);
   }
 
+  const [deleteError, setDeleteError] = useState("");
+
   async function confirmDelete() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteError("");
+    const res = await fetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" });
     setDeleteLoading(false);
-    setDeleteTarget(null);
-    router.refresh();
+    if (res.ok) {
+      setDeleteTarget(null);
+      router.refresh();
+    } else {
+      // Server kan afvise sletning (fx sidste admin). Vis fejlen i stedet
+      // for stille at lukke dialogen som om det lykkedes.
+      const d = await res.json().catch(() => ({ error: "Fejl ved sletning" }));
+      setDeleteError(d.error || "Fejl ved sletning");
+    }
   }
 
   return (
@@ -172,10 +223,24 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
                       className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-primary hover:bg-primary-muted transition-colors">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => setDeleteTarget(u)}
-                      className="w-8 h-8 flex items-center justify-center rounded-md text-text-subtle hover:text-danger hover:bg-danger-bg transition-colors">
-                      <Trash2 size={14} />
-                    </button>
+                    {(() => {
+                      const isLastAdmin = u.role === "ADMIN" && adminCount === 1;
+                      return (
+                        <button
+                          onClick={() => !isLastAdmin && setDeleteTarget(u)}
+                          disabled={isLastAdmin}
+                          title={isLastAdmin ? "Kan ikke slette den sidste administrator" : undefined}
+                          className={cn(
+                            "w-8 h-8 flex items-center justify-center rounded-md transition-colors",
+                            isLastAdmin
+                              ? "text-text-subtle/40 cursor-not-allowed"
+                              : "text-text-subtle hover:text-danger hover:bg-danger-bg",
+                          )}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -262,18 +327,33 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
             <div className="space-y-5">
               <div>
                 <SectionLabel>Rolle</SectionLabel>
+                {isEditingLastAdmin && (
+                  <p className="text-[12px] text-warning-text bg-warning-bg border border-[rgba(217,119,6,.2)] rounded-md px-3 py-2 mb-3 leading-relaxed">
+                    Dette er den sidste administrator i systemet. Rollen kan ikke ændres. Opret en anden administrator først.
+                  </p>
+                )}
                 <div className="space-y-2">
-                  {ROLE_OPTIONS.map((opt) => (
-                    <label key={opt.value} className={cn("flex items-start gap-3 p-3 rounded-lg border-[1.5px] cursor-pointer transition-all",
-                      editForm.role === opt.value ? "border-primary bg-primary-light" : "border-border hover:border-border-hover")}>
-                      <input type="radio" name="e-role" value={opt.value} checked={editForm.role === opt.value}
-                        onChange={() => setEditForm({ ...editForm, role: opt.value })} className="mt-0.5 accent-primary" />
-                      <div>
-                        <p className="text-[13px] font-semibold text-text">{opt.label}</p>
-                        <p className="text-[12px] text-text-muted">{opt.desc}</p>
-                      </div>
-                    </label>
-                  ))}
+                  {ROLE_OPTIONS.map((opt) => {
+                    // Hvis vi redigerer den sidste admin, skal alle ikke-ADMIN-
+                    // valg være disabled. Det matcher server-validering så admin
+                    // ikke får en fejl efter klik på Gem.
+                    const disabled = isEditingLastAdmin && opt.value !== "ADMIN";
+                    return (
+                      <label key={opt.value} className={cn(
+                        "flex items-start gap-3 p-3 rounded-lg border-[1.5px] transition-all",
+                        disabled ? "opacity-50 cursor-not-allowed border-border" :
+                        editForm.role === opt.value ? "border-primary bg-primary-light cursor-pointer" : "border-border hover:border-border-hover cursor-pointer",
+                      )}>
+                        <input type="radio" name="e-role" value={opt.value} checked={editForm.role === opt.value}
+                          disabled={disabled}
+                          onChange={() => setEditForm({ ...editForm, role: opt.value })} className="mt-0.5 accent-primary" />
+                        <div>
+                          <p className="text-[13px] font-semibold text-text">{opt.label}</p>
+                          <p className="text-[12px] text-text-muted">{opt.desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
               <div>
@@ -347,7 +427,7 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
 
           {editError && <p className="text-[12px] text-danger">{editError}</p>}
           <div className="flex gap-2 pt-2">
-            <Btn onClick={saveEdit} disabled={editLoading}>{editLoading ? "Gemmer..." : "Gem ændringer"}</Btn>
+            <Btn onClick={requestSave} disabled={editLoading}>{editLoading ? "Gemmer..." : "Gem ændringer"}</Btn>
             <Btn variant="ghost" onClick={() => setEditUser(null)}>Annuller</Btn>
           </div>
         </div>
@@ -387,14 +467,119 @@ export default function AdminUsersClient({ users: initialUsers, departments }: {
         />
       )}
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        title="Slet bruger"
-        message={`Er du sikker på at du vil slette ${deleteTarget?.name}? Brugeren og alle tilknyttede ansøgninger, vagter og data slettes permanent og kan ikke gendannes.`}
-        confirmLabel={deleteLoading ? "Sletter…" : "Slet bruger"}
-        onConfirm={confirmDelete}
-        onClose={() => setDeleteTarget(null)}
-      />
+      {/* Rolleskift-dialog: vises når admin er ved at gemme en bruger
+          hvor rollen er ændret og brugeren har eksisterende overrides. */}
+      {editUser && showRoleChangeDialog && (
+        <Modal
+          open={showRoleChangeDialog}
+          onClose={() => setShowRoleChangeDialog(false)}
+          title="Rolleskift"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-warning-bg border border-[rgba(217,119,6,.2)]">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(217,119,6,.15)] text-warning">
+                <Shield size={18} />
+              </div>
+              <div className="text-[13px] leading-relaxed text-warning-text">
+                <p className="font-semibold mb-1">
+                  {editUser.name} har tilpassede tilladelser
+                </p>
+                <p>
+                  Du ændrer rollen fra <span className="font-semibold">{editUser.role.toLowerCase()}</span> til <span className="font-semibold">{editForm.role.toLowerCase()}</span>.
+                  Hvad skal der ske med de eksisterende tilladelses-tilpasninger?
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Btn
+                variant="primary"
+                full
+                onClick={() => {
+                  setShowRoleChangeDialog(false);
+                  performSave("keep");
+                }}
+              >
+                Bevar tilpassede tilladelser
+              </Btn>
+              <Btn
+                variant="secondary"
+                full
+                onClick={() => {
+                  setShowRoleChangeDialog(false);
+                  performSave("reset");
+                }}
+              >
+                Nulstil til {editForm.role.toLowerCase()}-defaults
+              </Btn>
+              <Btn
+                variant="ghost"
+                full
+                onClick={() => {
+                  // Annuller rolleskiftet — sæt rolle tilbage og luk dialogen.
+                  // Admin kan så vælge at gemme uden rolleskift eller fortsætte
+                  // at redigere.
+                  setEditForm({ ...editForm, role: editUser.role });
+                  setShowRoleChangeDialog(false);
+                }}
+              >
+                Annullér rolleskift
+              </Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Slet-bekræftelse — custom Modal i stedet for ConfirmDialog så vi
+          kan vise server-fejl (fx sidste-admin-beskyttelse) inline i stedet
+          for at lukke stille som om det lykkedes. */}
+      {deleteTarget && (
+        <Modal
+          open={!!deleteTarget}
+          onClose={() => {
+            setDeleteTarget(null);
+            setDeleteError("");
+          }}
+          title="Slet bruger"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-danger-bg border border-[rgba(220,38,38,.2)]">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(220,38,38,.15)] text-danger">
+                <Trash2 size={18} />
+              </div>
+              <p className="text-[13px] leading-relaxed text-danger-text">
+                Er du sikker på at du vil slette <span className="font-semibold">{deleteTarget.name}</span>?
+                Brugeren og alle tilknyttede ansøgninger, vagter og data slettes permanent og kan ikke gendannes.
+              </p>
+            </div>
+            {deleteError && (
+              <div className="rounded-md border border-danger-bg bg-danger-bg px-3 py-2 text-[12px] text-danger-text">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Btn
+                variant="danger"
+                full
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Sletter…" : "Slet bruger"}
+              </Btn>
+              <Btn
+                variant="secondary"
+                full
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError("");
+                }}
+                disabled={deleteLoading}
+              >
+                Annuller
+              </Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
