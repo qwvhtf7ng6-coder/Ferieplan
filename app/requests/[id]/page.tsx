@@ -1,14 +1,12 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { formatDate, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, totalDaysFromEntries } from "@/lib/utils";
-import { canSeeShifts } from "@/lib/settings";
 import { can, buildSubject } from "@/lib/can";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import type { SessionUser } from "@/types";
@@ -19,10 +17,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const user = session.user as SessionUser;
   const subject = buildSubject(user);
 
-  const [{ id }, shiftsVisible] = await Promise.all([
-    params,
-    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
-  ]);
+  const { id } = await params;
 
   const request = await prisma.vacationRequest.findUnique({
     where: { id },
@@ -55,7 +50,6 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Ansøgning"

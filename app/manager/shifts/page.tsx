@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { can, buildSubject, scopeOf } from "@/lib/can";
 import { canSeeShifts } from "@/lib/settings";
@@ -47,9 +46,6 @@ export default async function ManagerShiftsPage() {
 
   return (
     <AppShell>
-      <div className="no-print">
-        <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
-      </div>
       <main className="max-w-6xl mx-auto px-4 py-6">
         <ShiftsClient
           departments={departments}

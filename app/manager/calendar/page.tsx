@@ -1,11 +1,10 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import CalendarGrid from "@/components/CalendarGrid";
 import { can, buildSubject } from "@/lib/can";
-import { getCalendarVisibility, canSeeShifts } from "@/lib/settings";
+import { getCalendarVisibility } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function CalendarPage({
@@ -18,10 +17,7 @@ export default async function CalendarPage({
   const user = session.user as SessionUser;
   const subject = buildSubject(user);
 
-  const [visibility, shiftsVisible] = await Promise.all([
-    getCalendarVisibility(),
-    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
-  ]);
+  const visibility = await getCalendarVisibility();
 
   // Medarbejdere kan altid se kalenderen.
   // MANAGEMENT_ONLY betyder kun at de kun ser egne data — ikke andres.
@@ -156,7 +152,6 @@ export default async function CalendarPage({
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="flex-1 overflow-hidden p-4">
         <CalendarGrid
           year={year}

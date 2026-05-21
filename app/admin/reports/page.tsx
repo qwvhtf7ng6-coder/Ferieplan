@@ -1,10 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { can, buildSubject } from "@/lib/can";
-import { isVacationBalanceEnabled } from "@/lib/settings";
 import ReportsClient from "./ReportsClient";
 import type { SessionUser } from "@/types";
 
@@ -16,7 +14,7 @@ export default async function ReportsPage() {
 
   const currentYear = new Date().getFullYear();
 
-  const [departments, users, requests, balanceEnabled] = await Promise.all([
+  const [departments, users, requests] = await Promise.all([
     prisma.department.findMany({ orderBy: { name: "asc" } }),
 
     prisma.user.findMany({
@@ -41,8 +39,6 @@ export default async function ReportsPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
-
-    isVacationBalanceEnabled(),
   ]);
 
   // Serialise dates
@@ -65,7 +61,6 @@ export default async function ReportsPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} vacationBalanceEnabled={balanceEnabled} />
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text">Rapporter</h1>

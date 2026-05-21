@@ -1,11 +1,10 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { RequestList } from "@/components/RequestList";
 import { getMyRequests } from "@/actions/requests";
-import { canSeeShifts, isVacationBalanceEnabled } from "@/lib/settings";
+import { isVacationBalanceEnabled } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
@@ -18,9 +17,8 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
 
-  const [result, shiftsVisible, balanceResult, balanceFeatureEnabled] = await Promise.all([
+  const [result, balanceResult, balanceFeatureEnabled] = await Promise.all([
     getMyRequests(),
-    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
     getMyVacationBalance(),
     isVacationBalanceEnabled(),
   ]);
@@ -45,7 +43,6 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Mine ansøgninger"

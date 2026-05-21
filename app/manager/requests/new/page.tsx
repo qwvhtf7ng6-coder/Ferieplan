@@ -2,11 +2,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { OnBehalfForm } from "./OnBehalfForm";
 import { can, buildSubject, scopeOf } from "@/lib/can";
-import { canSeeShifts } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Btn } from "@/components/ui/Btn";
 import type { SessionUser } from "@/types";
@@ -22,25 +20,21 @@ export default async function NewRequestOnBehalfPage() {
   const scope = scopeOf(subject, "application.create_on_behalf");
   const seeAllDepartments = scope === "ALL";
 
-  const [shiftsVisible, employees] = await Promise.all([
-    canSeeShifts(user.role, user.departmentId, user.canManageShifts),
-    prisma.user.findMany({
-      where: seeAllDepartments
-        ? { departmentId: { not: null } }
-        : { departmentId: user.departmentId ?? "" },
-      select: {
-        id: true,
-        name: true,
-        departmentId: true,
-        department: { select: { name: true } },
-      },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const employees = await prisma.user.findMany({
+    where: seeAllDepartments
+      ? { departmentId: { not: null } }
+      : { departmentId: user.departmentId ?? "" },
+    select: {
+      id: true,
+      name: true,
+      departmentId: true,
+      department: { select: { name: true } },
+    },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[860px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
         <PageHeader
           title="Opret på vegne af"

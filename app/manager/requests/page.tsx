@@ -2,13 +2,11 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
 import { AppShell } from "@/components/AppShell";
 import { RequestFilters } from "@/components/manager/RequestFilters";
 import { ManagerRequestsClient } from "./ManagerRequestsClient";
 import { getManagerRequests } from "@/actions/manager";
 import { can, buildSubject, scopeOf } from "@/lib/can";
-import { canSeeShifts } from "@/lib/settings";
 import type { SessionUser } from "@/types";
 
 export default async function ManagerRequestsPage({
@@ -26,8 +24,6 @@ export default async function ManagerRequestsPage({
   const user = session.user as SessionUser;
   const subject = buildSubject(user);
   if (!can(subject, "application.view_others")) redirect("/dashboard");
-
-  const shiftsVisible = await canSeeShifts(user.role, user.departmentId, user.canManageShifts);
 
   // ALL-scope = se på tværs af afdelinger. OWN_DEPARTMENT = kun egen.
   const viewScope = scopeOf(subject, "application.view_others");
@@ -81,7 +77,6 @@ export default async function ManagerRequestsPage({
 
   return (
     <AppShell>
-      <Nav role={user.role} name={user.name ?? ""} shiftsVisible={shiftsVisible} />
       <main className="max-w-[1100px] mx-auto px-4 sm:px-9 py-6 sm:py-8">
 
         {/* Today widget */}

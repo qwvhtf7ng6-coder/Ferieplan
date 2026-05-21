@@ -11,11 +11,19 @@ import {
   BarChart3, Settings, User, LogOut, Menu, X, CalendarDays, Wallet,
 } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
+import type { UserRole } from "@/lib/permissions";
+import type { Permissions } from "@/lib/permission-types";
+import { can, type PermissionSubject } from "@/lib/can";
 
 interface NavProps {
-  role: string;
+  role: UserRole;
   name: string;
+  departmentId: string | null;
+  permissions: Permissions;
+  /** System-indstilling: er vagtplan slået til for brugerens afdeling? Filtreres
+   *  uafhængigt af personlige tilladelser fordi det er en feature-gate. */
   shiftsVisible?: boolean;
+  /** System-indstilling: er feriedagsregnskab slået til globalt? Samme princip. */
   vacationBalanceEnabled?: boolean;
 }
 
@@ -23,10 +31,18 @@ interface NavLink {
   href: string;
   label: string;
   icon: React.ReactNode;
-  roles: string[];
+  /** Returnerer true hvis linket skal vises for denne bruger. */
+  show: (subject: PermissionSubject) => boolean;
 }
 
-export default function Nav({ role, name, shiftsVisible = true, vacationBalanceEnabled = false }: NavProps) {
+export default function Nav({
+  role,
+  name,
+  departmentId,
+  permissions,
+  shiftsVisible = true,
+  vacationBalanceEnabled = false,
+}: NavProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -36,20 +52,46 @@ export default function Nav({ role, name, shiftsVisible = true, vacationBalanceE
     return () => { document.body.style.overflow = ""; };
   }, [menuOpen]);
 
-  const links: NavLink[] = [
-    { href: "/dashboard",         label: "Mine ansøgninger",  icon: <Home size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/requests/new",      label: "Ny ansøgning",      icon: <Plus size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/manager/requests",  label: "Ansøgninger",       icon: <ClipboardList size={16} />, roles: ["MANAGER", "ADMIN"] },
-    ...(shiftsVisible ? [{ href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />, roles: ["EMPLOYEE", "MANAGER", "ADMIN"] }] : []),
-    { href: "/manager/calendar",  label: "Kalender",          icon: <Calendar size={16} />,    roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-    { href: "/admin/users",       label: "Brugere",           icon: <Users size={16} />,       roles: ["ADMIN"] },
-    { href: "/admin/departments",  label: "Afdelinger",       icon: <Building2 size={16} />,   roles: ["ADMIN"] },
-    { href: "/admin/holidays",    label: "Helligdage",        icon: <Flag size={16} />,        roles: ["ADMIN"] },
-    ...(vacationBalanceEnabled ? [{ href: "/admin/vacation-balance", label: "Feriesaldo", icon: <Wallet size={16} />, roles: ["ADMIN"] }] : []),
-    { href: "/admin/reports",     label: "Rapporter",         icon: <BarChart3 size={16} />,   roles: ["ADMIN"] },
-    { href: "/admin/settings",    label: "Indstillinger",     icon: <Settings size={16} />,    roles: ["ADMIN"] },
-    { href: "/profile",           label: "Min profil",        icon: <User size={16} />,        roles: ["EMPLOYEE", "MANAGER", "ADMIN"] },
-  ].filter((l) => l.roles.includes(role));
+  // Byg subject én gang — bruges af alle show()-prædikater.
+  // Vi bygger uden at gå gennem getEffectivePermissions igen fordi
+  // permissions allerede ER de effektive (kommer fra session.user.permissions).
+  const subject: PermissionSubject = { role, departmentId, permissions };
+
+  const allLinks: NavLink[] = [
+    // Personlige links — alle har dem, ingen permission-tjek.
+    { href: "/dashboard",      label: "Mine ansøgninger", icon: <Home size={16} />,           show: () => true },
+    { href: "/requests/new",   label: "Ny ansøgning",     icon: <Plus size={16} />,           show: () => true },
+
+    // Manager-listen — kræver at kunne se andres ansøgninger.
+    { href: "/manager/requests", label: "Ansøgninger", icon: <ClipboardList size={16} />,
+      show: (s) => can(s, "application.view_others") },
+
+    // Vagtplan — feature-gate fra system, ikke en personal tilladelse.
+    { href: "/manager/shifts", label: "Vagtplan", icon: <CalendarDays size={16} />,
+      show: () => shiftsVisible },
+
+    // Kalender — alle kan se egen kalender.
+    { href: "/manager/calendar", label: "Kalender", icon: <Calendar size={16} />, show: () => true },
+
+    // Admin-sektionen — hver låst på sin specifikke tilladelse.
+    { href: "/admin/users",     label: "Brugere",     icon: <Users size={16} />,
+      show: (s) => can(s, "user.view") },
+    { href: "/admin/departments", label: "Afdelinger", icon: <Building2 size={16} />,
+      show: (s) => can(s, "departments.edit") },
+    { href: "/admin/holidays",  label: "Helligdage",  icon: <Flag size={16} />,
+      show: (s) => can(s, "holidays.edit") },
+    { href: "/admin/vacation-balance", label: "Feriesaldo", icon: <Wallet size={16} />,
+      show: (s) => vacationBalanceEnabled && can(s, "balance.view_others") },
+    { href: "/admin/reports", label: "Rapporter", icon: <BarChart3 size={16} />,
+      show: (s) => can(s, "report.absence") || can(s, "report.department") },
+    { href: "/admin/settings", label: "Indstillinger", icon: <Settings size={16} />,
+      show: (s) => can(s, "settings.edit") },
+
+    // Profil — altid synlig.
+    { href: "/profile", label: "Min profil", icon: <User size={16} />, show: () => true },
+  ];
+
+  const links = allLinks.filter((l) => l.show(subject));
 
   const mainLinks = links.filter((l) => l.href !== "/profile");
   const bottomLinks = links.slice(0, 5);
