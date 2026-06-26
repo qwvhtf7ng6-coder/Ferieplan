@@ -1,0 +1,3 @@
+## 2024-06-27 - [Prisma N+1 Query Fix for Relational Data]
+**Learning:** [When dealing with an N+1 query problem where Prisma does not natively support `groupBy` across relational fields natively, we can fetch the flat data using a `userId { in: userIds }` query, and then aggregate the data in memory using a hash map for efficient mapping.]
+**Action:** [Next time I encounter N+1 queries, especially across nested relations or aggregates in Prisma, fetch all needed records using an `in` clause, and perform the relational grouping or aggregation locally in memory instead of relying on a loop of `aggregate` calls.]
