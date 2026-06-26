@@ -20,7 +20,8 @@ export default async function PrintCalendarPage({
   const user = session.user as SessionUser;
   const subject = buildSubject(user);
 
-  const visibility = await getCalendarVisibility();
+  const orgId = (user as any).organizationId as string;
+  const visibility = await getCalendarVisibility(orgId);
   const hasApprovalRole = can(subject, "approval.decide");
   const hasExtendedCalendar = can(subject, "calendar.view_extended");
   const canSeeOthers = hasApprovalRole || hasExtendedCalendar || visibility === "ALL_EMPLOYEES";
@@ -47,6 +48,7 @@ export default async function PrintCalendarPage({
 
   const [departments, requests, holidays] = await Promise.all([
     prisma.department.findMany({
+      where: { organizationId: orgId },
       orderBy: { name: "asc" },
       include: {
         users: {
@@ -58,6 +60,7 @@ export default async function PrintCalendarPage({
     }),
     prisma.vacationRequest.findMany({
       where: {
+        organizationId: orgId,
         status: { in: isManagerOrAdmin ? ["APPROVED", "PENDING"] : ["APPROVED"] },
         entries: { some: { date: { gte: start, lte: end } } },
       },
@@ -71,7 +74,7 @@ export default async function PrintCalendarPage({
       },
     }),
     prisma.holiday.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: { organizationId: orgId, date: { gte: start, lte: end } },
       orderBy: { date: "asc" },
     }),
   ]);

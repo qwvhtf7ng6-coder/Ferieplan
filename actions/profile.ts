@@ -19,24 +19,22 @@ export async function updateProfile(input: {
 }): Promise<ActionResult> {
   const user = await getSession();
   if (!user) return { ok: false, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string | null;
 
   const { name, email } = input;
-
   if (!name?.trim()) return { ok: false, error: "Navn er påkrævet" };
   if (!email?.trim()) return { ok: false, error: "Email er påkrævet" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, error: "Ugyldig email-adresse" };
   }
 
-  // Normalisér email til lowercase før både lookup og storage,
-  // så case-forskelle ikke kan skabe duplikater eller fejle unique-check
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Check email not taken by another user
-  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (existing && existing.id !== user.id) {
-    return { ok: false, error: "Email er allerede i brug" };
-  }
+  // Email-uniqueness inden for org (ekskluder sig selv)
+  const existing = await prisma.user.findFirst({
+    where: { email: normalizedEmail, organizationId: orgId, NOT: { id: user.id } },
+  });
+  if (existing) return { ok: false, error: "Email er allerede i brug" };
 
   await prisma.user.update({
     where: { id: user.id },
@@ -45,7 +43,6 @@ export async function updateProfile(input: {
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");
-
   return { ok: true };
 }
 
@@ -58,7 +55,6 @@ export async function updatePassword(input: {
   if (!user) return { ok: false, error: "Ikke logget ind" };
 
   const { currentPassword, newPassword, confirmPassword } = input;
-
   if (!currentPassword) return { ok: false, error: "Indtast nuværende adgangskode" };
   if (!newPassword) return { ok: false, error: "Indtast ny adgangskode" };
   if (newPassword.length < 8) return { ok: false, error: "Adgangskode skal være mindst 8 tegn" };
@@ -71,10 +67,6 @@ export async function updatePassword(input: {
   if (!valid) return { ok: false, error: "Nuværende adgangskode er forkert" };
 
   const hashed = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { password: hashed },
-  });
-
+  await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
   return { ok: true };
 }

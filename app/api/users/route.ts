@@ -12,6 +12,9 @@ export async function POST(req: NextRequest) {
   const subject = buildSubject(user);
   if (!can(subject, "user.create")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const orgId = user.organizationId as string | null;
+  if (!orgId) return NextResponse.json({ error: "Ingen organisation" }, { status: 400 });
+
   const { name, email, password, role, departmentId } = await req.json();
 
   if (!name || !email || !password) {
@@ -25,12 +28,13 @@ export async function POST(req: NextRequest) {
   }
 
   const safeRole = isValidRole(role) ? role : "EMPLOYEE";
-
-  // Normalisér email til lowercase før både lookup og storage
   const normalizedEmail = email.trim().toLowerCase();
 
-  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
+  // Check email-uniqueness inden for denne org
+  const existing = await prisma.user.findFirst({
+    where: { email: normalizedEmail, organizationId: orgId },
+  });
+  if (existing) return NextResponse.json({ error: "Email allerede i brug i denne organisation" }, { status: 400 });
 
   const hashed = await bcrypt.hash(password, 10);
   const newUser = await prisma.user.create({
@@ -39,6 +43,7 @@ export async function POST(req: NextRequest) {
       email: normalizedEmail,
       password: hashed,
       role: safeRole,
+      organizationId: orgId,
       departmentId: departmentId || null,
     },
   });

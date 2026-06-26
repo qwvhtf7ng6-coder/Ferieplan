@@ -10,9 +10,14 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   if (!can(buildSubject(user), "departments.edit")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
+  // Org-isolation: verificer at dept tilhører denne org
+  const dept = await prisma.department.findFirst({ where: { id, organizationId: orgId } });
+  if (!dept) return NextResponse.json({ error: "Afdeling ikke fundet" }, { status: 404 });
+
   await prisma.department.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
@@ -24,11 +29,14 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   if (!can(buildSubject(user), "departments.edit")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const { name, maxConcurrent, shiftsEnabled } = await req.json();
+  const dept = await prisma.department.findFirst({ where: { id, organizationId: orgId } });
+  if (!dept) return NextResponse.json({ error: "Afdeling ikke fundet" }, { status: 404 });
 
+  const { name, maxConcurrent, shiftsEnabled } = await req.json();
   if (!name || typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Navn er påkrævet" }, { status: 400 });
   }
@@ -40,6 +48,5 @@ export async function PATCH(
     where: { id },
     data: { name: name.trim(), maxConcurrent, shiftsEnabled: shiftsEnabled !== false },
   });
-
   return NextResponse.json(updated);
 }

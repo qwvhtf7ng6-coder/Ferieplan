@@ -16,11 +16,12 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
+  const orgId = (user as any).organizationId as string;
 
   const [result, balanceResult, balanceFeatureEnabled] = await Promise.all([
     getMyRequests(),
     getMyVacationBalance(),
-    isVacationBalanceEnabled(),
+    isVacationBalanceEnabled(orgId),
   ]);
 
   const requests = result.ok ? result.data ?? [] : [];

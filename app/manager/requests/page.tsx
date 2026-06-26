@@ -33,6 +33,7 @@ export default async function ManagerRequestsPage({
   const canCreateOnBehalf = can(subject, "application.create_on_behalf");
 
   const sp = await searchParams;
+  const orgId = (user as any).organizationId as string;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -41,7 +42,7 @@ export default async function ManagerRequestsPage({
 
   const [departments, result, todayAbsences, totalInDept] = await Promise.all([
     seeAllDepartments
-      ? prisma.department.findMany({ orderBy: { name: "asc" } })
+      ? prisma.department.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } })
       : [],
     getManagerRequests({
       status: sp.status,
@@ -49,9 +50,9 @@ export default async function ManagerRequestsPage({
       year: sp.year ? parseInt(sp.year) : undefined,
       departmentId: sp.departmentId,
     }),
-    // Who is absent today
     prisma.vacationRequest.findMany({
       where: {
+        organizationId: orgId,
         status: "APPROVED",
         ...(seeAllDepartments ? {} : { departmentId: user.departmentId ?? "" }),
         entries: { some: { date: { gte: today, lte: todayEnd } } },
@@ -62,11 +63,10 @@ export default async function ManagerRequestsPage({
         entries: { where: { date: { gte: today, lte: todayEnd } } },
       },
     }),
-    // Total employees in dept
     prisma.user.count({
       where: seeAllDepartments
-        ? { departmentId: { not: null } }
-        : { departmentId: user.departmentId ?? "" },
+        ? { organizationId: orgId, departmentId: { not: null } }
+        : { organizationId: orgId, departmentId: user.departmentId ?? "" },
     }),
   ]);
 

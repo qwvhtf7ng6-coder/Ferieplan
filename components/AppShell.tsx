@@ -32,11 +32,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // gennem buildSubject for at få en konsistent Permissions-værdi selv
   // hvis token-claim mangler (legacy fallback).
   const subject = buildSubject(user);
+  const orgId = (user as any).organizationId as string;
 
   // Feature-flags hentes parallelt — settings cached i 1 time, så billig.
   const [shiftsVisible, vacationBalanceEnabled] = await Promise.all([
     canSeeShifts(user.role, user.departmentId, user.canManageShifts),
-    isVacationBalanceEnabled(),
+    isVacationBalanceEnabled(orgId),
   ]);
 
   return (

@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 
 export async function createAuditLog({
+  organizationId,
   userId,
   requestId,
   action,
   details,
 }: {
+  organizationId: string;
   userId: string;
   requestId?: string;
   action: string;
@@ -13,6 +15,7 @@ export async function createAuditLog({
 }): Promise<void> {
   await prisma.auditLog.create({
     data: {
+      organizationId,
       userId,
       requestId: requestId ?? null,
       action,

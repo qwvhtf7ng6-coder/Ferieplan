@@ -1,6 +1,6 @@
 import type { Permissions } from "@/lib/permission-types";
 
-export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN";
+export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
 export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type EntryType = "FULL_DAY" | "HALF_DAY_AM" | "HALF_DAY_PM";
 export type AbsenceType = "VACATION" | "VACATION_FREE" | "MATERNITY" | "CHILD_SICK_DAY" | "SICK";
@@ -11,8 +11,11 @@ export interface SessionUser {
   name: string;
   email: string;
   role: UserRole;
+  organizationId?: string | null;
+  orgSlug?: string | null;
   departmentId: string | null;
   canManageShifts?: boolean;
+  isSuperAdmin?: boolean;
   // Effektive tilladelser (rolle-defaults merget med evt. per-bruger overrides).
   // Beregnes i auth.ts via getEffectivePermissions. Altid fuldt udfyldt på session.
   permissions?: Permissions;

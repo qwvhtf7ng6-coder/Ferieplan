@@ -19,21 +19,23 @@ async function getSession(): Promise<SessionUser | null> {
   return session.user as SessionUser;
 }
 
-/** Henter session OG bygger subject — bruges af alle actions her. */
 async function getSessionAndSubject(): Promise<
-  { user: SessionUser; subject: PermissionSubject } | null
+  { user: SessionUser; subject: PermissionSubject; orgId: string } | null
 > {
   const user = await getSession();
   if (!user) return null;
-  return { user, subject: buildSubject(user) };
+  const orgId = (user as any).organizationId as string;
+  if (!orgId) return null;
+  return { user, subject: buildSubject(user), orgId };
 }
 
 async function checkCapacity(
+  orgId: string,
   departmentId: string,
   entries: { date: Date }[],
   excludeRequestId?: string
 ): Promise<CapacityCheckResult> {
-  const dept = await prisma.department.findUnique({ where: { id: departmentId } });
+  const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
   for (const entry of entries) {
@@ -41,6 +43,7 @@ async function checkCapacity(
       where: {
         date: entry.date,
         request: {
+          organizationId: orgId,
           departmentId,
           status: "APPROVED",
           ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
@@ -48,12 +51,7 @@ async function checkCapacity(
       },
     });
     if (count + 1 > dept.maxConcurrent) {
-      return {
-        exceeded: true,
-        date: entry.date.toISOString().slice(0, 10),
-        current: count,
-        max: dept.maxConcurrent,
-      };
+      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
     }
   }
   return { exceeded: false };
@@ -67,17 +65,14 @@ export async function getManagerRequests(filters?: {
 }): Promise<ActionResult<VacationRequestRow[]>> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
+  const { user, subject, orgId } = ctx;
 
-  // Skal kunne se andres ansøgninger overhovedet
   if (!can(subject, "application.view_others")) {
     return { ok: false, error: "Ingen adgang" };
   }
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { organizationId: orgId };
 
-  // Scope-baseret filtrering: OWN_DEPARTMENT begrænser til egen afdeling,
-  // ALL tillader på tværs (eller filter fra forespørgsel hvis angivet).
   const scope = subject.permissions["application.view_others"];
   if (scope === "OWN_DEPARTMENT") {
     where.departmentId = user.departmentId;
@@ -112,19 +107,15 @@ export async function approveRequest(
 ): Promise<ActionResult<{ capacityWarning?: string }>> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
+  const { user, subject, orgId } = ctx;
 
-  const request = await prisma.vacationRequest.findUnique({
-    where: { id: requestId },
+  const request = await prisma.vacationRequest.findFirst({
+    where: { id: requestId, organizationId: orgId },
     include: { entries: true },
   });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
 
-  if (
-    !can(subject, "approval.decide", {
-      targetDepartmentId: request.departmentId,
-    })
-  ) {
+  if (!can(subject, "approval.decide", { targetDepartmentId: request.departmentId })) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (request.status !== "PENDING") {
@@ -132,13 +123,12 @@ export async function approveRequest(
   }
 
   const capacity = await checkCapacity(
+    orgId,
     request.departmentId,
     request.entries.map((e: { date: Date }) => ({ date: e.date })),
     requestId
   );
 
-  // Variant B: kapacitetsadvarsel blokerer godkendelse medmindre brugeren
-  // har approval.override_capacity OG eksplicit har bekræftet override.
   if (capacity.exceeded) {
     const mayOverride = can(subject, "approval.override_capacity");
     if (!mayOverride) {
@@ -148,9 +138,6 @@ export async function approveRequest(
       };
     }
     if (!options?.confirmOverride) {
-      // Returnér advarslen så frontend kan vise bekræftelses-dialog.
-      // Bemærk: ok=true men ingen update er sket — frontend skal kalde igen
-      // med confirmOverride: true for at gennemføre godkendelsen.
       return {
         ok: true,
         data: {
@@ -160,12 +147,10 @@ export async function approveRequest(
     }
   }
 
-  await prisma.vacationRequest.update({
-    where: { id: requestId },
-    data: { status: "APPROVED" },
-  });
+  await prisma.vacationRequest.update({ where: { id: requestId }, data: { status: "APPROVED" } });
 
   await createAuditLog({
+    organizationId: orgId,
     userId: user.id,
     requestId,
     action: "APPROVED",
@@ -174,8 +159,7 @@ export async function approveRequest(
       : undefined,
   });
 
-  // Notify employee
-  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_APPROVED", user.name ?? "Leder").catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(orgId, requestId, request.userId, "REQUEST_APPROVED", user.name ?? "Leder").catch(() => {});
 
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
@@ -184,21 +168,14 @@ export async function approveRequest(
   return { ok: true, data: {} };
 }
 
-export async function rejectRequest(
-  requestId: string,
-  reason?: string
-): Promise<ActionResult> {
+export async function rejectRequest(requestId: string, reason?: string): Promise<ActionResult> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
+  const { user, subject, orgId } = ctx;
 
-  const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
+  const request = await prisma.vacationRequest.findFirst({ where: { id: requestId, organizationId: orgId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (
-    !can(subject, "approval.decide", {
-      targetDepartmentId: request.departmentId,
-    })
-  ) {
+  if (!can(subject, "approval.decide", { targetDepartmentId: request.departmentId })) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (request.status !== "PENDING") {
@@ -209,20 +186,12 @@ export async function rejectRequest(
 
   await prisma.vacationRequest.update({
     where: { id: requestId },
-    data: {
-      status: "REJECTED",
-      rejectionReason: trimmedReason,
-    },
+    data: { status: "REJECTED", rejectionReason: trimmedReason },
   });
 
-  await createAuditLog({
-    userId: user.id,
-    requestId,
-    action: "REJECTED",
-    details: trimmedReason || undefined,
-  });
+  await createAuditLog({ organizationId: orgId, userId: user.id, requestId, action: "REJECTED", details: trimmedReason || undefined });
 
-  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder", trimmedReason ?? undefined).catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(orgId, requestId, request.userId, "REQUEST_REJECTED", user.name ?? "Leder", trimmedReason ?? undefined).catch(() => {});
 
   revalidatePath("/manager/requests");
   revalidatePath("/dashboard");
@@ -230,39 +199,31 @@ export async function rejectRequest(
   return { ok: true };
 }
 
-export async function cancelRequestAsManager(
-  requestId: string
-): Promise<ActionResult> {
+export async function cancelRequestAsManager(requestId: string): Promise<ActionResult> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
+  const { user, subject, orgId } = ctx;
 
-  const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
+  const request = await prisma.vacationRequest.findFirst({ where: { id: requestId, organizationId: orgId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (
-    !can(subject, "application.cancel_others", {
-      targetDepartmentId: request.departmentId,
-    })
-  ) {
+  if (!can(subject, "application.cancel_others", { targetDepartmentId: request.departmentId })) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
   if (!["PENDING", "APPROVED"].includes(request.status)) {
     return { ok: false, error: "Kan ikke annullere en afvist eller allerede annulleret ansøgning" };
   }
 
-  await prisma.vacationRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED" },
-  });
+  await prisma.vacationRequest.update({ where: { id: requestId }, data: { status: "CANCELLED" } });
 
   await createAuditLog({
+    organizationId: orgId,
     userId: user.id,
     requestId,
     action: "CANCELLED",
     details: `Annulleret af ${user.role === "ADMIN" ? "admin" : "leder"}`,
   });
 
-  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_CANCELLED", user.name ?? "Leder").catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(orgId, requestId, request.userId, "REQUEST_CANCELLED", user.name ?? "Leder").catch(() => {});
 
   revalidatePath("/manager/requests");
   revalidatePath("/manager/calendar");
@@ -271,64 +232,40 @@ export async function cancelRequestAsManager(
   return { ok: true };
 }
 
-export async function editRequestNote(
-  requestId: string,
-  note: string
-): Promise<ActionResult> {
+export async function editRequestNote(requestId: string, note: string): Promise<ActionResult> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
+  const { user, subject, orgId } = ctx;
 
-  const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
+  const request = await prisma.vacationRequest.findFirst({ where: { id: requestId, organizationId: orgId } });
   if (!request) return { ok: false, error: "Ansøgning ikke fundet" };
-  if (
-    !can(subject, "approval.decide", {
-      targetDepartmentId: request.departmentId,
-    })
-  ) {
+  if (!can(subject, "approval.decide", { targetDepartmentId: request.departmentId })) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
 
-  await prisma.vacationRequest.update({
-    where: { id: requestId },
-    data: { note: note.trim() || null },
-  });
+  await prisma.vacationRequest.update({ where: { id: requestId }, data: { note: note.trim() || null } });
 
-  await createAuditLog({
-    userId: user.id,
-    requestId,
-    action: "EDITED",
-    details: `Note opdateret`,
-  });
+  await createAuditLog({ organizationId: orgId, userId: user.id, requestId, action: "EDITED", details: "Note opdateret" });
 
-  if (request.userId) notifyEmployeeOfDecision(requestId, request.userId, "REQUEST_EDITED", user.name ?? "Leder").catch(() => {/* silent */});
+  if (request.userId) notifyEmployeeOfDecision(orgId, requestId, request.userId, "REQUEST_EDITED", user.name ?? "Leder").catch(() => {});
 
   revalidatePath("/manager/requests");
-
   return { ok: true };
 }
 
 export async function getRequestWithAudit(requestId: string): Promise<
   ActionResult<{
     request: VacationRequestRow;
-    auditLogs: {
-      id: string;
-      action: string;
-      details: string | null;
-      createdAt: Date;
-      user: { name: string };
-    }[];
+    auditLogs: { id: string; action: string; details: string | null; createdAt: Date; user: { name: string } }[];
   }>
 > {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { subject } = ctx;
-  if (!can(subject, "application.view_others")) {
-    return { ok: false, error: "Ingen adgang" };
-  }
+  const { subject, orgId } = ctx;
+  if (!can(subject, "application.view_others")) return { ok: false, error: "Ingen adgang" };
 
-  const request = await prisma.vacationRequest.findUnique({
-    where: { id: requestId },
+  const request = await prisma.vacationRequest.findFirst({
+    where: { id: requestId, organizationId: orgId },
     include: {
       entries: { orderBy: { date: "asc" } },
       user: { select: { id: true, name: true, email: true } },
@@ -337,27 +274,17 @@ export async function getRequestWithAudit(requestId: string): Promise<
   });
   if (!request) return { ok: false, error: "Ikke fundet" };
 
-  if (
-    !can(subject, "application.view_others", {
-      targetDepartmentId: request.departmentId,
-    })
-  ) {
+  if (!can(subject, "application.view_others", { targetDepartmentId: request.departmentId })) {
     return { ok: false, error: "Ingen adgang" };
   }
 
   const auditLogs = await prisma.auditLog.findMany({
-    where: { requestId },
+    where: { requestId, organizationId: orgId },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
   });
 
-  return {
-    ok: true,
-    data: {
-      request: request as unknown as VacationRequestRow,
-      auditLogs,
-    },
-  };
+  return { ok: true, data: { request: request as unknown as VacationRequestRow, auditLogs } };
 }
 
 export async function createRequestOnBehalf(input: {
@@ -367,24 +294,17 @@ export async function createRequestOnBehalf(input: {
 }): Promise<ActionResult<{ id: string }>> {
   const ctx = await getSessionAndSubject();
   if (!ctx) return { ok: false, error: "Ikke logget ind" };
-  const { user, subject } = ctx;
-  if (!can(subject, "application.create_on_behalf")) {
-    return { ok: false, error: "Ingen adgang" };
-  }
+  const { user, subject, orgId } = ctx;
+  if (!can(subject, "application.create_on_behalf")) return { ok: false, error: "Ingen adgang" };
 
-  const targetUser = await prisma.user.findUnique({
-    where: { id: input.targetUserId },
+  const targetUser = await prisma.user.findFirst({
+    where: { id: input.targetUserId, organizationId: orgId },
     select: { id: true, name: true, departmentId: true },
   });
   if (!targetUser) return { ok: false, error: "Medarbejder ikke fundet" };
   if (!targetUser.departmentId) return { ok: false, error: "Medarbejder mangler afdeling" };
 
-  // Scope-tjek: kan brugeren oprette ansøgning for nogen i denne afdeling?
-  if (
-    !can(subject, "application.create_on_behalf", {
-      targetDepartmentId: targetUser.departmentId,
-    })
-  ) {
+  if (!can(subject, "application.create_on_behalf", { targetDepartmentId: targetUser.departmentId })) {
     return { ok: false, error: "Ingen adgang til denne afdeling" };
   }
 
@@ -394,10 +314,11 @@ export async function createRequestOnBehalf(input: {
 
   const request = await prisma.vacationRequest.create({
     data: {
+      organizationId: orgId,
       userId: targetUser.id,
       departmentId: targetUser.departmentId,
       note: input.note?.trim() || null,
-      status: "APPROVED", // Manager-created requests are pre-approved
+      status: "APPROVED",
       entries: {
         create: input.entries.map((e) => ({
           date: new Date(e.date),
@@ -410,6 +331,7 @@ export async function createRequestOnBehalf(input: {
   });
 
   await createAuditLog({
+    organizationId: orgId,
     userId: user.id,
     requestId: request.id,
     action: "CREATED_ON_BEHALF",

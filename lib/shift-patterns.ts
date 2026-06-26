@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export async function generateAssignmentsFromPattern(pattern: {
+  organizationId: string;
   userId: string;
   templateId: string;
   startDate: Date;
@@ -86,7 +87,7 @@ export async function generateAssignmentsFromPattern(pattern: {
     await prisma.shiftAssignment.upsert({
       where: { userId_date_templateId: { userId: pattern.userId, date, templateId: pattern.templateId } },
       update: { note: pattern.note || null },
-      create: { userId: pattern.userId, templateId: pattern.templateId, date, note: pattern.note || null },
+      create: { organizationId: pattern.organizationId, userId: pattern.userId, templateId: pattern.templateId, date, note: pattern.note || null },
     });
   }
 

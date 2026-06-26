@@ -2,25 +2,44 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, CheckCircle, Shield, Users } from "lucide-react";
 import { Btn } from "@/components/ui/Btn";
 import { FieldInput } from "@/components/ui/FieldInput";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  const searchParams = useSearchParams();
+
+  // orgSlug kan komme fra URL-parameter (?org=odense) sat af middleware/redirect
+  const [orgSlug, setOrgSlug]     = useState(searchParams.get("org") ?? "");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [error, setError]         = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [attempts, setAttempts]   = useState(0);
+  const [step, setStep]           = useState<"org" | "credentials">(
+    searchParams.get("org") ? "credentials" : "org"
+  );
+
+  async function handleOrgSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orgSlug.trim()) return;
+    setError("");
+    setStep("credentials");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const res = await signIn("credentials", { email, password, redirect: false });
+    const res = await signIn("credentials", {
+      email,
+      password,
+      orgSlug: orgSlug.trim() || undefined,
+      redirect: false,
+    });
 
     if (res?.error) {
       const newAttempts = attempts + 1;
@@ -34,7 +53,7 @@ export default function LoginPage() {
       }
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      router.push(`/${orgSlug.trim() || ""}`);
     }
   }
 
@@ -78,12 +97,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-white/20 text-[11px]">© {new Date().getFullYear()} WorkPlan</p>
+        <p className="text-white/20 text-[12px]">© {new Date().getFullYear()} WorkPlan</p>
       </div>
 
-      {/* Right panel — form */}
+      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12">
-        <div className="w-full max-w-[380px]">
+        <div className="w-full max-w-[400px]">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 md:hidden">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -93,53 +112,98 @@ export default function LoginPage() {
             <span className="font-extrabold text-text text-[16px]">WorkPlan</span>
           </div>
 
-          <div className="mb-8">
-            <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Log ind</h1>
-            <p className="text-[13px] text-text-muted mt-1">Indtast dine oplysninger for at fortsætte</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FieldInput
-              id="email"
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="din@email.dk"
-              autoComplete="email"
-            />
-            <FieldInput
-              id="password"
-              label="Adgangskode"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-
-            {error && (
-              <div className={`text-[13px] rounded-md px-3.5 py-2.5 border ${
-                attempts >= 5
-                  ? "bg-danger-bg text-danger-text border-danger/20"
-                  : "bg-warning-bg text-warning-text border-warning/20"
-              }`}>
-                {error}
+          {step === "org" ? (
+            <>
+              <div className="mb-8">
+                <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Vælg organisation</h1>
+                <p className="text-[13px] text-text-muted mt-1">Indtast din organisations slug for at fortsætte</p>
               </div>
-            )}
+              <form onSubmit={handleOrgSubmit} className="space-y-4">
+                <FieldInput
+                  id="orgSlug"
+                  label="Organisation"
+                  type="text"
+                  value={orgSlug}
+                  onChange={(e) => setOrgSlug(e.target.value)}
+                  required
+                  placeholder="fx odense"
+                  autoComplete="off"
+                  helper="Organisationens unikke navn (slug)"
+                />
+                {error && (
+                  <div className="text-[13px] rounded-md px-3.5 py-2.5 border bg-danger-bg text-danger-text border-danger/20">
+                    {error}
+                  </div>
+                )}
+                <Btn type="submit" full size="lg">
+                  Fortsæt
+                </Btn>
+                <button
+                  type="button"
+                  onClick={() => { setOrgSlug(""); setStep("credentials"); }}
+                  className="text-[12px] text-text-muted underline w-full text-center mt-2"
+                >
+                  Log ind som Super Admin
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <div className="mb-8">
+                <h1 className="text-[22px] font-extrabold tracking-[-0.025em] text-text">Log ind</h1>
+                <p className="text-[13px] text-text-muted mt-1">
+                  {orgSlug ? (
+                    <>Organisation: <strong>{orgSlug}</strong> · <button type="button" onClick={() => setStep("org")} className="underline">Skift</button></>
+                  ) : (
+                    "Super Admin login"
+                  )}
+                </p>
+              </div>
 
-            <Btn
-              type="submit"
-              disabled={loading}
-              full
-              size="lg"
-              icon={loading ? undefined : <CheckCircle size={16} />}
-            >
-              {loading ? "Logger ind..." : "Log ind"}
-            </Btn>
-          </form>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <FieldInput
+                  id="email"
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="din@email.dk"
+                  autoComplete="email"
+                />
+                <FieldInput
+                  id="password"
+                  label="Adgangskode"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+
+                {error && (
+                  <div className={`text-[13px] rounded-md px-3.5 py-2.5 border ${
+                    attempts >= 5
+                      ? "bg-danger-bg text-danger-text border-danger/20"
+                      : "bg-warning-bg text-warning-text border-warning/20"
+                  }`}>
+                    {error}
+                  </div>
+                )}
+
+                <Btn
+                  type="submit"
+                  disabled={loading}
+                  full
+                  size="lg"
+                  icon={loading ? undefined : <CheckCircle size={16} />}
+                >
+                  {loading ? "Logger ind..." : "Log ind"}
+                </Btn>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>

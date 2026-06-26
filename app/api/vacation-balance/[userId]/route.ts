@@ -3,28 +3,23 @@ import { prisma } from "@/lib/prisma";
 import { can, buildSubject } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 
-interface Params {
-  params: Promise<{ userId: string }>;
-}
+interface Params { params: Promise<{ userId: string }> }
 
-// GET /api/vacation-balance/[userId]?year=2025
 export async function GET(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
+  const orgId = actor.organizationId as string;
   const subject = buildSubject(actor);
 
   const { userId } = await params;
 
-  // Egen saldo må altid ses
   if (actor.id !== userId) {
-    // Hent målbrugers afdeling for scope-tjek
-    const target = await prisma.user.findUnique({
-      where: { id: userId },
+    const target = await prisma.user.findFirst({
+      where: { id: userId, organizationId: orgId },
       select: { departmentId: true },
     });
     if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
-
     if (!can(subject, "balance.view_others", { targetDepartmentId: target.departmentId })) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -33,20 +28,12 @@ export async function GET(req: NextRequest, { params }: Params) {
   const year = parseInt(req.nextUrl.searchParams.get("year") ?? String(new Date().getFullYear()));
 
   const [balance, usedResult] = await Promise.all([
-    prisma.vacationBalance.findUnique({
-      where: { userId_year: { userId, year } },
-    }),
+    prisma.vacationBalance.findUnique({ where: { userId_year: { userId, year } } }),
     prisma.vacationRequestEntry.aggregate({
       where: {
         absenceType: "VACATION",
-        date: {
-          gte: new Date(`${year}-01-01`),
-          lte: new Date(`${year}-12-31`),
-        },
-        request: {
-          userId,
-          status: "APPROVED",
-        },
+        date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+        request: { organizationId: orgId, userId, status: "APPROVED" },
       },
       _sum: { days: true },
     }),
@@ -65,17 +52,15 @@ export async function GET(req: NextRequest, { params }: Params) {
   });
 }
 
-// PUT /api/vacation-balance/[userId] — admin sets balance
 export async function PUT(req: NextRequest, { params }: Params) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
+  const orgId = actor.organizationId as string;
   const subject = buildSubject(actor);
 
   const { userId } = await params;
-
-  // Verificér målbruger og scope
-  const target = await prisma.user.findUnique({ where: { id: userId } });
+  const target = await prisma.user.findFirst({ where: { id: userId, organizationId: orgId } });
   if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
 
   if (!can(subject, "balance.edit", { targetDepartmentId: target.departmentId })) {
@@ -83,7 +68,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 
   const { year, totalDays, carryOverDays, note } = await req.json();
-
   if (!year || totalDays === undefined) {
     return NextResponse.json({ error: "year og totalDays er påkrævet" }, { status: 400 });
   }
@@ -96,7 +80,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   const balance = await prisma.vacationBalance.upsert({
     where: { userId_year: { userId, year } },
-    create: { userId, year, totalDays, carryOverDays: carryOverDays ?? 0, note: note ?? null },
+    create: { organizationId: orgId, userId, year, totalDays, carryOverDays: carryOverDays ?? 0, note: note ?? null },
     update: { totalDays, carryOverDays: carryOverDays ?? 0, note: note ?? null },
   });
 

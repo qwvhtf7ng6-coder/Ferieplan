@@ -9,6 +9,7 @@ type NotificationType =
   | "PENDING_REMINDER";
 
 interface CreateNotificationInput {
+  organizationId: string;
   userId: string;
   type: NotificationType;
   title: string;
@@ -22,6 +23,7 @@ export async function createNotification(input: CreateNotificationInput) {
 
 /** Notify the employee who owns the request of a status decision */
 export async function notifyEmployeeOfDecision(
+  organizationId: string,
   requestId: string,
   employeeId: string,
   type: "REQUEST_APPROVED" | "REQUEST_REJECTED" | "REQUEST_CANCELLED" | "REQUEST_EDITED",
@@ -47,6 +49,7 @@ export async function notifyEmployeeOfDecision(
   }
 
   await createNotification({
+    organizationId,
     userId: employeeId,
     type,
     title: titles[type],
@@ -57,12 +60,14 @@ export async function notifyEmployeeOfDecision(
 
 /** Notify all managers in the same department of a new request */
 export async function notifyManagersOfNewRequest(
+  organizationId: string,
   requestId: string,
   departmentId: string,
   employeeName: string
 ) {
   const managers = await prisma.user.findMany({
     where: {
+      organizationId,
       departmentId,
       role: { in: ["MANAGER", "ADMIN"] },
     },
@@ -72,6 +77,7 @@ export async function notifyManagersOfNewRequest(
   await Promise.all(
     managers.map((m) =>
       createNotification({
+        organizationId,
         userId: m.id,
         type: "NEW_REQUEST_SUBMITTED",
         title: "Ny ansøgning",
@@ -84,6 +90,7 @@ export async function notifyManagersOfNewRequest(
 
 /** Notify all admins of a new request (only those not already notified as manager) */
 export async function notifyAdminsOfNewRequest(
+  organizationId: string,
   requestId: string,
   departmentId: string,
   employeeName: string,
@@ -91,6 +98,7 @@ export async function notifyAdminsOfNewRequest(
 ) {
   const admins = await prisma.user.findMany({
     where: {
+      organizationId,
       role: "ADMIN",
       id: { notIn: alreadyNotifiedUserIds },
     },
@@ -100,6 +108,7 @@ export async function notifyAdminsOfNewRequest(
   await Promise.all(
     admins.map((a) =>
       createNotification({
+        organizationId,
         userId: a.id,
         type: "NEW_REQUEST_SUBMITTED",
         title: "Ny ansøgning",

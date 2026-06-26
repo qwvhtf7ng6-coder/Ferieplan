@@ -11,35 +11,27 @@ async function getSession(): Promise<SessionUser | null> {
   return session.user as SessionUser;
 }
 
-function usedDaysQuery(userId: string, year: number) {
+function usedDaysQuery(orgId: string, userId: string, year: number) {
   return prisma.vacationRequestEntry.aggregate({
     where: {
       absenceType: "VACATION",
-      date: {
-        gte: new Date(`${year}-01-01`),
-        lte: new Date(`${year}-12-31`),
-      },
-      request: {
-        userId,
-        status: "APPROVED",
-      },
+      date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+      request: { organizationId: orgId, userId, status: "APPROVED" },
     },
     _sum: { days: true },
   });
 }
 
-// Get own vacation balance
 export async function getMyVacationBalance(year?: number) {
   const user = await getSession();
   if (!user) return { ok: false as const, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string;
 
   const y = year ?? new Date().getFullYear();
 
   const [balance, usedResult] = await Promise.all([
-    prisma.vacationBalance.findUnique({
-      where: { userId_year: { userId: user.id, year: y } },
-    }),
-    usedDaysQuery(user.id, y),
+    prisma.vacationBalance.findUnique({ where: { userId_year: { userId: user.id, year: y } } }),
+    usedDaysQuery(orgId, user.id, y),
   ]);
 
   const totalDays = balance?.totalDays ?? 25;
@@ -60,10 +52,10 @@ export async function getMyVacationBalance(year?: number) {
   };
 }
 
-// Admin/Manager: get all users with balances for a given year (scope-filtered)
 export async function getAllVacationBalances(year?: number) {
   const user = await getSession();
   if (!user) return { ok: false as const, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "balance.view_others")) {
     return { ok: false as const, error: "Ingen adgang" };
@@ -71,11 +63,11 @@ export async function getAllVacationBalances(year?: number) {
 
   const y = year ?? new Date().getFullYear();
 
-  // Scope-baseret filtrering af brugerlisten
   const scope = subject.permissions["balance.view_others"];
-  const userWhere = scope === "OWN_DEPARTMENT"
-    ? { departmentId: user.departmentId ?? undefined }
-    : {};
+  const userWhere =
+    scope === "OWN_DEPARTMENT"
+      ? { organizationId: orgId, departmentId: user.departmentId ?? undefined }
+      : { organizationId: orgId };
 
   const users = await prisma.user.findMany({
     where: userWhere,
@@ -93,10 +85,7 @@ export async function getAllVacationBalances(year?: number) {
     },
   });
 
-  // Get used days for all users in parallel
-  const usedResults = await Promise.all(
-    users.map((u) => usedDaysQuery(u.id, y))
-  );
+  const usedResults = await Promise.all(users.map((u) => usedDaysQuery(orgId, u.id, y)));
 
   const data = users.map((u, i) => {
     const bal = u.vacationBalances[0];

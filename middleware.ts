@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/offline", "/_next", "/favicon"];
+
+// Reserverede slugs der ikke må bruges som org-slugs
+const RESERVED_SLUGS = new Set([
+  "admin", "api", "www", "app", "auth", "login", "static",
+  "dashboard", "profile", "manager", "requests",
+]);
 
 // Rate-limiting mod brute-force login håndteres udelukkende via
 // database-baseret account lockout i auth.ts (5 fejlede forsøg → 15 min lås).
-// En in-memory Map virker ikke i fler-process miljøer (Vercel serverless,
-// Docker/Kubernetes, PM2 cluster) da hver instans har sin egen hukommelse.
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths
+  // Allow public + static paths
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -30,5 +34,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public|icons|manifest).*)"],
 };

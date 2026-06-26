@@ -9,11 +9,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const existing = await prisma.shiftPattern.findUnique({ where: { id } });
+  const existing = await prisma.shiftPattern.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
   if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -21,7 +22,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { active, name, note, startDate, endDate, recurrenceType, intervalWeeks, weekdayRules } = await req.json();
 
-  // Validér datoer hvis de er med
   if (startDate !== undefined && !isValidDateString(startDate)) {
     return NextResponse.json({ error: "Ugyldig startdato" }, { status: 400 });
   }
@@ -58,11 +58,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const existing = await prisma.shiftPattern.findUnique({ where: { id } });
+  const existing = await prisma.shiftPattern.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
   if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -72,19 +73,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   return NextResponse.json({ ok: true });
 }
 
-// POST /api/shifts/patterns/[id] => regenerer vagter
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  const pattern = await prisma.shiftPattern.findUnique({ where: { id } });
+  const pattern = await prisma.shiftPattern.findFirst({ where: { id, organizationId: orgId } });
   if (!pattern) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
-
-  // Scope: brugeren skal kunne tildele vagter i mønsterets afdeling
   if (!can(subject, "shift.assign", { targetDepartmentId: pattern.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -17,12 +17,9 @@ export default async function CalendarPage({
   const user = session.user as SessionUser;
   const subject = buildSubject(user);
 
-  const visibility = await getCalendarVisibility();
+  const orgId = (user as any).organizationId as string;
+  const visibility = await getCalendarVisibility(orgId);
 
-  // Medarbejdere kan altid se kalenderen.
-  // MANAGEMENT_ONLY betyder kun at de kun ser egne data — ikke andres.
-  // "Ledelse" = brugere der må godkende ansøgninger (kerne-rettigheden for managers).
-  // PENDING-ansøgninger vises også til brugere med calendar.view_extended.
   const hasApprovalRole = can(subject, "approval.decide");
   const hasExtendedCalendar = can(subject, "calendar.view_extended");
   const isManagerOrAdmin = hasApprovalRole;
@@ -38,6 +35,7 @@ export default async function CalendarPage({
 
   const [departments, requests, holidays, shiftAssignments] = await Promise.all([
     prisma.department.findMany({
+      where: { organizationId: orgId },
       orderBy: { name: "asc" },
       include: {
         users: {
@@ -49,6 +47,7 @@ export default async function CalendarPage({
     }),
     prisma.vacationRequest.findMany({
       where: {
+        organizationId: orgId,
         status: { in: isManagerOrAdmin ? ["APPROVED", "PENDING"] : ["APPROVED"] },
         entries: { some: { date: { gte: start, lte: end } } },
         ...(!canSeeAll ? { userId: user.id } : {}),
@@ -62,11 +61,12 @@ export default async function CalendarPage({
       },
     }),
     prisma.holiday.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: { organizationId: orgId, date: { gte: start, lte: end } },
       orderBy: { date: "asc" },
     }),
     prisma.shiftAssignment.findMany({
       where: {
+        organizationId: orgId,
         date: { gte: start, lte: end },
         ...(!canSeeAll ? { userId: user.id } : {}),
       },
@@ -122,6 +122,7 @@ export default async function CalendarPage({
     where: {
       date: { gte: start, lte: end },
       request: {
+        organizationId: orgId,
         status: "APPROVED",
         userId: { in: [...new Set(shiftAssignments.map((s) => s.userId))] },
       },

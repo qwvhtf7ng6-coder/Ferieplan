@@ -18,9 +18,10 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const subject = buildSubject(user);
 
   const { id } = await params;
+  const orgId = (user as any).organizationId as string;
 
-  const request = await prisma.vacationRequest.findUnique({
-    where: { id },
+  const request = await prisma.vacationRequest.findFirst({
+    where: { id, organizationId: orgId },
     include: {
       entries: { orderBy: { date: "asc" } },
       user: { select: { id: true, name: true, email: true } },

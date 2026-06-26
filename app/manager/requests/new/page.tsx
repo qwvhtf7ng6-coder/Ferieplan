@@ -16,14 +16,14 @@ export default async function NewRequestOnBehalfPage() {
   const subject = buildSubject(user);
   if (!can(subject, "application.create_on_behalf")) redirect("/dashboard");
 
-  // ALL-scope = se medarbejdere på tværs. OWN_DEPARTMENT = kun egen afdeling.
+  const orgId = (user as any).organizationId as string;
   const scope = scopeOf(subject, "application.create_on_behalf");
   const seeAllDepartments = scope === "ALL";
 
   const employees = await prisma.user.findMany({
     where: seeAllDepartments
-      ? { departmentId: { not: null } }
-      : { departmentId: user.departmentId ?? "" },
+      ? { organizationId: orgId, departmentId: { not: null } }
+      : { organizationId: orgId, departmentId: user.departmentId ?? "" },
     select: {
       id: true,
       name: true,

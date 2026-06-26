@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -16,12 +17,12 @@ export async function GET(req: NextRequest) {
   const departmentId = searchParams.get("departmentId");
 
   const assignScope = scopeOf(subject, "shift.assign");
-  const where = assignScope === "ALL"
+  const deptFilter = assignScope === "ALL"
     ? departmentId ? { departmentId } : {}
     : { departmentId: user.departmentId };
 
   const patterns = await prisma.shiftPattern.findMany({
-    where,
+    where: { organizationId: orgId, ...deptFilter },
     include: {
       template: { select: { id: true, name: true, color: true, startTime: true, endTime: true, dayTimeRules: true } },
       user: { select: { id: true, name: true } },
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.assign")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -44,46 +46,25 @@ export async function POST(req: NextRequest) {
   if (!name || !departmentId || !templateId || !userId || !startDate || !endDate || !weekdayRules) {
     return NextResponse.json({ error: "Manglende påkrævede felter" }, { status: 400 });
   }
-
-  // Scope: brugeren skal kunne tildele vagter i målafdelingen
   if (!can(subject, "shift.assign", { targetDepartmentId: departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Validér at templateId tilhører den angivne afdeling
-  // (forhindrer manager i at bruge en skabelon fra anden afdeling
-  //  ved at gætte template-IDs)
-  const template = await prisma.shiftTemplate.findUnique({
-    where: { id: templateId },
-    select: { departmentId: true },
-  });
-  if (!template) {
-    return NextResponse.json({ error: "Vagtskabelon ikke fundet" }, { status: 404 });
-  }
+  const template = await prisma.shiftTemplate.findFirst({ where: { id: templateId, organizationId: orgId }, select: { departmentId: true } });
+  if (!template) return NextResponse.json({ error: "Vagtskabelon ikke fundet" }, { status: 404 });
   if (template.departmentId !== departmentId) {
     return NextResponse.json({ error: "Vagtskabelon tilhører ikke den angivne afdeling" }, { status: 403 });
   }
 
-  // Validér at userId tilhører departmentId (gælder også admin for at undgå
-  // inkonsistente patterns hvor en bruger fra dept B tildeles dept A's template)
-  const targetUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { departmentId: true },
-  });
-  if (!targetUser) {
-    return NextResponse.json({ error: "Medarbejder ikke fundet" }, { status: 404 });
-  }
+  const targetUser = await prisma.user.findFirst({ where: { id: userId, organizationId: orgId }, select: { departmentId: true } });
+  if (!targetUser) return NextResponse.json({ error: "Medarbejder ikke fundet" }, { status: 404 });
   if (targetUser.departmentId !== departmentId) {
     return NextResponse.json({ error: "Medarbejder tilhører ikke den angivne afdeling" }, { status: 403 });
   }
 
-  // Validér recurrenceType
   const safeRecurrenceType = isValidRecurrenceType(recurrenceType) ? recurrenceType : "weekly";
-
-  // Validér intervalWeeks
   const safeIntervalWeeks = isValidIntervalWeeks(intervalWeeks) ? intervalWeeks : 1;
 
-  // Validér datoer
   if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
     return NextResponse.json({ error: "Ugyldig dato" }, { status: 400 });
   }
@@ -93,6 +74,7 @@ export async function POST(req: NextRequest) {
 
   const pattern = await prisma.shiftPattern.create({
     data: {
+      organizationId: orgId,
       name: name.trim(),
       departmentId,
       templateId,
@@ -112,6 +94,5 @@ export async function POST(req: NextRequest) {
   });
 
   const generated = await generateAssignmentsFromPattern(pattern);
-
   return NextResponse.json({ ...pattern, generated }, { status: 201 });
 }

@@ -27,6 +27,8 @@ export async function createVacationRequest(
 ): Promise<ActionResult<{ id: string }>> {
   const user = await getSession();
   if (!user) return { ok: false, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string | null;
+  if (!orgId) return { ok: false, error: "Ingen organisation tilknyttet" };
   if (!user.departmentId) return { ok: false, error: "Ingen afdeling tilknyttet" };
 
   if (!input.entries || input.entries.length === 0) {
@@ -48,6 +50,7 @@ export async function createVacationRequest(
 
   const request = await prisma.vacationRequest.create({
     data: {
+      organizationId: orgId,
       userId: user.id,
       departmentId: user.departmentId,
       note: input.note?.trim() || null,
@@ -56,18 +59,18 @@ export async function createVacationRequest(
   });
 
   await createAuditLog({
+    organizationId: orgId,
     userId: user.id,
     requestId: request.id,
     action: "CREATE",
     details: `${input.entries.length} datolinjer`,
   });
 
-  // Notify managers + admins (best-effort, don't block)
   const userName = user.name ?? "En medarbejder";
   const deptId = user.departmentId;
   Promise.all([
-    notifyManagersOfNewRequest(request.id, deptId, userName),
-    notifyAdminsOfNewRequest(request.id, deptId, userName, []),
+    notifyManagersOfNewRequest(orgId, request.id, deptId, userName),
+    notifyAdminsOfNewRequest(orgId, request.id, deptId, userName, []),
   ]).catch(() => {/* silent */});
 
   revalidatePath("/dashboard");
@@ -79,8 +82,11 @@ export async function createVacationRequest(
 export async function cancelOwnRequest(requestId: string): Promise<ActionResult> {
   const user = await getSession();
   if (!user) return { ok: false, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string;
 
-  const request = await prisma.vacationRequest.findUnique({ where: { id: requestId } });
+  const request = await prisma.vacationRequest.findFirst({
+    where: { id: requestId, organizationId: orgId },
+  });
   if (!request) return { ok: false, error: "Ikke fundet" };
   if (request.userId !== user.id) return { ok: false, error: "Ingen adgang" };
   if (request.status !== "PENDING") {
@@ -92,19 +98,19 @@ export async function cancelOwnRequest(requestId: string): Promise<ActionResult>
     data: { status: "CANCELLED" },
   });
 
-  await createAuditLog({ userId: user.id, requestId, action: "CANCELLED" });
+  await createAuditLog({ organizationId: orgId, userId: user.id, requestId, action: "CANCELLED" });
 
   revalidatePath("/dashboard");
-
   return { ok: true };
 }
 
 export async function getMyRequests(): Promise<ActionResult<VacationRequestRow[]>> {
   const user = await getSession();
   if (!user) return { ok: false, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string;
 
   const requests = await prisma.vacationRequest.findMany({
-    where: { userId: user.id },
+    where: { organizationId: orgId, userId: user.id },
     include: {
       entries: { orderBy: { date: "asc" } },
       user: { select: { id: true, name: true, email: true } },
@@ -115,5 +121,3 @@ export async function getMyRequests(): Promise<ActionResult<VacationRequestRow[]
 
   return { ok: true, data: requests as unknown as VacationRequestRow[] };
 }
-
-

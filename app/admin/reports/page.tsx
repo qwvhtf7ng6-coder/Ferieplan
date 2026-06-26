@@ -12,12 +12,14 @@ export default async function ReportsPage() {
   const user = session.user as SessionUser;
   if (!can(buildSubject(user), "report.absence")) redirect("/dashboard");
 
+  const orgId = (user as any).organizationId as string;
   const currentYear = new Date().getFullYear();
 
   const [departments, users, requests] = await Promise.all([
-    prisma.department.findMany({ orderBy: { name: "asc" } }),
+    prisma.department.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } }),
 
     prisma.user.findMany({
+      where: { organizationId: orgId },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -30,6 +32,7 @@ export default async function ReportsPage() {
 
     prisma.vacationRequest.findMany({
       where: {
+        organizationId: orgId,
         status: { in: ["APPROVED", "PENDING", "REJECTED", "CANCELLED"] },
       },
       include: {

@@ -40,17 +40,19 @@ export default async function SettingsPage({
   }
 
   const sp = await searchParams;
+  const orgId = user.organizationId as string;
 
   // Hent settings (altid — bruges blandt andet til at vide om balance-tab skal vises)
-  const settings = await prisma.appSettings.findFirst();
+  const settings = await prisma.appSettings.findUnique({ where: { organizationId: orgId } });
 
   // Hent data parallelt — kun det brugeren har lov til at se
   const [holidays, departments, balanceResult] = await Promise.all([
     perms.holidays
-      ? prisma.holiday.findMany({ orderBy: { date: "asc" } })
+      ? prisma.holiday.findMany({ where: { organizationId: orgId }, orderBy: { date: "asc" } })
       : Promise.resolve([]),
     perms.departments
       ? prisma.department.findMany({
+          where: { organizationId: orgId },
           include: { _count: { select: { users: true } } },
           orderBy: { name: "asc" },
         })

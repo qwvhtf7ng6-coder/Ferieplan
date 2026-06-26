@@ -28,64 +28,52 @@ export async function getMyNotifications(): Promise<{
 }> {
   const user = await getSession();
   if (!user) return { ok: false, error: "Ikke logget ind" };
+  const orgId = (user as any).organizationId as string;
 
   const notifications = await prisma.notification.findMany({
-    where: { userId: user.id },
+    where: { organizationId: orgId, userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 30,
-    select: {
-      id: true,
-      type: true,
-      title: true,
-      message: true,
-      link: true,
-      readAt: true,
-      createdAt: true,
-    },
+    select: { id: true, type: true, title: true, message: true, link: true, readAt: true, createdAt: true },
   });
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
-
   return { ok: true, data: notifications, unreadCount };
 }
 
 export async function getUnreadCount(): Promise<{ ok: boolean; count?: number }> {
   const user = await getSession();
   if (!user) return { ok: false };
+  const orgId = (user as any).organizationId as string;
 
   const count = await prisma.notification.count({
-    where: { userId: user.id, readAt: null },
+    where: { organizationId: orgId, userId: user.id, readAt: null },
   });
-
   return { ok: true, count };
 }
 
 export async function markNotificationRead(notificationId: string): Promise<{ ok: boolean }> {
   const user = await getSession();
   if (!user) return { ok: false };
+  const orgId = (user as any).organizationId as string;
 
-  // Ensure ownership before updating
   const notification = await prisma.notification.findFirst({
-    where: { id: notificationId, userId: user.id },
+    where: { id: notificationId, organizationId: orgId, userId: user.id },
   });
   if (!notification) return { ok: false };
 
-  await prisma.notification.update({
-    where: { id: notificationId },
-    data: { readAt: new Date() },
-  });
-
+  await prisma.notification.update({ where: { id: notificationId }, data: { readAt: new Date() } });
   return { ok: true };
 }
 
 export async function markAllNotificationsRead(): Promise<{ ok: boolean }> {
   const user = await getSession();
   if (!user) return { ok: false };
+  const orgId = (user as any).organizationId as string;
 
   await prisma.notification.updateMany({
-    where: { userId: user.id, readAt: null },
+    where: { organizationId: orgId, userId: user.id, readAt: null },
     data: { readAt: new Date() },
   });
-
   return { ok: true };
 }

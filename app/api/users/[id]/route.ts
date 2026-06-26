@@ -15,21 +15,24 @@ export async function DELETE(
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
   const subject = buildSubject(actor);
-  // Sletning kræver "edit" på den specifikke bruger — vi skal kende deres afdeling først
   const { id } = await params;
   if (id === actor.id) return NextResponse.json({ error: "Kan ikke slette dig selv" }, { status: 400 });
 
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { departmentId: true, role: true },
+    select: { departmentId: true, role: true, organizationId: true },
   });
   if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
+
+  // Org-isolation: kan kun slette brugere i samme org
+  if (target.organizationId !== actor.organizationId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   if (!can(subject, "user.edit", { targetDepartmentId: target.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Sidste-admin-beskyttelse: forhindrer at systemet låses ude
   if (await wouldRemoveLastAdminByDelete(target)) {
     return NextResponse.json(
       { error: "Kan ikke slette den sidste administrator. Opret en anden administrator først." },
@@ -37,9 +40,7 @@ export async function DELETE(
     );
   }
 
-  // Cascade: slet bruger og alle tilknyttede data
   await prisma.user.delete({ where: { id } });
-
   return NextResponse.json({ ok: true });
 }
 
@@ -51,24 +52,27 @@ export async function PATCH(
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const actor = session.user as any;
   const subject = buildSubject(actor);
+  const orgId = actor.organizationId as string | null;
 
   const { id } = await params;
   const body = await req.json();
   const { name, email, role, departmentId, newPassword, canManageShifts, permissions } = body;
 
-  // Find målbruger først så vi kan tjekke scope mod deres aktuelle afdeling
   const target = await prisma.user.findUnique({
     where: { id },
-    select: { departmentId: true, role: true },
+    select: { departmentId: true, role: true, organizationId: true },
   });
   if (!target) return NextResponse.json({ error: "Bruger ikke fundet" }, { status: 404 });
 
-  // Generel redigerings-adgang
+  // Org-isolation
+  if (target.organizationId !== orgId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   if (!can(subject, "user.edit", { targetDepartmentId: target.departmentId })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Adgangskode-reset kræver separat tilladelse med scope
   if (newPassword && !can(subject, "user.reset_password", { targetDepartmentId: target.departmentId })) {
     return NextResponse.json({ error: "Ingen tilladelse til at nulstille adgangskode" }, { status: 403 });
   }
@@ -80,15 +84,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Ugyldig email-adresse" }, { status: 400 });
   }
 
-  // Normalisér email til lowercase før både lookup og storage
   const normalizedEmail = email.trim().toLowerCase();
 
-  const existing = await prisma.user.findFirst({ where: { email: normalizedEmail, NOT: { id } } });
-  if (existing) return NextResponse.json({ error: "Email allerede i brug" }, { status: 400 });
+  // Email-uniqueness inden for org (ekskluder den bruger vi redigerer)
+  const existing = await prisma.user.findFirst({
+    where: { email: normalizedEmail, organizationId: orgId ?? undefined, NOT: { id } },
+  });
+  if (existing) return NextResponse.json({ error: "Email allerede i brug i denne organisation" }, { status: 400 });
 
   const safeRole = isValidRole(role) ? role : "EMPLOYEE";
 
-  // Sidste-admin-beskyttelse: forhindrer at den eneste admin degraderes
   if (await wouldRemoveLastAdminByRoleChange(target, safeRole)) {
     return NextResponse.json(
       { error: "Kan ikke ændre rolle på den sidste administrator. Opret en anden administrator først." },
@@ -104,20 +109,11 @@ export async function PATCH(
     canManageShifts: canManageShifts === true,
   };
 
-  // Permissions-overrides: kun tilladt for brugere med permissions.edit-tilladelsen.
-  // Nøglen optræder kun i body hvis admin eksplicit har redigeret tilladelser
-  // (frontend sender ikke feltet ellers), så vi ignorerer fraværet.
   if (permissions !== undefined) {
     if (!can(subject, "permissions.edit")) {
       return NextResponse.json({ error: "Ingen tilladelse til at redigere tilladelser" }, { status: 403 });
     }
-    if (permissions === null) {
-      // Eksplicit nulstilling — bruger arver rolle-defaults fremover.
-      data.permissions = null;
-    } else {
-      // Saniter input og gem som JSON.
-      data.permissions = sanitizePermissions(permissions);
-    }
+    data.permissions = permissions === null ? null : sanitizePermissions(permissions);
   }
 
   if (newPassword) {
@@ -125,8 +121,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Adgangskode skal være mindst 8 tegn" }, { status: 400 });
     }
     data.password = await bcrypt.hash(newPassword, 10);
-    // Når admin nulstiller adgangskode, nulstil også login-attempts og lockout
-    // så brugeren straks kan logge ind med den nye adgangskode
     data.loginAttempts = 0;
     data.lockedUntil = null;
   }

@@ -11,12 +11,14 @@ export default async function AdminUsersPage() {
   const user = session.user as any;
   if (!can(buildSubject(user), "user.view")) redirect("/dashboard");
 
+  const orgId = user.organizationId as string;
   const [users, departments] = await Promise.all([
     prisma.user.findMany({
+      where: { organizationId: orgId },
       include: { department: { select: { name: true } } },
       orderBy: { name: "asc" },
     }),
-    prisma.department.findMany({ orderBy: { name: "asc" } }),
+    prisma.department.findMany({ where: { organizationId: orgId }, orderBy: { name: "asc" } }),
   ]);
 
   return (

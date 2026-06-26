@@ -11,6 +11,7 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -25,7 +26,7 @@ export async function PATCH(
   }
   const safeColor = isValidHexColor(color) ? color : "#3b82f6";
 
-  const existing = await prisma.shiftTemplate.findUnique({ where: { id } });
+  const existing = await prisma.shiftTemplate.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
   if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
@@ -53,12 +54,13 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
+  const orgId = user.organizationId as string;
   const subject = buildSubject(user);
   if (!can(subject, "shift.edit_templates")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
 
-  const existing = await prisma.shiftTemplate.findUnique({ where: { id } });
+  const existing = await prisma.shiftTemplate.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return NextResponse.json({ error: "Ikke fundet" }, { status: 404 });
 
   if (!can(subject, "shift.assign", { targetDepartmentId: existing.departmentId })) {
