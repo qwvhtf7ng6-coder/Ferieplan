@@ -521,19 +521,40 @@ export default function CalendarGrid({
   }, [requests]);
 
   const deptCapacity = useMemo(() => {
+    /* ⚡ Bolt: Optimized deptCapacity calculation.
+     * Replaced O(departments * requests * users) nested loop with O(users + requests) linear pass
+     * by building a user->dept lookup map first. This significantly speeds up rendering
+     * when viewing many departments and requests.
+     */
     const outer = new Map<string, Map<string, number>>();
+
+    // Initialize map for all departments
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
-        for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
-          dm.set(dk, (dm.get(dk) ?? 0) + 1);
-        }
-      }
-      outer.set(dept.id, dm);
+      outer.set(dept.id, new Map<string, number>());
     }
+
+    // Build user -> department lookup for O(1) access
+    const userToDept = new Map<string, string>();
+    for (const dept of departments) {
+      for (const u of dept.users) {
+        userToDept.set(u.id, dept.id);
+      }
+    }
+
+    // Process requests linearly
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+
+      const deptId = userToDept.get(req.user.id);
+      if (!deptId) continue; // User not in any department currently viewed
+
+      const dm = outer.get(deptId)!;
+      for (const entry of req.entries) {
+        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        dm.set(dk, (dm.get(dk) ?? 0) + 1);
+      }
+    }
+
     return outer;
   }, [departments, requests]);
 

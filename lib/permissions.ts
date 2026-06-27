@@ -1,4 +1,4 @@
-export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN";
+export type UserRole = "EMPLOYEE" | "MANAGER" | "ADMIN" | "SUPER_ADMIN";
 export type VisibilitySetting = "ALL_EMPLOYEES" | "MANAGEMENT_ONLY";
 
 export function isAdmin(role: UserRole): boolean {
