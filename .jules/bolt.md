@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimized Array.some in Nested Loop for capacity calculation
+**Learning:** Found an anti-pattern in `components/CalendarGrid.tsx` where an `O(N^3)` calculation was used to match users and requests against departments within a `useMemo` block. `departments.map -> requests.map -> department.users.some` is extremely costly and will scale poorly as users and requests grow.
+**Action:** Replaced nested array traversals inside memoized computation with a hash map lookup (linear processing: `O(departments + users + requests)`). Always try to restructure O(N^2) or O(N^3) matching nested loops in React renderings into lookup maps.

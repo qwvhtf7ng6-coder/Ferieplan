@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
@@ -8,6 +9,14 @@ import { Btn } from "@/components/ui/Btn";
 import { FieldInput } from "@/components/ui/FieldInput";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -128,7 +137,7 @@ export default function LoginPage() {
                   required
                   placeholder="fx odense"
                   autoComplete="off"
-                  helper="Organisationens unikke navn (slug)"
+                  hint="Organisationens unikke navn (slug)"
                 />
                 {error && (
                   <div className="text-[13px] rounded-md px-3.5 py-2.5 border bg-danger-bg text-danger-text border-danger/20">
