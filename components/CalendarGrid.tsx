@@ -359,7 +359,7 @@ function CalendarTable({
 function MobileCalendarList({
   year, month, departments, requests, holidays, onNavigate, deptColorMap,
 }: CalendarGridProps & { onNavigate: (delta: number) => void; deptColorMap: Map<string, DeptColor> }) {
-  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
+  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [typeof h.date === 'string' ? h.date.slice(0, 10) : new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
   const requestsByUser = useMemo(() => {
     const map = new Map<string, CalendarRequest[]>();
     for (const req of requests) {
@@ -497,11 +497,18 @@ export default function CalendarGrid({
   const shiftLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarShift[]>>();
     for (const s of shifts) {
-      const dk = new Date(s.date).toISOString().slice(0, 10);
-      if (!map.has(s.userId)) map.set(s.userId, new Map());
-      const dm = map.get(s.userId)!;
-      if (!dm.has(dk)) dm.set(dk, []);
-      dm.get(dk)!.push(s);
+      const dk = typeof s.date === 'string' ? s.date.slice(0, 10) : new Date(s.date).toISOString().slice(0, 10);
+      let dm = map.get(s.userId);
+      if (!dm) {
+        dm = new Map();
+        map.set(s.userId, dm);
+      }
+      let dayShifts = dm.get(dk);
+      if (!dayShifts) {
+        dayShifts = [];
+        dm.set(dk, dayShifts);
+      }
+      dayShifts.push(s);
     }
     return map;
   }, [shifts]);
@@ -510,11 +517,18 @@ export default function CalendarGrid({
     const map = new Map<string, Map<string, CalendarRequest[]>>();
     for (const req of requests) {
       for (const entry of req.entries) {
-        const dk = new Date(entry.date).toISOString().slice(0, 10);
-        if (!map.has(req.user.id)) map.set(req.user.id, new Map());
-        const dm = map.get(req.user.id)!;
-        if (!dm.has(dk)) dm.set(dk, []);
-        dm.get(dk)!.push(req);
+        const dk = typeof entry.date === 'string' ? entry.date.slice(0, 10) : new Date(entry.date).toISOString().slice(0, 10);
+        let dm = map.get(req.user.id);
+        if (!dm) {
+          dm = new Map();
+          map.set(req.user.id, dm);
+        }
+        let dayReqs = dm.get(dk);
+        if (!dayReqs) {
+          dayReqs = [];
+          dm.set(dk, dayReqs);
+        }
+        dayReqs.push(req);
       }
     }
     return map;
@@ -522,17 +536,25 @@ export default function CalendarGrid({
 
   const deptCapacity = useMemo(() => {
     const outer = new Map<string, Map<string, number>>();
+
+    const userDeptMap = new Map<string, string>();
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
-        for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
-          dm.set(dk, (dm.get(dk) ?? 0) + 1);
-        }
+      for (const user of dept.users) {
+        userDeptMap.set(user.id, dept.id);
       }
-      outer.set(dept.id, dm);
+      outer.set(dept.id, new Map<string, number>());
+    }
+
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+      const deptId = userDeptMap.get(req.user.id);
+      if (!deptId) continue;
+
+      const dm = outer.get(deptId)!;
+      for (const entry of req.entries) {
+        const dk = typeof entry.date === 'string' ? entry.date.slice(0, 10) : new Date(entry.date).toISOString().slice(0, 10);
+        dm.set(dk, (dm.get(dk) ?? 0) + 1);
+      }
     }
     return outer;
   }, [departments, requests]);
