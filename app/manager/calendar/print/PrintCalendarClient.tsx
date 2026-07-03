@@ -1,4 +1,5 @@
 "use client";
+import { toISODate } from "@/lib/utils";
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -53,14 +54,14 @@ function PrintGrid({
   const days = Array.from({ length: daysInMonth }, (_, i) => new Date(year, month - 1, i + 1));
 
   const holidayMap = useMemo(() => new Map(
-    holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])
+    holidays.map((h) => [toISODate(h.date), h.name])
   ), [holidays]);
 
   const requestLookup = useMemo(() => {
     const map = new Map<string, Map<string, PrintRequest[]>>();
     for (const req of requests) {
       for (const entry of req.entries) {
-        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        const dk = toISODate(entry.date);
         if (!map.has(req.user.id)) map.set(req.user.id, new Map());
         const dm = map.get(req.user.id)!;
         if (!dm.has(dk)) dm.set(dk, []);
@@ -147,7 +148,7 @@ function PrintGrid({
                       const weekend = isWeekend(d);
                       const holiday = holidayMap.has(dk);
 
-                      const entry = approved?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
+                      const entry = approved?.entries.find((e) => toISODate(e.date) === dk);
                       const absColor = entry ? ABSENCE_TYPE_COLORS[entry.absenceType] : null;
                       const absLabel = entry ? ABSENCE_TYPE_LABELS[entry.absenceType] : null;
 

@@ -1,4 +1,5 @@
 "use server";
+import { toISODate } from "@/lib/utils";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -51,7 +52,7 @@ async function checkCapacity(
       },
     });
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: toISODate(entry.date), current: count, max: dept.maxConcurrent };
     }
   }
   return { exceeded: false };
