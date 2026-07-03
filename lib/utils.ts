@@ -9,6 +9,13 @@ import {
 } from "date-fns";
 import { da } from "date-fns/locale";
 
+// Performance optimization: Fast ISO date string extraction that avoids instantiating new Date()
+// objects when the input is already a serialized ISO string. Used in intensive calendar rendering loops.
+export function toISODate(date: Date | string): string {
+  if (typeof date === "string") return date.substring(0, 10);
+  return date.toISOString().substring(0, 10);
+}
+
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? parseISO(date) : date;
   if (!isValid(d)) return "—";

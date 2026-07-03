@@ -1,3 +1,4 @@
+import { toISODate } from "@/lib/utils";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { can, buildSubject, scopeOf } from "@/lib/can";
@@ -56,13 +57,13 @@ export async function GET(req: NextRequest) {
 
   const absenceSet = new Set(
     absenceEntries.map((e) => {
-      const dk = new Date(e.date).toISOString().slice(0, 10);
+      const dk = toISODate(e.date);
       return `${e.request.userId}|${dk}`;
     })
   );
 
   const result = assignments.map((a) => {
-    const dk = new Date(a.date).toISOString().slice(0, 10);
+    const dk = toISODate(a.date);
     return { ...a, hasAbsenceConflict: absenceSet.has(`${a.userId}|${dk}`) };
   });
 
