@@ -33,7 +33,8 @@ export function ManagerRequestRow({ request, onOpenDetail }: ManagerRequestRowPr
 
   const busy = actionState !== "idle";
 
-  const sortedEntries = [...request.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Optimization: entries are already sorted by date asc from the database
+  const sortedEntries = request.entries;
   const totalDays = totalDaysFromEntries(request.entries);
   const first = sortedEntries[0]?.date;
   const last  = sortedEntries[sortedEntries.length - 1]?.date;
