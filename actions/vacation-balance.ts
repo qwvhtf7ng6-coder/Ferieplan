@@ -85,9 +85,23 @@ export async function getAllVacationBalances(year?: number) {
     },
   });
 
-  const usedResults = await Promise.all(
-    (users as Array<{ id: string }>).map((u) => usedDaysQuery(orgId, u.id, y))
-  );
+  // Optimize N+1 query: Fetch all used days for these users in a single query
+  // and group them in memory, avoiding N queries inside a Promise.all
+  const userIds = users.map((u) => u.id);
+  const usedEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      absenceType: "VACATION",
+      date: { gte: new Date(`${y}-01-01`), lte: new Date(`${y}-12-31`) },
+      request: { organizationId: orgId, userId: { in: userIds }, status: "APPROVED" },
+    },
+    select: { days: true, request: { select: { userId: true } } },
+  });
+
+  const usedDaysMap = new Map<string, number>();
+  for (const entry of usedEntries) {
+    const uid = entry.request.userId;
+    usedDaysMap.set(uid, (usedDaysMap.get(uid) ?? 0) + entry.days);
+  }
 
   const data = (users as Array<{
     id: string;
@@ -96,11 +110,11 @@ export async function getAllVacationBalances(year?: number) {
     role: string;
     department: { name: string } | null;
     vacationBalances: Array<{ totalDays: number; carryOverDays: number; note: string | null }>;
-  }>).map((u, i) => {
+  }>).map((u) => {
     const bal = u.vacationBalances[0];
     const totalDays = bal?.totalDays ?? 25;
     const carryOverDays = bal?.carryOverDays ?? 0;
-    const usedDays = usedResults[i]._sum.days ?? 0;
+    const usedDays = usedDaysMap.get(u.id) ?? 0;
     return {
       userId: u.id,
       name: u.name,
