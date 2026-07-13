@@ -1,6 +1,7 @@
 -- =============================================================================
 -- WorkPlan — Fase 1: Multi-tenant schema migration
--- Kør i Neon SQL Editor. Hele filen er wrapped i én transaktion (BEGIN/COMMIT).
+-- ✅ HISTORISK: Allerede kørt i produktion (juli 2026). Beholdes som dokumentation.
+-- Schema-sync fremadrettet sker via `prisma db push` i build-scriptet.
 -- =============================================================================
 
 BEGIN;
