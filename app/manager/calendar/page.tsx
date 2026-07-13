@@ -124,13 +124,13 @@ export default async function CalendarPage({
       request: {
         organizationId: orgId,
         status: "APPROVED",
-        userId: { in: [...new Set(shiftAssignments.map((s) => s.userId))] },
+        userId: { in: [...new Set((shiftAssignments as any[]).map((s) => s.userId))] },
       },
     },
     select: { date: true, request: { select: { userId: true } } },
   });
   const calAbsenceSet = new Set(
-    calAbsenceEntries.map((e) => {
+    (calAbsenceEntries as any[]).map((e) => {
       const dk = new Date(e.date).toISOString().slice(0, 10);
       return `${e.request.userId}|${dk}`;
     })

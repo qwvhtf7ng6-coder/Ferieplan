@@ -37,7 +37,7 @@ export async function getMyNotifications(): Promise<{
     select: { id: true, type: true, title: true, message: true, link: true, readAt: true, createdAt: true },
   });
 
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
+  const unreadCount = (notifications as Array<{ readAt: Date | null }>).filter((n) => !n.readAt).length;
   return { ok: true, data: notifications, unreadCount };
 }
 

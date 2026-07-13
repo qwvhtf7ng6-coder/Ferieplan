@@ -128,7 +128,7 @@ export default function LoginPage() {
                   required
                   placeholder="fx odense"
                   autoComplete="off"
-                  helper="Organisationens unikke navn (slug)"
+                  hint="Organisationens unikke navn (slug)"
                 />
                 {error && (
                   <div className="text-[13px] rounded-md px-3.5 py-2.5 border bg-danger-bg text-danger-text border-danger/20">

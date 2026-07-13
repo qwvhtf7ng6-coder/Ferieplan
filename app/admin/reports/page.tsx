@@ -45,7 +45,7 @@ export default async function ReportsPage() {
   ]);
 
   // Serialise dates
-  const serializedRequests = requests.map((r) => ({
+  const serializedRequests = (requests as any[]).map((r) => ({
     id: r.id,
     status: r.status as string,
     note: r.note,
@@ -54,7 +54,7 @@ export default async function ReportsPage() {
     departmentId: r.departmentId,
     user: r.user,
     department: r.department,
-    entries: r.entries.map((e) => ({
+    entries: (r.entries as any[]).map((e) => ({
       id: e.id,
       date: e.date.toISOString(),
       type: e.type as string,

@@ -85,9 +85,18 @@ export async function getAllVacationBalances(year?: number) {
     },
   });
 
-  const usedResults = await Promise.all(users.map((u) => usedDaysQuery(orgId, u.id, y)));
+  const usedResults = await Promise.all(
+    (users as Array<{ id: string }>).map((u) => usedDaysQuery(orgId, u.id, y))
+  );
 
-  const data = users.map((u, i) => {
+  const data = (users as Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    department: { name: string } | null;
+    vacationBalances: Array<{ totalDays: number; carryOverDays: number; note: string | null }>;
+  }>).map((u, i) => {
     const bal = u.vacationBalances[0];
     const totalDays = bal?.totalDays ?? 25;
     const carryOverDays = bal?.carryOverDays ?? 0;

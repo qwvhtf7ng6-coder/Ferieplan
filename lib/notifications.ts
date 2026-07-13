@@ -75,7 +75,7 @@ export async function notifyManagersOfNewRequest(
   });
 
   await Promise.all(
-    managers.map((m) =>
+    managers.map((m: { id: string }) =>
       createNotification({
         organizationId,
         userId: m.id,
@@ -106,7 +106,7 @@ export async function notifyAdminsOfNewRequest(
   });
 
   await Promise.all(
-    admins.map((a) =>
+    admins.map((a: { id: string }) =>
       createNotification({
         organizationId,
         userId: a.id,

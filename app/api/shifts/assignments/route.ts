@@ -48,20 +48,20 @@ export async function GET(req: NextRequest) {
       request: {
         organizationId: orgId,
         status: "APPROVED",
-        userId: { in: [...new Set(assignments.map((a) => a.userId))] },
+        userId: { in: [...new Set((assignments as any[]).map((a) => a.userId))] },
       },
     },
     select: { date: true, request: { select: { userId: true } } },
   });
 
   const absenceSet = new Set(
-    absenceEntries.map((e) => {
+    (absenceEntries as any[]).map((e) => {
       const dk = new Date(e.date).toISOString().slice(0, 10);
       return `${e.request.userId}|${dk}`;
     })
   );
 
-  const result = assignments.map((a) => {
+  const result = (assignments as any[]).map((a) => {
     const dk = new Date(a.date).toISOString().slice(0, 10);
     return { ...a, hasAbsenceConflict: absenceSet.has(`${a.userId}|${dk}`) };
   });
