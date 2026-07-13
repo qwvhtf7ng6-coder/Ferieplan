@@ -6,7 +6,7 @@ import path from "path";
 // ⚠️ MIDLERTIDIG ENGANGS-ROUTE — slettes efter migrationen er kørt.
 // Beskyttet med MIGRATION_SECRET miljøvariabel. Kør ÉN gang, slet så filen.
 
-export async function POST(req: NextRequest) {
+async function runMigration(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   if (!secret || secret !== process.env.MIGRATION_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -69,4 +69,12 @@ export async function POST(req: NextRequest) {
 
   await client.$disconnect();
   return NextResponse.json({ ok: true, statementsRun: results.length, results });
+}
+
+export async function GET(req: NextRequest) {
+  return runMigration(req);
+}
+
+export async function POST(req: NextRequest) {
+  return runMigration(req);
 }
