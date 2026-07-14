@@ -1,0 +1,3 @@
+## 2024-07-14 - Prisma N+1 Aggregation with Relation Filters
+**Learning:** Prisma's `aggregate` and `groupBy` don't support `where` clauses on related models, so aggregating `VacationRequestEntry` based on the status of its related `request` inside a loop causes severe N+1 query problems. Replacing `Promise.all` with a single `findMany` using `in` on the `userId` of related requests allows fetching all entries at once.
+**Action:** Always batch related model aggregations in memory when the aggregation criteria involve relation fields, turning N+1 `aggregate` calls into a single `findMany` followed by a Map-based reduction.
