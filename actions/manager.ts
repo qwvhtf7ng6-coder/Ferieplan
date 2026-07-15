@@ -38,22 +38,38 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  // ⚡ Bolt: Fix N+1 query problem by batching the capacity check.
+  // Fetch all existing approved entries for the requested dates in one query,
+  // then count them in memory.
+  const entryDates = entries.map((e) => e.date);
+
+  const existingEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { in: entryDates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    select: { date: true },
+  });
+
+  const countByDate = new Map<string, number>();
+  for (const row of existingEntries) {
+    const dStr = row.date.toISOString().slice(0, 10);
+    countByDate.set(dStr, (countByDate.get(dStr) || 0) + 1);
+  }
+
+  for (const entry of entries) {
+    const dStr = entry.date.toISOString().slice(0, 10);
+    const count = countByDate.get(dStr) || 0;
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: dStr, current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
