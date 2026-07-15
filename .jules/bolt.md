@@ -1,0 +1,3 @@
+## 2024-05-24 - Prisma N+1 Aggregation with Relation Filters
+**Learning:** Prisma's `groupBy` method does not support filtering by relation fields in its `where` clause (e.g., checking the `request` status for a `VacationRequestEntry`). You cannot offload the entire aggregation to the database directly if you need to filter by a relation.
+**Action:** When aggregating records that require relation filtering, use `findMany` to fetch the filtered records in a single batch, and then perform the grouping and counting in memory using a JavaScript `Map`. This avoids N+1 queries while bypassing Prisma's `groupBy` limitation.
