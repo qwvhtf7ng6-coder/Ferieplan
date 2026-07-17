@@ -1,0 +1,3 @@
+## 2025-02-23 - Prisma N+1 loop behavior optimization
+**Learning:** Found a critical performance bottleneck in `actions/manager.ts` where the `checkCapacity` function used an N+1 loop by iterating over request entries and triggering multiple sequential `prisma.vacationRequestEntry.count()` queries (one for each requested date). Prisma `count()` inside loops does not optimize or batch automatically.
+**Action:** Always replace DB queries inside loops with a single `findMany` query combining all parameters (e.g., using `{ in: entryDates }`), grouping the results in memory to reduce database round-trips from O(n) to O(1).
