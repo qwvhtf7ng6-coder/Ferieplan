@@ -1,0 +1,3 @@
+## 2024-07-21 - Prisma Relation Grouping Limitations
+**Learning:** Prisma's `groupBy` feature does not currently support filtering by relation fields (e.g., `request.userId`) in its `where` clause. This limitation is critical when attempting to optimize N+1 queries by aggregating child records associated with parent relation fields.
+**Action:** When trying to resolve N+1 database querying issues involving relational aggregations, the safest and most efficient path is to use a bulk `findMany` request (O(1)) filtering with `{ in: [] }` on the related keys, and then aggregate the retrieved records in-memory (e.g., using a `Map`).
