@@ -38,22 +38,42 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  if (entries.length === 0) return { exceeded: false };
+
+  // ⚡ Bolt: Optimize N+1 query. Batch check all dates in a single query
+  // Reduces DB queries from O(N) to O(1) where N is number of requested days.
+  const entryDates = entries.map(e => e.date);
+
+  const existingEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { in: entryDates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    select: {
+      date: true,
+    },
+  });
+
+  const countByDate = new Map<string, number>();
+  for (const row of existingEntries) {
+    const dateStr = row.date.toISOString().slice(0, 10);
+    countByDate.set(dateStr, (countByDate.get(dateStr) || 0) + 1);
+  }
+
+  for (const entry of entries) {
+    const dateStr = entry.date.toISOString().slice(0, 10);
+    const count = countByDate.get(dateStr) || 0;
+
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: dateStr, current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
