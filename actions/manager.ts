@@ -38,22 +38,36 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  if (entries.length === 0) return { exceeded: false };
+
+  // Optimization: Fetch all overlapping approved entries in a single query (O(1)) instead of an N+1 query loop
+  const dates = entries.map(e => e.date);
+  const existingEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { in: dates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    select: { date: true },
+  });
+
+  const countsByDate = new Map<number, number>();
+  for (const row of existingEntries) {
+    const time = row.date.getTime();
+    countsByDate.set(time, (countsByDate.get(time) || 0) + 1);
+  }
+
+  for (const entry of entries) {
+    const count = countsByDate.get(entry.date.getTime()) || 0;
     if (count + 1 > dept.maxConcurrent) {
       return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
