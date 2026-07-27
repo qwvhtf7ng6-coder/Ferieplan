@@ -117,24 +117,18 @@ export default async function CalendarPage({
     isNational: h.isNational,
   }));
 
-  // Cross-check shifts against approved absences
-  const calAbsenceEntries = await prisma.vacationRequestEntry.findMany({
-    where: {
-      date: { gte: start, lte: end },
-      request: {
-        organizationId: orgId,
-        status: "APPROVED",
-        userId: { in: [...new Set((shiftAssignments as any[]).map((s) => s.userId))] },
-      },
-    },
-    select: { date: true, request: { select: { userId: true } } },
-  });
-  const calAbsenceSet = new Set(
-    (calAbsenceEntries as any[]).map((e) => {
-      const dk = new Date(e.date).toISOString().slice(0, 10);
-      return `${e.request.userId}|${dk}`;
-    })
-  );
+  // ⚡ Bolt Performance Optimization
+  // Replaced redundant database query with in-memory filtering from existing 'requests' array.
+  // This eliminates an N+1-style blocking query and speeds up calendar load times.
+  const calAbsenceSet = new Set<string>();
+  for (const r of requests) {
+    if (r.status === "APPROVED") {
+      for (const e of r.entries) {
+        const dk = new Date(e.date).toISOString().slice(0, 10);
+        calAbsenceSet.add(`${r.userId}|${dk}`);
+      }
+    }
+  }
 
   const serializedShifts = shiftAssignments.map((s: ShiftRow) => {
     const dk = new Date(s.date).toISOString().slice(0, 10);
