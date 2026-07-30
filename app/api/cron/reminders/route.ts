@@ -54,22 +54,34 @@ export async function GET(request: Request) {
 
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // ⚡ Bolt: Fix N+1 query problem by fetching all recent reminders for all managers at once
+    const allManagerIdsSet = new Set<string>();
+    pendingRequests.forEach((req) => {
+      req.department.users.forEach((u: { id: string }) => allManagerIdsSet.add(u.id));
+    });
+    const allManagerIds = Array.from(allManagerIdsSet);
+
+    const allRecentReminders = allManagerIds.length > 0
+      ? await prisma.notification.findMany({
+          where: {
+            organizationId: org.id,
+            userId: { in: allManagerIds },
+            type: "PENDING_REMINDER",
+            createdAt: { gte: dayAgo },
+          },
+          select: { userId: true, message: true },
+        })
+      : [];
+
     for (const req of pendingRequests) {
       const managerIds = req.department.users.map((u: { id: string }) => u.id);
       if (managerIds.length === 0) continue;
 
-      const recentReminders = await prisma.notification.findMany({
-        where: {
-          organizationId: org.id,
-          userId: { in: managerIds },
-          type: "PENDING_REMINDER",
-          createdAt: { gte: dayAgo },
-          message: { contains: req.id },
-        },
-        select: { userId: true },
-      });
+      const recentReminders = allRecentReminders.filter(
+        (n) => managerIds.includes(n.userId) && n.message.includes(req.id)
+      );
 
-      const alreadyNotified = new Set(recentReminders.map((n: { userId: string }) => n.userId));
+      const alreadyNotified = new Set(recentReminders.map((n) => n.userId));
       const daysWaiting = Math.floor(
         (Date.now() - new Date(req.createdAt).getTime()) / (1000 * 60 * 60 * 24)
       );
