@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   format, isWeekend, getISOWeek,
@@ -180,6 +180,19 @@ function CalendarTable({
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
+  // ⚡ Bolt: Precompute day data to avoid O(N*M) date operations in nested render loops
+  const precomputedDays = useMemo(() => days.map(d => {
+    const dk = format(d, "yyyy-MM-dd");
+    return {
+      date: d,
+      dk,
+      dayStr: format(d, "d"),
+      weekdayStr: format(d, "EEEEE", { locale: da }),
+      isWeekend: isWeekend(d),
+      isToday: dk === todayKey,
+    };
+  }), [days, todayKey]);
+
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
       <thead className="sticky top-0 z-20">
@@ -191,11 +204,8 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
+          {precomputedDays.map(({ dk, dayStr, weekdayStr, isWeekend, isToday }) => {
             const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
-            const isToday = dk === todayKey;
             return (
               <th
                 key={dk}
@@ -208,22 +218,22 @@ function CalendarTable({
                   borderColor: "var(--c-border)",
                   background: holiday
                     ? "var(--c-danger-bg)"
-                    : weekend
+                    : isWeekend
                     ? "var(--c-bg)"
                     : isToday
                     ? "var(--c-primary-light)"
                     : "var(--c-surface)",
                   color: holiday
                     ? "var(--c-danger-text)"
-                    : weekend
+                    : isWeekend
                     ? "var(--c-text-subtle)"
                     : isToday
                     ? "var(--c-primary)"
                     : "var(--c-text-muted)",
                 }}
               >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
+                <div className="font-bold text-[12px]">{dayStr}</div>
+                <div className="text-[9px] uppercase opacity-70">{weekdayStr}</div>
                 {holiday && <div className="text-[8px] leading-tight">🎌</div>}
               </th>
             );
@@ -238,23 +248,21 @@ function CalendarTable({
           const cellBg = color?.hexLight ?? "#bbf7d0";
 
           return (
-            <>
+            <React.Fragment key={`dept-${dept.id}`}>
               {/* Dept header row */}
-              <tr key={`dept-${dept.id}`}>
+              <tr>
                 <td
                   className="sticky left-0 z-10 text-white px-3 py-1.5 font-bold text-[11px] uppercase tracking-widest whitespace-nowrap border-b"
                   style={{ minWidth: 160, backgroundColor: headerBg, borderColor: `${headerBg}cc` }}
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                {precomputedDays.map(({ dk, isWeekend }) => {
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
                   const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
-                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || holiday ? `${headerBg}88` : headerBg }}>
+                      style={{ borderColor: `${headerBg}66`, backgroundColor: isWeekend || holiday ? `${headerBg}88` : headerBg }}>
                       <CapacityDot count={count} max={dept.maxConcurrent} />
                     </td>
                   );
@@ -279,13 +287,11 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                  {precomputedDays.map(({ dk, isWeekend }) => {
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
@@ -304,7 +310,7 @@ function CalendarTable({
                       cellClass += " hover:opacity-90";
                     } else if (holiday) {
                       cellStyle = { ...cellStyle, background: "var(--c-danger-bg)" };
-                    } else if (weekend) {
+                    } else if (isWeekend) {
                       cellStyle = { ...cellStyle, background: "var(--c-bg)" };
                     } else {
                       cellClass += " hover:bg-primary-muted/20";
@@ -346,7 +352,7 @@ function CalendarTable({
                   })}
                 </tr>
               ))}
-            </>
+            </React.Fragment>
           );
         })}
       </tbody>
