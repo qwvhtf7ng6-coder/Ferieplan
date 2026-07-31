@@ -1,0 +1,3 @@
+## 2025-01-20 - O(n³) React useMemo Anti-Pattern in Calendar View
+**Learning:** Found an accidental O(D*R*U) loop where D=departments, R=requests, U=users inside a `useMemo` calculating department capacity. It checked `dept.users.some()` for every single request in every single department.
+**Action:** Replaced nested loops with a hash map lookup (user -> department), changing complexity from O(D*R*U) to O(D*U + R). Always watch out for nested iterations combined with array methods like `.some()` or `.find()` inside `useMemo` hooks, especially on larger collections like users/requests.
