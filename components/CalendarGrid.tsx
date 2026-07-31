@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import {
   format, isWeekend, getISOWeek,
@@ -166,7 +166,7 @@ function CapacityDot({ count, max }: { count: number; max: number }) {
 
 // ─── Grid table ───────────────────────────────────────────────────────────────
 
-function CalendarTable({
+const CalendarTable = memo(function CalendarTable({
   days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin, shiftLookup,
 }: {
   days: Date[];
@@ -352,7 +352,7 @@ function CalendarTable({
       </tbody>
     </table>
   );
-}
+});
 
 // ─── Mobile list view ─────────────────────────────────────────────────────────
 
@@ -564,6 +564,10 @@ export default function CalendarGrid({
     { value: "me",   label: "Kun mig" },
   ];
 
+  const handleOpenCell = useCallback((dk: string, user: CalendarUser, reqs: CalendarRequest[], cellShifts: CalendarShift[]) => {
+    setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts });
+  }, [holidayMap]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Mobile */}
@@ -660,7 +664,7 @@ export default function CalendarGrid({
             deptCapacity={deptCapacity}
             deptColorMap={deptColorMap}
             todayKey={todayKey}
-            onOpenCell={(dk, user, reqs, cellShifts) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts })}
+            onOpenCell={handleOpenCell}
             isManagerOrAdmin={isManagerOrAdmin}
             shiftLookup={shiftLookup}
           />
