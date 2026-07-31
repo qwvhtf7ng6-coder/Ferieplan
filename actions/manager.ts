@@ -29,6 +29,7 @@ async function getSessionAndSubject(): Promise<
   return { user, subject: buildSubject(user), orgId };
 }
 
+// ⚡ Bolt: Check capacity for all dates in a single query to avoid N+1 queries
 async function checkCapacity(
   orgId: string,
   departmentId: string,
@@ -38,22 +39,37 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  if (entries.length === 0) return { exceeded: false };
+
+  const dates = entries.map((e) => e.date);
+
+  const existingEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { in: dates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    select: { date: true },
+  });
+
+  const countsByDate = existingEntries.reduce((acc, entry) => {
+    const dKey = entry.date.toISOString().slice(0, 10);
+    acc[dKey] = (acc[dKey] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  for (const entry of entries) {
+    const dKey = entry.date.toISOString().slice(0, 10);
+    const count = countsByDate[dKey] || 0;
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: dKey, current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
