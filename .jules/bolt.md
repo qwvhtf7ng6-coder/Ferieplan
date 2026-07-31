@@ -1,0 +1,3 @@
+## 2025-01-24 - CalendarGrid re-render performance bottleneck
+**Learning:** In large React applications with deep grid components (like `CalendarTable` which can render hundreds of cells), inline functions passed as props (e.g., `onOpenCell={(dk, user, reqs, cellShifts) => setCellModal(...)}`) cause the entire grid to re-render whenever the parent component state changes (like opening a modal). This happens because a new function reference is created on every render.
+**Action:** Always memoize expensive child components using `React.memo` and extract inline functions to `useCallback` hooks (e.g., `const handleOpenCell = useCallback(...)`) to preserve referential equality and avoid unnecessary re-renders.
