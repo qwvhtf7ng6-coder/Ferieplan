@@ -38,22 +38,40 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  if (entries.length === 0) return { exceeded: false };
+
+  const dates = entries.map((e) => e.date);
+
+  const groupedCounts = await prisma.vacationRequestEntry.groupBy({
+    by: ["date"],
+    where: {
+      date: { in: dates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const countMap = new Map<string, number>();
+  for (const gc of groupedCounts) {
+    countMap.set(gc.date.toISOString(), gc._count._all);
+  }
+
+  for (const entry of entries) {
+    const dateStr = entry.date.toISOString();
+    const count = countMap.get(dateStr) ?? 0;
+
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: dateStr.slice(0, 10), current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
