@@ -1,0 +1,3 @@
+## 2023-10-27 - N+1 Query in Date Iteration
+**Learning:** Checking capacity iteratively for a multi-day vacation request inside a `for` loop triggers sequential `count` queries in Prisma, forming a severe N+1 bottleneck. Since Prisma `groupBy` does not support relation-based `where` filtering, fetching the relevant subset with `findMany` and using a JS Map for counting provides a robust O(1) query solution.
+**Action:** Always inspect loops containing `await prisma...` queries for N+1 vulnerabilities. Batch queries using `findMany` and in-memory aggregation via `Map` when complex relational filters are needed.
