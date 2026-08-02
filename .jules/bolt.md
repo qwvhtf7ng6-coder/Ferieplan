@@ -1,0 +1,3 @@
+## 2023-10-27 - Prisma groupBy limitation with relations
+**Learning:** Prisma's `groupBy` method does not support filtering by relation fields in its `where` clause. To aggregate data with relation filters, we need to use `findMany` to fetch the relevant records and perform the grouping/aggregation in memory, or we must avoid the relation filters in `where`. But memory mentions: "Prisma's `groupBy` method does not support filtering by relation fields in its `where` clause. To aggregate data with relation filters, use `findMany` to fetch the relevant records and perform the grouping/aggregation in memory."
+**Action:** Use `findMany` followed by in-memory grouping/counting instead of `groupBy` to resolve the N+1 query issue in `checkCapacity`.
