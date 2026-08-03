@@ -54,20 +54,24 @@ export async function GET(request: Request) {
 
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // Batch query: Fetch all recent PENDING_REMINDER notifications for this org
+    const allRecentReminders = await prisma.notification.findMany({
+      where: {
+        organizationId: org.id,
+        type: "PENDING_REMINDER",
+        createdAt: { gte: dayAgo },
+      },
+      select: { userId: true, message: true },
+    });
+
     for (const req of pendingRequests) {
       const managerIds = req.department.users.map((u: { id: string }) => u.id);
       if (managerIds.length === 0) continue;
 
-      const recentReminders = await prisma.notification.findMany({
-        where: {
-          organizationId: org.id,
-          userId: { in: managerIds },
-          type: "PENDING_REMINDER",
-          createdAt: { gte: dayAgo },
-          message: { contains: req.id },
-        },
-        select: { userId: true },
-      });
+      // Filter in-memory instead of executing a query per request
+      const recentReminders = allRecentReminders.filter((n: { userId: string, message: string }) =>
+        managerIds.includes(n.userId) && n.message.includes(req.id)
+      );
 
       const alreadyNotified = new Set(recentReminders.map((n: { userId: string }) => n.userId));
       const daysWaiting = Math.floor(
