@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, memo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   format, isWeekend, getISOWeek,
@@ -166,7 +166,7 @@ function CapacityDot({ count, max }: { count: number; max: number }) {
 
 // ─── Grid table ───────────────────────────────────────────────────────────────
 
-function CalendarTable({
+const CalendarTable = memo(function CalendarTable({
   days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin, shiftLookup,
 }: {
   days: Date[];
@@ -352,7 +352,7 @@ function CalendarTable({
       </tbody>
     </table>
   );
-}
+});
 
 // ─── Mobile list view ─────────────────────────────────────────────────────────
 
@@ -493,6 +493,14 @@ export default function CalendarGrid({
   const days = viewMode === "month" ? monthDays : weekDays;
 
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
+
+  // ⚡ Bolt Performance Optimization:
+  // Memoized onOpenCell handler using useCallback to provide a stable reference
+  // to the memoized CalendarTable component. This prevents CalendarTable from
+  // re-rendering unnecessarily whenever the parent CalendarGrid state changes.
+  const handleOpenCell = useCallback((dk: string, user: CalendarUser, reqs: CalendarRequest[], cellShifts: CalendarShift[]) => {
+    setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts });
+  }, [holidayMap]);
 
   const shiftLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarShift[]>>();
@@ -660,7 +668,7 @@ export default function CalendarGrid({
             deptCapacity={deptCapacity}
             deptColorMap={deptColorMap}
             todayKey={todayKey}
-            onOpenCell={(dk, user, reqs, cellShifts) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts })}
+            onOpenCell={handleOpenCell}
             isManagerOrAdmin={isManagerOrAdmin}
             shiftLookup={shiftLookup}
           />
