@@ -29,6 +29,9 @@ async function getSessionAndSubject(): Promise<
   return { user, subject: buildSubject(user), orgId };
 }
 
+// ⚡ Bolt: Optimized capacity check to prevent N+1 queries.
+// Fetches all relevant approved entries in a single query and aggregates in memory.
+// Expected Impact: Reduces database queries from O(N) to O(1) for multi-day requests.
 async function checkCapacity(
   orgId: string,
   departmentId: string,
@@ -38,22 +41,41 @@ async function checkCapacity(
   const dept = await prisma.department.findFirst({ where: { id: departmentId, organizationId: orgId } });
   if (!dept) return { exceeded: false };
 
-  for (const entry of entries) {
-    const count = await prisma.vacationRequestEntry.count({
-      where: {
-        date: entry.date,
-        request: {
-          organizationId: orgId,
-          departmentId,
-          status: "APPROVED",
-          ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
-        },
+  if (entries.length === 0) return { exceeded: false };
+
+  const dates = entries.map(e => e.date);
+
+  // Single query for all dates
+  const existingEntries = await prisma.vacationRequestEntry.findMany({
+    where: {
+      date: { in: dates },
+      request: {
+        organizationId: orgId,
+        departmentId,
+        status: "APPROVED",
+        ...(excludeRequestId ? { id: { not: excludeRequestId } } : {}),
       },
-    });
+    },
+    select: { date: true },
+  });
+
+  // Aggregate in memory
+  const countsByDate = new Map<string, number>();
+  for (const e of existingEntries) {
+    const dateStr = e.date.toISOString().slice(0, 10);
+    countsByDate.set(dateStr, (countsByDate.get(dateStr) || 0) + 1);
+  }
+
+  // Check against capacity
+  for (const entry of entries) {
+    const dateStr = entry.date.toISOString().slice(0, 10);
+    const count = countsByDate.get(dateStr) || 0;
+
     if (count + 1 > dept.maxConcurrent) {
-      return { exceeded: true, date: entry.date.toISOString().slice(0, 10), current: count, max: dept.maxConcurrent };
+      return { exceeded: true, date: dateStr, current: count, max: dept.maxConcurrent };
     }
   }
+
   return { exceeded: false };
 }
 
