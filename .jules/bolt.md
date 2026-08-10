@@ -1,0 +1,3 @@
+## 2025-02-18 - Avoid expensive Date parsing in tight loops
+**Learning:** In React performance, using `new Date(...).toISOString().slice(0, 10)` inside a heavy `useMemo` map iteration across thousands of elements caused severe blocking (O(N^3) time complexity in `deptCapacity`). Dates fetched from backend APIs (Prisma/Next.js JSON serialization) are often guaranteed to be in ISO 8601 format already (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+**Action:** Use simple string slicing (`dateStr.substring(0, 10)`) directly on serialized date strings for grouping operations. Combine with O(1) Map lookups for relation resolution instead of nested arrays `some()` scans to optimize client-side aggregations.
