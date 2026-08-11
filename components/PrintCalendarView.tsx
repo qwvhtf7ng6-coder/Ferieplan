@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { format, isWeekend, getDaysInMonth } from "date-fns";
 import { da } from "date-fns/locale";
-import { ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS } from "@/lib/utils";
+import { ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, toISODate } from "@/lib/utils";
 import { buildDeptColorMap } from "@/lib/dept-colors";
 
 interface PrintDept {
@@ -63,7 +63,7 @@ export function PrintCalendarView({
   const daysInMonth = days.length;
 
   const holidayMap = useMemo(
-    () => new Map(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])),
+    () => new Map(holidays.map((h) => [toISODate(h.date), h.name])),
     [holidays],
   );
 
@@ -71,7 +71,7 @@ export function PrintCalendarView({
     const map = new Map<string, Map<string, PrintRequest[]>>();
     for (const req of requests) {
       for (const entry of req.entries) {
-        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        const dk = toISODate(entry.date);
         if (!map.has(req.user.id)) map.set(req.user.id, new Map());
         const dm = map.get(req.user.id)!;
         if (!dm.has(dk)) dm.set(dk, []);
@@ -319,7 +319,7 @@ export function PrintCalendarView({
                         const isToday = dk === todayKey;
 
                         const entry = approved?.entries.find(
-                          (e) => new Date(e.date).toISOString().slice(0, 10) === dk
+                          (e) => toISODate(e.date) === dk
                         );
                         const absColor = entry ? ABSENCE_TYPE_COLORS[entry.absenceType] : null;
 

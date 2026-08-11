@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { can, buildSubject, scopeOf } from "@/lib/can";
 import { NextRequest, NextResponse } from "next/server";
 import { startOfWeek, endOfWeek, addDays } from "date-fns";
+import { toISODate } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -56,13 +57,13 @@ export async function GET(req: NextRequest) {
 
   const absenceSet = new Set(
     (absenceEntries as any[]).map((e) => {
-      const dk = new Date(e.date).toISOString().slice(0, 10);
+      const dk = toISODate(e.date);
       return `${e.request.userId}|${dk}`;
     })
   );
 
   const result = (assignments as any[]).map((a) => {
-    const dk = new Date(a.date).toISOString().slice(0, 10);
+    const dk = toISODate(a.date);
     return { ...a, hasAbsenceConflict: absenceSet.has(`${a.userId}|${dk}`) };
   });
 

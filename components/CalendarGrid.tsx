@@ -7,7 +7,7 @@ import {
   startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval,
 } from "date-fns";
 import { da } from "date-fns/locale";
-import { getMonthDays, formatMonthYear, cn, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, formatDate } from "@/lib/utils";
+import { getMonthDays, formatMonthYear, cn, ENTRY_TYPE_LABELS, ABSENCE_TYPE_LABELS, ABSENCE_TYPE_COLORS, formatDate, toISODate } from "@/lib/utils";
 import { buildDeptColorMap, type DeptColor } from "@/lib/dept-colors";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
@@ -104,7 +104,7 @@ function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClos
         )}
 
         {requests.map((req) => {
-          const dayEntry = req.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dateKey);
+          const dayEntry = req.entries.find((e) => toISODate(e.date) === dateKey);
           const totalDays = req.entries.reduce((s, e) => s + e.days, 0);
           return (
             <div key={req.id} className="border border-border rounded-lg p-4 space-y-2 bg-bg">
@@ -130,7 +130,7 @@ function CellDetailModal({ data, onClose }: { data: CellModalData | null; onClos
                   {[...req.entries]
                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                     .map((e) => {
-                      const eKey = new Date(e.date).toISOString().slice(0, 10);
+                      const eKey = toISODate(e.date);
                       return (
                         <span key={eKey} className={cn(
                           "text-[11px] px-1.5 py-0.5 rounded-md font-medium",
@@ -289,7 +289,7 @@ function CalendarTable({
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
-                    const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
+                    const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => toISODate(e.date) === dk);
                     const hasShift = cellShifts.length > 0;
                     const clickable = reqs.length > 0 || holiday || hasShift;
 
@@ -359,7 +359,7 @@ function CalendarTable({
 function MobileCalendarList({
   year, month, departments, requests, holidays, onNavigate, deptColorMap,
 }: CalendarGridProps & { onNavigate: (delta: number) => void; deptColorMap: Map<string, DeptColor> }) {
-  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
+  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [toISODate(h.date), h.name])), [holidays]);
   const requestsByUser = useMemo(() => {
     const map = new Map<string, CalendarRequest[]>();
     for (const req of requests) {
@@ -492,12 +492,12 @@ export default function CalendarGrid({
   const weekDays  = useMemo(() => eachDayOfInterval({ start: startOfWeek(weekStart, { weekStartsOn: 1 }), end: endOfWeek(weekStart, { weekStartsOn: 1 }) }), [weekStart]);
   const days = viewMode === "month" ? monthDays : weekDays;
 
-  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
+  const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [toISODate(h.date), h.name])), [holidays]);
 
   const shiftLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarShift[]>>();
     for (const s of shifts) {
-      const dk = new Date(s.date).toISOString().slice(0, 10);
+      const dk = toISODate(s.date);
       if (!map.has(s.userId)) map.set(s.userId, new Map());
       const dm = map.get(s.userId)!;
       if (!dm.has(dk)) dm.set(dk, []);
@@ -510,7 +510,7 @@ export default function CalendarGrid({
     const map = new Map<string, Map<string, CalendarRequest[]>>();
     for (const req of requests) {
       for (const entry of req.entries) {
-        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        const dk = toISODate(entry.date);
         if (!map.has(req.user.id)) map.set(req.user.id, new Map());
         const dm = map.get(req.user.id)!;
         if (!dm.has(dk)) dm.set(dk, []);
@@ -528,7 +528,7 @@ export default function CalendarGrid({
         if (req.status !== "APPROVED") continue;
         if (!dept.users.some((u) => u.id === req.user.id)) continue;
         for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
+          const dk = toISODate(entry.date);
           dm.set(dk, (dm.get(dk) ?? 0) + 1);
         }
       }

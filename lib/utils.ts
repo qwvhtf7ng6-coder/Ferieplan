@@ -44,6 +44,10 @@ export function toDateKey(date: Date | string): string {
   return format(d, "yyyy-MM-dd");
 }
 
+export function toISODate(date: Date | string): string {
+  return typeof date === "string" ? date.substring(0, 10) : date.toISOString().substring(0, 10);
+}
+
 export function entryTypeToDays(type: string): number {
   return type === "FULL_DAY" ? 1 : 0.5;
 }

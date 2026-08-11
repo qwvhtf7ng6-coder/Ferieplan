@@ -6,6 +6,7 @@ import CalendarGrid from "@/components/CalendarGrid";
 import { can, buildSubject } from "@/lib/can";
 import { getCalendarVisibility } from "@/lib/settings";
 import type { SessionUser } from "@/types";
+import { toISODate } from "@/lib/utils";
 
 export default async function CalendarPage({
   searchParams,
@@ -131,13 +132,13 @@ export default async function CalendarPage({
   });
   const calAbsenceSet = new Set(
     (calAbsenceEntries as any[]).map((e) => {
-      const dk = new Date(e.date).toISOString().slice(0, 10);
+      const dk = toISODate(e.date);
       return `${e.request.userId}|${dk}`;
     })
   );
 
   const serializedShifts = shiftAssignments.map((s: ShiftRow) => {
-    const dk = new Date(s.date).toISOString().slice(0, 10);
+    const dk = toISODate(s.date);
     return {
       id: s.id,
       userId: s.userId,
