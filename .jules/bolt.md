@@ -1,0 +1,3 @@
+## 2024-05-18 - Avoid Date object allocation in render loops
+**Learning:** Dates serialized from Prisma/Next.js APIs to the frontend are strictly ISO 8601 formatted strings (`YYYY-MM-DDTHH:mm:ss.sssZ`). Using `.substring(0, 10)` directly on the string instead of `new Date(dateStr).toISOString().slice(0, 10)` avoids extremely expensive date parsing and object allocation within tight React render loops (e.g., `useMemo` block maps).
+**Action:** Replace `new Date(dateStr).toISOString().slice(0, 10)` with `dateStr.substring(0, 10)` or `dateStr.slice(0, 10)` when dealing with ISO 8601 strings from Prisma in frontend components.

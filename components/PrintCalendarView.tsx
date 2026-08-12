@@ -63,7 +63,7 @@ export function PrintCalendarView({
   const daysInMonth = days.length;
 
   const holidayMap = useMemo(
-    () => new Map(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])),
+    () => new Map(holidays.map((h) => [h.date.substring(0, 10), h.name])),
     [holidays],
   );
 
@@ -71,7 +71,7 @@ export function PrintCalendarView({
     const map = new Map<string, Map<string, PrintRequest[]>>();
     for (const req of requests) {
       for (const entry of req.entries) {
-        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        const dk = entry.date.substring(0, 10);
         if (!map.has(req.user.id)) map.set(req.user.id, new Map());
         const dm = map.get(req.user.id)!;
         if (!dm.has(dk)) dm.set(dk, []);
@@ -319,7 +319,7 @@ export function PrintCalendarView({
                         const isToday = dk === todayKey;
 
                         const entry = approved?.entries.find(
-                          (e) => new Date(e.date).toISOString().slice(0, 10) === dk
+                          (e) => e.date.substring(0, 10) === dk
                         );
                         const absColor = entry ? ABSENCE_TYPE_COLORS[entry.absenceType] : null;
 
