@@ -131,13 +131,13 @@ export default async function CalendarPage({
   });
   const calAbsenceSet = new Set(
     (calAbsenceEntries as any[]).map((e) => {
-      const dk = new Date(e.date).toISOString().slice(0, 10);
+      const dk = e.date.toISOString().substring(0, 10);
       return `${e.request.userId}|${dk}`;
     })
   );
 
   const serializedShifts = shiftAssignments.map((s: ShiftRow) => {
-    const dk = new Date(s.date).toISOString().slice(0, 10);
+    const dk = s.date.toISOString().substring(0, 10);
     return {
       id: s.id,
       userId: s.userId,
