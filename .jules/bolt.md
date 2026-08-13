@@ -1,0 +1,3 @@
+## 2024-08-13 - [Optimize Date parsing in React loops]
+**Learning:** Dates serialized from Prisma/Next.js APIs to the frontend are strictly ISO 8601 formatted strings (`YYYY-MM-DDTHH:mm:ss.sssZ`). Using `.substring(0, 10)` directly on the string instead of `new Date(dateStr).toISOString().slice(0, 10)` avoids extremely expensive date parsing and object allocation within tight React render loops (e.g., `useMemo` block maps).
+**Action:** Replace `new Date(date).toISOString().slice(0, 10)` with `typeof date === "string" ? date.substring(0, 10) : new Date(date).toISOString().slice(0, 10)` where dates from API are used to optimize frontend date manipulation.
