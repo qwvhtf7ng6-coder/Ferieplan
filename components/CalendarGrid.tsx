@@ -521,18 +521,35 @@ export default function CalendarGrid({
   }, [requests]);
 
   const deptCapacity = useMemo(() => {
-    const outer = new Map<string, Map<string, number>>();
+    // ⚡ Bolt: Replace O(N²) nested loop with O(N) hash map lookup
+    // Resolves N*M scaling issues on heavy calendar renders. Expected impact: eliminates main thread blocking for large requests arrays.
+    const userDepts = new Map<string, string[]>();
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
-        for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
+      for (const user of dept.users) {
+        let arr = userDepts.get(user.id);
+        if (!arr) {
+          arr = [];
+          userDepts.set(user.id, arr);
+        }
+        arr.push(dept.id);
+      }
+    }
+
+    const outer = new Map<string, Map<string, number>>();
+    for (const d of departments) outer.set(d.id, new Map());
+
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+      const depts = userDepts.get(req.user.id);
+      if (!depts) continue;
+
+      for (const entry of req.entries) {
+        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        for (const deptId of depts) {
+          const dm = outer.get(deptId)!;
           dm.set(dk, (dm.get(dk) ?? 0) + 1);
         }
       }
-      outer.set(dept.id, dm);
     }
     return outer;
   }, [departments, requests]);
