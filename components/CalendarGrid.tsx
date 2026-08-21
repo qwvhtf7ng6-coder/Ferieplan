@@ -180,6 +180,22 @@ function CalendarTable({
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
+  const daysData = useMemo(() => {
+    return days.map(d => {
+      const dk = format(d, "yyyy-MM-dd");
+      return {
+        d,
+        dk,
+        weekend: isWeekend(d),
+        holiday: holidayMap.get(dk) ?? null,
+        isHoliday: holidayMap.has(dk),
+        isToday: dk === todayKey,
+        dayStr: format(d, "d"),
+        dayOfWeekStr: format(d, "EEEEE", { locale: da })
+      };
+    });
+  }, [days, holidayMap, todayKey]);
+
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
       <thead className="sticky top-0 z-20">
@@ -191,11 +207,7 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
-            const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
-            const isToday = dk === todayKey;
+          {daysData.map(({ dk, holiday, weekend, isToday, dayStr, dayOfWeekStr }) => {
             return (
               <th
                 key={dk}
@@ -222,8 +234,8 @@ function CalendarTable({
                     : "var(--c-text-muted)",
                 }}
               >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
+                <div className="font-bold text-[12px]">{dayStr}</div>
+                <div className="text-[9px] uppercase opacity-70">{dayOfWeekStr}</div>
                 {holiday && <div className="text-[8px] leading-tight">🎌</div>}
               </th>
             );
@@ -247,14 +259,11 @@ function CalendarTable({
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                {daysData.map(({ dk, weekend, isHoliday }) => {
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
-                  const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
-                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || holiday ? `${headerBg}88` : headerBg }}>
+                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || isHoliday ? `${headerBg}88` : headerBg }}>
                       <CapacityDot count={count} max={dept.maxConcurrent} />
                     </td>
                   );
@@ -279,14 +288,12 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                  {daysData.map(({ dk, weekend, isHoliday }) => {
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
-                    const holiday = holidayMap.has(dk);
+                    const holiday = isHoliday;
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
                     const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
