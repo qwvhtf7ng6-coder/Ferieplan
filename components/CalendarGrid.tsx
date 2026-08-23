@@ -166,10 +166,18 @@ function CapacityDot({ count, max }: { count: number; max: number }) {
 
 // ─── Grid table ───────────────────────────────────────────────────────────────
 
+export interface FormattedDay {
+  date: Date;
+  dateKey: string;
+  isWeekend: boolean;
+  dayNumber: string;
+  dayName: string;
+}
+
 function CalendarTable({
   days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin, shiftLookup,
 }: {
-  days: Date[];
+  days: FormattedDay[];
   departments: CalendarDepartment[];
   holidayMap: Map<string, string>;
   requestLookup: Map<string, Map<string, CalendarRequest[]>>;
@@ -192,9 +200,9 @@ function CalendarTable({
             Medarbejder
           </th>
           {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
+            const dk = d.dateKey;
             const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
+            const weekend = d.isWeekend;
             const isToday = dk === todayKey;
             return (
               <th
@@ -222,8 +230,8 @@ function CalendarTable({
                     : "var(--c-text-muted)",
                 }}
               >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
+                <div className="font-bold text-[12px]">{d.dayNumber}</div>
+                <div className="text-[9px] uppercase opacity-70">{d.dayName}</div>
                 {holiday && <div className="text-[8px] leading-tight">🎌</div>}
               </th>
             );
@@ -248,9 +256,9 @@ function CalendarTable({
                   {dept.name}
                 </td>
                 {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                  const dk = d.dateKey;
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
+                  const weekend = d.isWeekend;
                   const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
@@ -280,12 +288,12 @@ function CalendarTable({
                     </span>
                   </td>
                   {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                    const dk = d.dateKey;
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
+                    const weekend = d.isWeekend;
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
@@ -492,6 +500,17 @@ export default function CalendarGrid({
   const weekDays  = useMemo(() => eachDayOfInterval({ start: startOfWeek(weekStart, { weekStartsOn: 1 }), end: endOfWeek(weekStart, { weekStartsOn: 1 }) }), [weekStart]);
   const days = viewMode === "month" ? monthDays : weekDays;
 
+  // Precompute formatted days to avoid O(Users * Days) formatting calls in render loops
+  const formattedDays: FormattedDay[] = useMemo(() => {
+    return days.map(d => ({
+      date: d,
+      dateKey: format(d, "yyyy-MM-dd"),
+      isWeekend: isWeekend(d),
+      dayNumber: format(d, "d"),
+      dayName: format(d, "EEEEE", { locale: da })
+    }));
+  }, [days]);
+
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
 
   const shiftLookup = useMemo(() => {
@@ -653,7 +672,7 @@ export default function CalendarGrid({
           className="overflow-auto border border-border rounded-lg shadow-xs"
           style={{ maxHeight: "calc(100vh - 240px)" }}>
           <CalendarTable
-            days={days}
+            days={formattedDays}
             departments={filteredDepartments}
             holidayMap={holidayMap}
             requestLookup={requestLookup}
