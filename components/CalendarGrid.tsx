@@ -180,6 +180,23 @@ function CalendarTable({
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
+  // Precompute static string representations for dates to avoid O(Days * Users) date formatting overhead
+  const formattedDays = useMemo(() => {
+    return days.map(d => {
+      const dk = format(d, "yyyy-MM-dd");
+      return {
+        date: d,
+        dk,
+        dayStr: format(d, "d"),
+        dayNameStr: format(d, "EEEEE", { locale: da }),
+        weekend: isWeekend(d),
+        isToday: dk === todayKey,
+        holidayName: holidayMap.get(dk),
+        hasHoliday: holidayMap.has(dk)
+      };
+    });
+  }, [days, todayKey, holidayMap]);
+
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
       <thead className="sticky top-0 z-20">
@@ -191,40 +208,36 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
-            const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
-            const isToday = dk === todayKey;
+          {formattedDays.map((fd) => {
             return (
               <th
-                key={dk}
-                title={holiday ?? undefined}
+                key={fd.dk}
+                title={fd.holidayName ?? undefined}
                 className={cn(
                   "border-b border-r text-center font-normal select-none min-w-[34px] w-9 py-1.5 px-0",
-                  isToday ? "ring-2 ring-inset ring-primary" : "",
+                  fd.isToday ? "ring-2 ring-inset ring-primary" : "",
                 )}
                 style={{
                   borderColor: "var(--c-border)",
-                  background: holiday
+                  background: fd.hasHoliday
                     ? "var(--c-danger-bg)"
-                    : weekend
+                    : fd.weekend
                     ? "var(--c-bg)"
-                    : isToday
+                    : fd.isToday
                     ? "var(--c-primary-light)"
                     : "var(--c-surface)",
-                  color: holiday
+                  color: fd.hasHoliday
                     ? "var(--c-danger-text)"
-                    : weekend
+                    : fd.weekend
                     ? "var(--c-text-subtle)"
-                    : isToday
+                    : fd.isToday
                     ? "var(--c-primary)"
                     : "var(--c-text-muted)",
                 }}
               >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
-                {holiday && <div className="text-[8px] leading-tight">🎌</div>}
+                <div className="font-bold text-[12px]">{fd.dayStr}</div>
+                <div className="text-[9px] uppercase opacity-70">{fd.dayNameStr}</div>
+                {fd.hasHoliday && <div className="text-[8px] leading-tight">🎌</div>}
               </th>
             );
           })}
@@ -247,14 +260,11 @@ function CalendarTable({
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
-                  const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
-                  const holiday = holidayMap.has(dk);
+                {formattedDays.map((fd) => {
+                  const count = capacityMap.get(fd.dk) ?? 0;
                   return (
-                    <td key={dk} className="border-b border-r text-center py-0.5"
-                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || holiday ? `${headerBg}88` : headerBg }}>
+                    <td key={fd.dk} className="border-b border-r text-center py-0.5"
+                      style={{ borderColor: `${headerBg}66`, backgroundColor: fd.weekend || fd.hasHoliday ? `${headerBg}88` : headerBg }}>
                       <CapacityDot count={count} max={dept.maxConcurrent} />
                     </td>
                   );
@@ -279,17 +289,16 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
-                    const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
+                  {formattedDays.map((fd) => {
+                    const reqs = requestLookup.get(emp.id)?.get(fd.dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
-                      ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
+                      ? (shiftLookup.get(emp.id)?.get(fd.dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
-                    const holiday = holidayMap.has(dk);
+                    const weekend = fd.weekend;
+                    const holiday = fd.hasHoliday;
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
-                    const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
+                    const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === fd.dk);
                     const hasShift = cellShifts.length > 0;
                     const clickable = reqs.length > 0 || holiday || hasShift;
 
@@ -312,8 +321,8 @@ function CalendarTable({
 
                     return (
                       <td
-                        key={dk}
-                        onClick={() => clickable && onOpenCell(dk, emp, reqs, cellShifts)}
+                        key={fd.dk}
+                        onClick={() => clickable && onOpenCell(fd.dk, emp, reqs, cellShifts)}
                         className={cn("border-b border-r text-center h-7 w-9 relative", cellClass, clickable ? "cursor-pointer" : "cursor-default")}
                         style={cellStyle}
                       >

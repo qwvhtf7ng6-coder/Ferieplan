@@ -84,6 +84,21 @@ export function PrintCalendarView({
   const today = new Date();
   const todayKey = format(today, "yyyy-MM-dd");
 
+  const formattedDays = useMemo(() => {
+    return days.map(d => {
+      const dk = format(d, "yyyy-MM-dd");
+      return {
+        date: d,
+        dk,
+        weekend: isWeekend(d),
+        isToday: dk === todayKey,
+        holidayName: holidayMap.get(dk),
+        hasHoliday: holidayMap.has(dk),
+        dayOfWeek: (d.getDay() + 6) % 7 // Mon=0
+      };
+    });
+  }, [days, todayKey, holidayMap]);
+
   // Collect all absence types used this month for the legend
   const usedAbsenceTypes = useMemo(() => {
     const types = new Set<string>();
@@ -218,7 +233,7 @@ export function PrintCalendarView({
       <table style={S.table}>
         <colgroup>
           <col style={{ width: "130px" }} />
-          {days.map((_, i) => (
+          {formattedDays.map((_, i) => (
             <col key={i} style={{ width: `${(100 - 14) / daysInMonth}%` }} />
           ))}
         </colgroup>
@@ -226,15 +241,10 @@ export function PrintCalendarView({
         <thead>
           <tr>
             <th style={S.thName}>Medarbejder</th>
-            {days.map((d, i) => {
-              const dk = format(d, "yyyy-MM-dd");
-              const weekend = isWeekend(d);
-              const holiday = holidayMap.has(dk);
-              const isToday = dk === todayKey;
-              const dayOfWeek = (d.getDay() + 6) % 7; // Mon=0
+            {formattedDays.map((fd, i) => {
               return (
-                <th key={dk} title={holidayMap.get(dk)} style={{
-                  background: isToday ? "#2563eb" : holiday ? "#dc2626" : weekend ? "#374151" : "#1e3a5f",
+                <th key={fd.dk} title={fd.holidayName ?? undefined} style={{
+                  background: fd.isToday ? "#2563eb" : fd.hasHoliday ? "#dc2626" : fd.weekend ? "#374151" : "#1e3a5f",
                   color: "#fff",
                   padding: "5px 1px",
                   textAlign: "center" as const,
@@ -242,9 +252,9 @@ export function PrintCalendarView({
                   borderLeft: "1px solid rgba(255,255,255,0.12)",
                   borderRadius: i === daysInMonth - 1 ? "0 4px 0 0" : undefined,
                 }}>
-                  <div style={{ fontSize: "9px", opacity: 0.7 }}>{DAY_INITIALS[dayOfWeek]}</div>
-                  <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.1 }}>{d.getDate()}</div>
-                  {holiday && <div style={{ fontSize: "7px", opacity: 0.9 }}>🎌</div>}
+                  <div style={{ fontSize: "9px", opacity: 0.7 }}>{DAY_INITIALS[fd.dayOfWeek]}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.1 }}>{fd.date.getDate()}</div>
+                  {fd.hasHoliday && <div style={{ fontSize: "7px", opacity: 0.9 }}>🎌</div>}
                 </th>
               );
             })}
@@ -309,17 +319,16 @@ export function PrintCalendarView({
                       </td>
 
                       {/* Day cells */}
-                      {days.map((d) => {
-                        const dk = format(d, "yyyy-MM-dd");
-                        const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
+                      {formattedDays.map((fd) => {
+                        const reqs = requestLookup.get(emp.id)?.get(fd.dk) ?? [];
                         const approved = reqs.find((r) => r.status === "APPROVED");
                         const pending = reqs.find((r) => r.status === "PENDING") && isManagerOrAdmin;
-                        const weekend = isWeekend(d);
-                        const holiday = holidayMap.has(dk);
-                        const isToday = dk === todayKey;
+                        const weekend = fd.weekend;
+                        const holiday = fd.hasHoliday;
+                        const isToday = fd.isToday;
 
                         const entry = approved?.entries.find(
-                          (e) => new Date(e.date).toISOString().slice(0, 10) === dk
+                          (e) => new Date(e.date).toISOString().slice(0, 10) === fd.dk
                         );
                         const absColor = entry ? ABSENCE_TYPE_COLORS[entry.absenceType] : null;
 
@@ -350,7 +359,7 @@ export function PrintCalendarView({
                         }
 
                         return (
-                          <td key={dk} style={{
+                          <td key={fd.dk} style={{
                             background: bg,
                             borderBottom: "1px solid #e2e8f0",
                             borderLeft: "1px solid #e2e8f0",
