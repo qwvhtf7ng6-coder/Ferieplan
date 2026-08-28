@@ -97,6 +97,24 @@ export function PrintCalendarView({
 
   const totalEmployees = departments.reduce((s, d) => s + d.users.length, 0);
 
+  // Performance optimization: Precompute static column data (dates, holidays, weekends)
+  // to avoid expensive date-fns formats and Map lookups inside the O(Users * Days) render loop.
+  const formattedDays = useMemo(() => {
+    return days.map(d => {
+      const dk = format(d, "yyyy-MM-dd");
+      return {
+        d,
+        dk,
+        weekend: isWeekend(d),
+        holidayHas: holidayMap.has(dk),
+        holidayGet: holidayMap.get(dk),
+        isToday: dk === todayKey,
+        dayOfWeek: (d.getDay() + 6) % 7, // Mon=0
+        dGetDate: d.getDate(),
+      };
+    });
+  }, [days, holidayMap, todayKey]);
+
   // ── Styles ──────────────────────────────────────────────────────────────────
   const S = {
     page: {
@@ -226,14 +244,10 @@ export function PrintCalendarView({
         <thead>
           <tr>
             <th style={S.thName}>Medarbejder</th>
-            {days.map((d, i) => {
-              const dk = format(d, "yyyy-MM-dd");
-              const weekend = isWeekend(d);
-              const holiday = holidayMap.has(dk);
-              const isToday = dk === todayKey;
-              const dayOfWeek = (d.getDay() + 6) % 7; // Mon=0
+            {formattedDays.map((fd, i) => {
+              const { dk, weekend, holidayHas: holiday, holidayGet, isToday, dayOfWeek, dGetDate } = fd;
               return (
-                <th key={dk} title={holidayMap.get(dk)} style={{
+                <th key={dk} title={holidayGet} style={{
                   background: isToday ? "#2563eb" : holiday ? "#dc2626" : weekend ? "#374151" : "#1e3a5f",
                   color: "#fff",
                   padding: "5px 1px",
@@ -243,7 +257,7 @@ export function PrintCalendarView({
                   borderRadius: i === daysInMonth - 1 ? "0 4px 0 0" : undefined,
                 }}>
                   <div style={{ fontSize: "9px", opacity: 0.7 }}>{DAY_INITIALS[dayOfWeek]}</div>
-                  <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.1 }}>{d.getDate()}</div>
+                  <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.1 }}>{dGetDate}</div>
                   {holiday && <div style={{ fontSize: "7px", opacity: 0.9 }}>🎌</div>}
                 </th>
               );
@@ -309,14 +323,11 @@ export function PrintCalendarView({
                       </td>
 
                       {/* Day cells */}
-                      {days.map((d) => {
-                        const dk = format(d, "yyyy-MM-dd");
+                      {formattedDays.map((fd) => {
+                        const { dk, weekend, holidayHas: holiday, isToday } = fd;
                         const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                         const approved = reqs.find((r) => r.status === "APPROVED");
                         const pending = reqs.find((r) => r.status === "PENDING") && isManagerOrAdmin;
-                        const weekend = isWeekend(d);
-                        const holiday = holidayMap.has(dk);
-                        const isToday = dk === todayKey;
 
                         const entry = approved?.entries.find(
                           (e) => new Date(e.date).toISOString().slice(0, 10) === dk
