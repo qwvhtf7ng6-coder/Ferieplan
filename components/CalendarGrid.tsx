@@ -522,17 +522,27 @@ export default function CalendarGrid({
 
   const deptCapacity = useMemo(() => {
     const outer = new Map<string, Map<string, number>>();
+    const userToDepts = new Map<string, string[]>();
+
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
+      outer.set(dept.id, new Map<string, number>());
+      for (const u of dept.users) {
+        const depts = userToDepts.get(u.id) ?? [];
+        if (!depts.includes(dept.id)) depts.push(dept.id);
+        userToDepts.set(u.id, depts);
+      }
+    }
+
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+      const userDeptIds = userToDepts.get(req.user.id) ?? [];
+      for (const deptId of userDeptIds) {
+        const dm = outer.get(deptId)!;
         for (const entry of req.entries) {
           const dk = new Date(entry.date).toISOString().slice(0, 10);
           dm.set(dk, (dm.get(dk) ?? 0) + 1);
         }
       }
-      outer.set(dept.id, dm);
     }
     return outer;
   }, [departments, requests]);
