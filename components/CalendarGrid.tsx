@@ -521,18 +521,35 @@ export default function CalendarGrid({
   }, [requests]);
 
   const deptCapacity = useMemo(() => {
-    const outer = new Map<string, Map<string, number>>();
+    // Optimization: Build a user -> department IDs map to avoid O(Departments * Requests * Users) lookups.
+    const userDepts = new Map<string, string[]>();
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
-        for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
+      for (const u of dept.users) {
+        if (!userDepts.has(u.id)) userDepts.set(u.id, []);
+        userDepts.get(u.id)!.push(dept.id);
+      }
+    }
+
+    const outer = new Map<string, Map<string, number>>();
+    // Pre-populate outer with empty Maps for all departments to maintain identical return contract
+    for (const dept of departments) {
+      outer.set(dept.id, new Map<string, number>());
+    }
+
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+
+      const uDepts = userDepts.get(req.user.id) || [];
+      if (uDepts.length === 0) continue;
+
+      for (const entry of req.entries) {
+        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        for (const deptId of uDepts) {
+          if (!outer.has(deptId)) outer.set(deptId, new Map<string, number>());
+          const dm = outer.get(deptId)!;
           dm.set(dk, (dm.get(dk) ?? 0) + 1);
         }
       }
-      outer.set(dept.id, dm);
     }
     return outer;
   }, [departments, requests]);
