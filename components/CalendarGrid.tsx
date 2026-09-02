@@ -180,6 +180,23 @@ function CalendarTable({
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
+  // ⚡ Bolt: Precompute static column data to prevent calling expensive format() in nested loops
+  const formattedDays = useMemo(() => {
+    return days.map(d => {
+      const dk = format(d, "yyyy-MM-dd");
+      return {
+        d,
+        dk,
+        holiday: holidayMap.get(dk),
+        hasHoliday: holidayMap.has(dk),
+        weekend: isWeekend(d),
+        isToday: dk === todayKey,
+        dayFormatted: format(d, "d"),
+        dayOfWeek: format(d, "EEEEE", { locale: da })
+      };
+    });
+  }, [days, holidayMap, todayKey]);
+
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
       <thead className="sticky top-0 z-20">
@@ -191,43 +208,37 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
-            const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
-            const isToday = dk === todayKey;
-            return (
-              <th
-                key={dk}
-                title={holiday ?? undefined}
-                className={cn(
-                  "border-b border-r text-center font-normal select-none min-w-[34px] w-9 py-1.5 px-0",
-                  isToday ? "ring-2 ring-inset ring-primary" : "",
-                )}
-                style={{
-                  borderColor: "var(--c-border)",
-                  background: holiday
-                    ? "var(--c-danger-bg)"
-                    : weekend
-                    ? "var(--c-bg)"
-                    : isToday
-                    ? "var(--c-primary-light)"
-                    : "var(--c-surface)",
-                  color: holiday
-                    ? "var(--c-danger-text)"
-                    : weekend
-                    ? "var(--c-text-subtle)"
-                    : isToday
-                    ? "var(--c-primary)"
-                    : "var(--c-text-muted)",
-                }}
-              >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
-                {holiday && <div className="text-[8px] leading-tight">🎌</div>}
-              </th>
-            );
-          })}
+          {formattedDays.map(({ dk, holiday, weekend, isToday, dayFormatted, dayOfWeek }) => (
+            <th
+              key={dk}
+              title={holiday ?? undefined}
+              className={cn(
+                "border-b border-r text-center font-normal select-none min-w-[34px] w-9 py-1.5 px-0",
+                isToday ? "ring-2 ring-inset ring-primary" : "",
+              )}
+              style={{
+                borderColor: "var(--c-border)",
+                background: holiday
+                  ? "var(--c-danger-bg)"
+                  : weekend
+                  ? "var(--c-bg)"
+                  : isToday
+                  ? "var(--c-primary-light)"
+                  : "var(--c-surface)",
+                color: holiday
+                  ? "var(--c-danger-text)"
+                  : weekend
+                  ? "var(--c-text-subtle)"
+                  : isToday
+                  ? "var(--c-primary)"
+                  : "var(--c-text-muted)",
+              }}
+            >
+              <div className="font-bold text-[12px]">{dayFormatted}</div>
+              <div className="text-[9px] uppercase opacity-70">{dayOfWeek}</div>
+              {holiday && <div className="text-[8px] leading-tight">🎌</div>}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
@@ -247,14 +258,11 @@ function CalendarTable({
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                {formattedDays.map(({ dk, weekend, hasHoliday }) => {
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
-                  const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
-                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || holiday ? `${headerBg}88` : headerBg }}>
+                      style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || hasHoliday ? `${headerBg}88` : headerBg }}>
                       <CapacityDot count={count} max={dept.maxConcurrent} />
                     </td>
                   );
@@ -279,19 +287,16 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                  {formattedDays.map(({ dk, weekend, hasHoliday }) => {
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
-                    const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
                     const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
                     const hasShift = cellShifts.length > 0;
-                    const clickable = reqs.length > 0 || holiday || hasShift;
+                    const clickable = reqs.length > 0 || hasHoliday || hasShift;
 
                     let cellStyle: React.CSSProperties = { borderColor: "var(--c-border)" };
                     let cellClass = "transition-colors";
@@ -302,7 +307,7 @@ function CalendarTable({
                     } else if (hasPending) {
                       cellStyle = { ...cellStyle, background: "var(--c-warning-bg)" };
                       cellClass += " hover:opacity-90";
-                    } else if (holiday) {
+                    } else if (hasHoliday) {
                       cellStyle = { ...cellStyle, background: "var(--c-danger-bg)" };
                     } else if (weekend) {
                       cellStyle = { ...cellStyle, background: "var(--c-bg)" };
@@ -521,18 +526,34 @@ export default function CalendarGrid({
   }, [requests]);
 
   const deptCapacity = useMemo(() => {
-    const outer = new Map<string, Map<string, number>>();
+    // ⚡ Bolt: Precompute user-to-department mapping to prevent O(N^3) nested some() loop
+    const userToDepts = new Map<string, string[]>();
     for (const dept of departments) {
-      const dm = new Map<string, number>();
-      for (const req of requests) {
-        if (req.status !== "APPROVED") continue;
-        if (!dept.users.some((u) => u.id === req.user.id)) continue;
-        for (const entry of req.entries) {
-          const dk = new Date(entry.date).toISOString().slice(0, 10);
+      for (const user of dept.users) {
+        const current = userToDepts.get(user.id) ?? [];
+        current.push(dept.id);
+        userToDepts.set(user.id, current);
+      }
+    }
+
+    const outer = new Map<string, Map<string, number>>();
+    // Initialize outer map for all departments to maintain contract
+    for (const dept of departments) {
+      outer.set(dept.id, new Map<string, number>());
+    }
+
+    for (const req of requests) {
+      if (req.status !== "APPROVED") continue;
+      const userDeptIds = userToDepts.get(req.user.id);
+      if (!userDeptIds) continue;
+
+      for (const entry of req.entries) {
+        const dk = new Date(entry.date).toISOString().slice(0, 10);
+        for (const deptId of userDeptIds) {
+          const dm = outer.get(deptId)!;
           dm.set(dk, (dm.get(dk) ?? 0) + 1);
         }
       }
-      outer.set(dept.id, dm);
     }
     return outer;
   }, [departments, requests]);
