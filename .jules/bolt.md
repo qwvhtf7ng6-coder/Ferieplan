@@ -1,0 +1,3 @@
+## 2024-09-02 - Optimize nested loops in Calendar Grid
+**Learning:** Calling `date-fns` `format()` repeatedly inside nested loops (O(Users * Days)) and performing nested `.some()` user array lookups inside memos (O(Requests * Departments * Users)) cause severe frontend bottlenecks in Calendar grid views.
+**Action:** Precompute static column data into an array of objects using `useMemo` to reduce calculation overhead. Create a mapping (e.g. `Map<string, string[]>`) before loops to replace nested `.some()` lookups.
