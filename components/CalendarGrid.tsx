@@ -180,6 +180,13 @@ function CalendarTable({
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
 }) {
+  // Precompute expensive date-fns formatting and isWeekend checks for O(Days) complexity
+  const formattedDays = useMemo(() => days.map(d => ({
+    d,
+    dk: format(d, "yyyy-MM-dd"),
+    weekend: isWeekend(d)
+  })), [days]);
+
   return (
     <table className="border-collapse text-xs" style={{ minWidth: "max-content" }}>
       <thead className="sticky top-0 z-20">
@@ -191,10 +198,8 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
+          {formattedDays.map(({ d, dk, weekend }) => {
             const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
             const isToday = dk === todayKey;
             return (
               <th
@@ -247,10 +252,8 @@ function CalendarTable({
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                {formattedDays.map(({ dk, weekend }) => {
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
                   const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
@@ -279,13 +282,11 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                  {formattedDays.map(({ dk, weekend }) => {
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
                     const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
