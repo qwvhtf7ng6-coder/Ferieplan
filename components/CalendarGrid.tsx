@@ -23,6 +23,16 @@ interface CalendarDepartment {
   id: string; name: string; maxConcurrent: number; shiftsEnabled: boolean; users: CalendarUser[];
 }
 
+interface FormattedDay {
+  date: Date;
+  key: string;
+  isWeekend: boolean;
+  holiday: string | null;
+  isToday: boolean;
+  dayStr: string;
+  dayName: string;
+}
+
 interface CalendarEntry { date: string; type: string; absenceType: string; days: number; }
 
 interface CalendarRequest {
@@ -167,15 +177,14 @@ function CapacityDot({ count, max }: { count: number; max: number }) {
 // ─── Grid table ───────────────────────────────────────────────────────────────
 
 function CalendarTable({
-  days, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, todayKey, onOpenCell, isManagerOrAdmin, shiftLookup,
+  formattedDays, departments, holidayMap, requestLookup, deptCapacity, deptColorMap, onOpenCell, isManagerOrAdmin, shiftLookup,
 }: {
-  days: Date[];
+  formattedDays: FormattedDay[];
   departments: CalendarDepartment[];
   holidayMap: Map<string, string>;
   requestLookup: Map<string, Map<string, CalendarRequest[]>>;
   deptCapacity: Map<string, Map<string, number>>;
   deptColorMap: Map<string, DeptColor>;
-  todayKey: string;
   onOpenCell: (dk: string, user: CalendarUser, reqs: CalendarRequest[], shifts: CalendarShift[]) => void;
   isManagerOrAdmin?: boolean;
   shiftLookup: Map<string, Map<string, CalendarShift[]>>;
@@ -191,11 +200,7 @@ function CalendarTable({
           >
             Medarbejder
           </th>
-          {days.map((d) => {
-            const dk = format(d, "yyyy-MM-dd");
-            const holiday = holidayMap.get(dk);
-            const weekend = isWeekend(d);
-            const isToday = dk === todayKey;
+          {formattedDays.map(({ key: dk, isWeekend: weekend, holiday, isToday, dayStr, dayName }) => {
             return (
               <th
                 key={dk}
@@ -222,8 +227,8 @@ function CalendarTable({
                     : "var(--c-text-muted)",
                 }}
               >
-                <div className="font-bold text-[12px]">{format(d, "d")}</div>
-                <div className="text-[9px] uppercase opacity-70">{format(d, "EEEEE", { locale: da })}</div>
+                <div className="font-bold text-[12px]">{dayStr}</div>
+                <div className="text-[9px] uppercase opacity-70">{dayName}</div>
                 {holiday && <div className="text-[8px] leading-tight">🎌</div>}
               </th>
             );
@@ -247,11 +252,8 @@ function CalendarTable({
                 >
                   {dept.name}
                 </td>
-                {days.map((d) => {
-                  const dk = format(d, "yyyy-MM-dd");
+                {formattedDays.map(({ key: dk, isWeekend: weekend, holiday }) => {
                   const count = capacityMap.get(dk) ?? 0;
-                  const weekend = isWeekend(d);
-                  const holiday = holidayMap.has(dk);
                   return (
                     <td key={dk} className="border-b border-r text-center py-0.5"
                       style={{ borderColor: `${headerBg}66`, backgroundColor: weekend || holiday ? `${headerBg}88` : headerBg }}>
@@ -279,14 +281,11 @@ function CalendarTable({
                       {emp.name}
                     </span>
                   </td>
-                  {days.map((d) => {
-                    const dk = format(d, "yyyy-MM-dd");
+                  {formattedDays.map(({ key: dk, isWeekend: weekend, holiday }) => {
                     const reqs = requestLookup.get(emp.id)?.get(dk) ?? [];
                     const cellShifts = dept.shiftsEnabled
                       ? (shiftLookup.get(emp.id)?.get(dk) ?? [])
                       : [];
-                    const weekend = isWeekend(d);
-                    const holiday = holidayMap.has(dk);
                     const hasApproved = reqs.some((r) => r.status === "APPROVED");
                     const hasPending = reqs.some((r) => r.status === "PENDING") && !!isManagerOrAdmin;
                     const approvedEntry = reqs.find((r) => r.status === "APPROVED")?.entries.find((e) => new Date(e.date).toISOString().slice(0, 10) === dk);
@@ -494,6 +493,21 @@ export default function CalendarGrid({
 
   const holidayMap = useMemo(() => new Map<string, string>(holidays.map((h) => [new Date(h.date).toISOString().slice(0, 10), h.name])), [holidays]);
 
+  const formattedDays = useMemo<FormattedDay[]>(() => {
+    return days.map((d) => {
+      const key = format(d, "yyyy-MM-dd");
+      return {
+        date: d,
+        key,
+        isWeekend: isWeekend(d),
+        holiday: holidayMap.get(key) ?? null,
+        isToday: key === todayKey,
+        dayStr: format(d, "d"),
+        dayName: format(d, "EEEEE", { locale: da }),
+      };
+    });
+  }, [days, holidayMap, todayKey]);
+
   const shiftLookup = useMemo(() => {
     const map = new Map<string, Map<string, CalendarShift[]>>();
     for (const s of shifts) {
@@ -653,13 +667,12 @@ export default function CalendarGrid({
           className="overflow-auto border border-border rounded-lg shadow-xs"
           style={{ maxHeight: "calc(100vh - 240px)" }}>
           <CalendarTable
-            days={days}
+            formattedDays={formattedDays}
             departments={filteredDepartments}
             holidayMap={holidayMap}
             requestLookup={requestLookup}
             deptCapacity={deptCapacity}
             deptColorMap={deptColorMap}
-            todayKey={todayKey}
             onOpenCell={(dk, user, reqs, cellShifts) => setCellModal({ dateKey: dk, user, requests: reqs, holidayName: holidayMap.get(dk) ?? null, shifts: cellShifts })}
             isManagerOrAdmin={isManagerOrAdmin}
             shiftLookup={shiftLookup}
