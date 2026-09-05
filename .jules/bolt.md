@@ -1,0 +1,3 @@
+## YYYY-MM-DD - [CalendarGrid Optimization: Pre-formatting days and caching weekend/holiday states]
+**Learning:** In React grid or table components, avoid calling `date-fns` `format()` or `isWeekend()` or similar expensive string parsing/date operations inside nested loops (e.g., O(Users * Days)). Precompute this static column data into an array of objects using `useMemo` to reduce calculation overhead to O(Days).
+**Action:** Use `useMemo` to pre-calculate day keys, formatted strings, and weekend/holiday flags into a `FormattedDay[]` before rendering the table, and pass that to the table component.
